@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='UTF-8'?>
-<XMLDB xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" PATH="admin/tool/coursecompliance/db" VERSION="2026090804" COMMENT="XMLDB file for tool_coursecompliance" xsi:noNamespaceSchemaLocation="../../../lib/xmldb/xmldb.xsd">
+<XMLDB xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" PATH="admin/tool/coursecompliance/db" VERSION="2026090806" COMMENT="XMLDB file for tool_coursecompliance" xsi:noNamespaceSchemaLocation="../../../lib/xmldb/xmldb.xsd">
   <TABLES>
     <TABLE NAME="tool_cc_profile" COMMENT="Compliance profiles">
       <FIELDS>
@@ -48,7 +48,7 @@
         <FIELD NAME="scanid" TYPE="int" LENGTH="10" NOTNULL="true" />
         <FIELD NAME="courseid" TYPE="int" LENGTH="10" NOTNULL="true" />
         <FIELD NAME="component" TYPE="char" LENGTH="32" NOTNULL="true" />
-        <FIELD NAME="assessmenttype" TYPE="char" LENGTH="16" NOTNULL="true" DEFAULT="" />
+        <FIELD NAME="assessmenttype" TYPE="char" LENGTH="16" NOTNULL="true" DEFAULT="course" />
         <FIELD NAME="rulecode" TYPE="char" LENGTH="80" NOTNULL="true" />
         <FIELD NAME="severity" TYPE="char" LENGTH="16" NOTNULL="true" />
         <FIELD NAME="objectid" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" />
@@ -152,7 +152,7 @@
         <FIELD NAME="assessmenttype" TYPE="char" LENGTH="16" NOTNULL="true" />
         <FIELD NAME="quizid" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" />
         <FIELD NAME="objectname" TYPE="char" LENGTH="1333" NOTNULL="false" />
-        <FIELD NAME="idnumber" TYPE="char" LENGTH="255" NOTNULL="true" DEFAULT="" />
+        <FIELD NAME="idnumber" TYPE="char" LENGTH="255" NOTNULL="true" />
         <FIELD NAME="existsflag" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="0" />
         <FIELD NAME="critical" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" />
         <FIELD NAME="warnings" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" />

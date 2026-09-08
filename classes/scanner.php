@@ -78,7 +78,7 @@ final class scanner {
                 'teachercount' => $teachers[$course->id] ?? 0,
             ];
             foreach (rule_registry::course_rules() as $rule) {
-                $outcome = $this->evaluate_and_store($rule, $coursecontext, $config, $scanid, (int)$course->id, '');
+                $outcome = $this->evaluate_and_store($rule, $coursecontext, $config, $scanid, (int)$course->id, 'course');
                 $this->increment_outcome($totals, $outcome);
             }
 

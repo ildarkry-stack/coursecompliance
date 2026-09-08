@@ -131,7 +131,7 @@ function xmldb_tool_coursecompliance_upgrade(int $oldversion): bool {
         }
 
         $table = new xmldb_table('tool_cc_result');
-        $field = new xmldb_field('assessmenttype', XMLDB_TYPE_CHAR, '16', null, XMLDB_NOTNULL, null, '', 'component');
+        $field = new xmldb_field('assessmenttype', XMLDB_TYPE_CHAR, '16', null, XMLDB_NOTNULL, null, 'course', 'component');
         if ($dbman->table_exists($table) && !$dbman->field_exists($table, $field)) {
             $dbman->add_field($table, $field);
         }
@@ -147,7 +147,7 @@ function xmldb_tool_coursecompliance_upgrade(int $oldversion): bool {
         $table->add_field('assessmenttype', XMLDB_TYPE_CHAR, '16', null, XMLDB_NOTNULL, null, null);
         $table->add_field('quizid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0');
         $table->add_field('objectname', XMLDB_TYPE_CHAR, '1333', null, null, null, null);
-        $table->add_field('idnumber', XMLDB_TYPE_CHAR, '255', null, XMLDB_NOTNULL, null, '');
+        $table->add_field('idnumber', XMLDB_TYPE_CHAR, '255', null, XMLDB_NOTNULL, null, null);
         $table->add_field('existsflag', XMLDB_TYPE_INTEGER, '1', null, XMLDB_NOTNULL, null, '0');
         $table->add_field('critical', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0');
         $table->add_field('warnings', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0');
@@ -203,6 +203,44 @@ function xmldb_tool_coursecompliance_upgrade(int $oldversion): bool {
         }
 
         upgrade_plugin_savepoint(true, 2026090804, 'tool', 'coursecompliance');
+    }
+
+
+    if ($oldversion < 2026090806) {
+        // Normalize course-level result rows and use a meaningful XMLDB default.
+        $table = new xmldb_table('tool_cc_result');
+        $field = new xmldb_field(
+            'assessmenttype',
+            XMLDB_TYPE_CHAR,
+            '16',
+            null,
+            XMLDB_NOTNULL,
+            null,
+            'course',
+            'component'
+        );
+        if ($dbman->table_exists($table) && $dbman->field_exists($table, $field)) {
+            $DB->set_field('tool_cc_result', 'assessmenttype', 'course', ['assessmenttype' => '']);
+            $dbman->change_field_default($table, $field);
+        }
+
+        // idnumber is always explicitly supplied by the assessment scanner, so no default is required.
+        $table = new xmldb_table('tool_cc_assessment');
+        $field = new xmldb_field(
+            'idnumber',
+            XMLDB_TYPE_CHAR,
+            '255',
+            null,
+            XMLDB_NOTNULL,
+            null,
+            null,
+            'objectname'
+        );
+        if ($dbman->table_exists($table) && $dbman->field_exists($table, $field)) {
+            $dbman->change_field_default($table, $field);
+        }
+
+        upgrade_plugin_savepoint(true, 2026090806, 'tool', 'coursecompliance');
     }
 
     return true;
