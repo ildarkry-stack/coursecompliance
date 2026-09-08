@@ -1,0 +1,199 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<XMLDB xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" PATH="admin/tool/coursecompliance/db" VERSION="2026090804" COMMENT="XMLDB file for tool_coursecompliance" xsi:noNamespaceSchemaLocation="../../../lib/xmldb/xmldb.xsd">
+  <TABLES>
+    <TABLE NAME="tool_cc_profile" COMMENT="Compliance profiles">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true" />
+        <FIELD NAME="name" TYPE="char" LENGTH="255" NOTNULL="true" />
+        <FIELD NAME="description" TYPE="text" NOTNULL="false" />
+        <FIELD NAME="enabled" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="1" />
+        <FIELD NAME="configjson" TYPE="text" NOTNULL="false" />
+        <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" />
+        <FIELD NAME="timemodified" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" />
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id" />
+      </KEYS>
+    </TABLE>
+    <TABLE NAME="tool_cc_scan" COMMENT="Compliance scan runs">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true" />
+        <FIELD NAME="profileid" TYPE="int" LENGTH="10" NOTNULL="true" />
+        <FIELD NAME="categoryid" TYPE="int" LENGTH="10" NOTNULL="true" />
+        <FIELD NAME="userid" TYPE="int" LENGTH="10" NOTNULL="true" />
+        <FIELD NAME="status" TYPE="char" LENGTH="20" NOTNULL="true" DEFAULT="queued" />
+        <FIELD NAME="courses" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" />
+        <FIELD NAME="assessments" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" />
+        <FIELD NAME="critical" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" />
+        <FIELD NAME="warnings" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" />
+        <FIELD NAME="notices" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" />
+        <FIELD NAME="ignored" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" />
+        <FIELD NAME="startedat" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" />
+        <FIELD NAME="finishedat" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" />
+        <FIELD NAME="errormessage" TYPE="text" NOTNULL="false" />
+        <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" />
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id" />
+        <KEY NAME="profile_fk" TYPE="foreign" FIELDS="profileid" REFTABLE="tool_cc_profile" REFFIELDS="id" />
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="status_idx" UNIQUE="false" FIELDS="status" />
+        <INDEX NAME="created_idx" UNIQUE="false" FIELDS="timecreated" />
+      </INDEXES>
+    </TABLE>
+    <TABLE NAME="tool_cc_result" COMMENT="Rule violations found by scans">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true" />
+        <FIELD NAME="scanid" TYPE="int" LENGTH="10" NOTNULL="true" />
+        <FIELD NAME="courseid" TYPE="int" LENGTH="10" NOTNULL="true" />
+        <FIELD NAME="component" TYPE="char" LENGTH="32" NOTNULL="true" />
+        <FIELD NAME="assessmenttype" TYPE="char" LENGTH="16" NOTNULL="true" DEFAULT="" />
+        <FIELD NAME="rulecode" TYPE="char" LENGTH="80" NOTNULL="true" />
+        <FIELD NAME="severity" TYPE="char" LENGTH="16" NOTNULL="true" />
+        <FIELD NAME="objectid" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" />
+        <FIELD NAME="objectname" TYPE="char" LENGTH="255" NOTNULL="false" />
+        <FIELD NAME="expected" TYPE="text" NOTNULL="false" />
+        <FIELD NAME="actual" TYPE="text" NOTNULL="false" />
+        <FIELD NAME="message" TYPE="text" NOTNULL="true" />
+        <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" />
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id" />
+        <KEY NAME="scan_fk" TYPE="foreign" FIELDS="scanid" REFTABLE="tool_cc_scan" REFFIELDS="id" />
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="scan_course_idx" UNIQUE="false" FIELDS="scanid, courseid" />
+        <INDEX NAME="scan_severity_idx" UNIQUE="false" FIELDS="scanid, severity" />
+        <INDEX NAME="rule_idx" UNIQUE="false" FIELDS="rulecode" />
+        <INDEX NAME="scan_assessment_idx" UNIQUE="false" FIELDS="scanid, assessmenttype" />
+      </INDEXES>
+    </TABLE>
+    <TABLE NAME="tool_cc_act_batch" COMMENT="Preview and execution batches for centralized activity operations">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true" />
+        <FIELD NAME="userid" TYPE="int" LENGTH="10" NOTNULL="true" />
+        <FIELD NAME="categoryid" TYPE="int" LENGTH="10" NOTNULL="true" />
+        <FIELD NAME="sourcebatchid" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" />
+        <FIELD NAME="action" TYPE="char" LENGTH="32" NOTNULL="true" />
+        <FIELD NAME="status" TYPE="char" LENGTH="20" NOTNULL="true" DEFAULT="preview" />
+        <FIELD NAME="filterjson" TYPE="text" NOTNULL="false" />
+        <FIELD NAME="summary" TYPE="text" NOTNULL="false" />
+        <FIELD NAME="totalchanges" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" />
+        <FIELD NAME="applied" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" />
+        <FIELD NAME="skipped" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" />
+        <FIELD NAME="failed" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" />
+        <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" />
+        <FIELD NAME="timestarted" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" />
+        <FIELD NAME="timefinished" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" />
+        <FIELD NAME="errormessage" TYPE="text" NOTNULL="false" />
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id" />
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="userid_idx" UNIQUE="false" FIELDS="userid" />
+        <INDEX NAME="status_idx" UNIQUE="false" FIELDS="status" />
+        <INDEX NAME="created_idx" UNIQUE="false" FIELDS="timecreated" />
+      </INDEXES>
+    </TABLE>
+    <TABLE NAME="tool_cc_act_change" COMMENT="Expected and new values for activity operation batches">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true" />
+        <FIELD NAME="batchid" TYPE="int" LENGTH="10" NOTNULL="true" />
+        <FIELD NAME="cmid" TYPE="int" LENGTH="10" NOTNULL="true" />
+        <FIELD NAME="courseid" TYPE="int" LENGTH="10" NOTNULL="true" />
+        <FIELD NAME="modname" TYPE="char" LENGTH="32" NOTNULL="true" />
+        <FIELD NAME="instanceid" TYPE="int" LENGTH="10" NOTNULL="true" />
+        <FIELD NAME="fieldname" TYPE="char" LENGTH="64" NOTNULL="true" />
+        <FIELD NAME="oldvalue" TYPE="text" NOTNULL="false" />
+        <FIELD NAME="newvalue" TYPE="text" NOTNULL="false" />
+        <FIELD NAME="status" TYPE="char" LENGTH="20" NOTNULL="true" DEFAULT="pending" />
+        <FIELD NAME="message" TYPE="text" NOTNULL="false" />
+        <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" />
+        <FIELD NAME="timeapplied" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" />
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id" />
+        <KEY NAME="batch_fk" TYPE="foreign" FIELDS="batchid" REFTABLE="tool_cc_act_batch" REFFIELDS="id" />
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="batch_cmid_idx" UNIQUE="false" FIELDS="batchid, cmid" />
+        <INDEX NAME="batch_status_idx" UNIQUE="false" FIELDS="batchid, status" />
+        <INDEX NAME="course_idx" UNIQUE="false" FIELDS="courseid" />
+      </INDEXES>
+    </TABLE>
+    <TABLE NAME="tool_cc_session_issue" COMMENT="Issues found while resolving assessment schedule targets">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true" />
+        <FIELD NAME="batchid" TYPE="int" LENGTH="10" NOTNULL="true" />
+        <FIELD NAME="courseid" TYPE="int" LENGTH="10" NOTNULL="true" />
+        <FIELD NAME="assessmenttype" TYPE="char" LENGTH="16" NOTNULL="true" />
+        <FIELD NAME="modname" TYPE="char" LENGTH="32" NOTNULL="true" />
+        <FIELD NAME="idnumber" TYPE="char" LENGTH="255" NOTNULL="true" />
+        <FIELD NAME="issuecode" TYPE="char" LENGTH="32" NOTNULL="true" />
+        <FIELD NAME="details" TYPE="text" NOTNULL="false" />
+        <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" />
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id" />
+        <KEY NAME="batch_fk" TYPE="foreign" FIELDS="batchid" REFTABLE="tool_cc_act_batch" REFFIELDS="id" />
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="batch_issue_idx" UNIQUE="false" FIELDS="batchid, issuecode" />
+        <INDEX NAME="course_idx" UNIQUE="false" FIELDS="courseid" />
+      </INDEXES>
+    </TABLE>
+    <TABLE NAME="tool_cc_assessment" COMMENT="Assessment readiness snapshot for completed scans">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true" />
+        <FIELD NAME="scanid" TYPE="int" LENGTH="10" NOTNULL="true" />
+        <FIELD NAME="courseid" TYPE="int" LENGTH="10" NOTNULL="true" />
+        <FIELD NAME="assessmenttype" TYPE="char" LENGTH="16" NOTNULL="true" />
+        <FIELD NAME="quizid" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" />
+        <FIELD NAME="objectname" TYPE="char" LENGTH="1333" NOTNULL="false" />
+        <FIELD NAME="idnumber" TYPE="char" LENGTH="255" NOTNULL="true" DEFAULT="" />
+        <FIELD NAME="existsflag" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="0" />
+        <FIELD NAME="critical" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" />
+        <FIELD NAME="warnings" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" />
+        <FIELD NAME="notices" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" />
+        <FIELD NAME="ignored" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" />
+        <FIELD NAME="score" TYPE="int" LENGTH="3" NOTNULL="true" DEFAULT="100" />
+        <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" />
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id" />
+        <KEY NAME="scan_fk" TYPE="foreign" FIELDS="scanid" REFTABLE="tool_cc_scan" REFFIELDS="id" />
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="scan_type_idx" UNIQUE="false" FIELDS="scanid, assessmenttype" />
+        <INDEX NAME="scan_course_idx" UNIQUE="false" FIELDS="scanid, courseid" />
+      </INDEXES>
+    </TABLE>
+    <TABLE NAME="tool_cc_exception" COMMENT="Explicit course and rule exceptions for compliance profiles">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true" />
+        <FIELD NAME="profileid" TYPE="int" LENGTH="10" NOTNULL="true" />
+        <FIELD NAME="courseid" TYPE="int" LENGTH="10" NOTNULL="true" />
+        <FIELD NAME="rulecode" TYPE="char" LENGTH="80" NOTNULL="true" />
+        <FIELD NAME="component" TYPE="char" LENGTH="32" NOTNULL="true" />
+        <FIELD NAME="objectid" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" />
+        <FIELD NAME="reason" TYPE="text" NOTNULL="true" />
+        <FIELD NAME="expiresat" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" />
+        <FIELD NAME="enabled" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="1" />
+        <FIELD NAME="userid" TYPE="int" LENGTH="10" NOTNULL="true" />
+        <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" />
+        <FIELD NAME="timemodified" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" />
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id" />
+        <KEY NAME="profile_fk" TYPE="foreign" FIELDS="profileid" REFTABLE="tool_cc_profile" REFFIELDS="id" />
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="profile_course_idx" UNIQUE="false" FIELDS="profileid, courseid" />
+        <INDEX NAME="rule_idx" UNIQUE="false" FIELDS="rulecode" />
+        <INDEX NAME="enabled_idx" UNIQUE="false" FIELDS="enabled" />
+      </INDEXES>
+    </TABLE>
+  </TABLES>
+</XMLDB>
