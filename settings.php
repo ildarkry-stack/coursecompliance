@@ -14,6 +14,14 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
+/**
+ * Administration settings for the plugin.
+ *
+ * @package    tool_coursecompliance
+ * @copyright  2026 MIA Academy
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
+
 defined('MOODLE_INTERNAL') || die();
 
 $ADMIN->add('courses', new admin_externalpage(
@@ -22,7 +30,6 @@ $ADMIN->add('courses', new admin_externalpage(
     new moodle_url('/admin/tool/coursecompliance/index.php'),
     'tool/coursecompliance:view'
 ));
-
 
 $ADMIN->add('courses', new admin_externalpage(
     'tool_coursecompliance_readiness',

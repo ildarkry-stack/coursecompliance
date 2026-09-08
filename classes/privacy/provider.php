@@ -14,6 +14,13 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
+/**
+ * Classes for the Course compliance plugin.
+ *
+ * @package    tool_coursecompliance
+ * @copyright  2026 MIA Academy
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
 
 namespace tool_coursecompliance\privacy;
 
@@ -24,10 +31,19 @@ use core_privacy\local\request\writer;
 
 defined('MOODLE_INTERNAL') || die();
 
+/**
+ * Privacy provider for Course compliance data.
+ */
 final class provider implements
         \core_privacy\local\metadata\provider,
         \core_privacy\local\request\plugin\provider {
 
+    /**
+     * Describe personal data stored by the plugin.
+     *
+     * @param collection $collection Metadata collection.
+     * @return collection
+     */
     public static function get_metadata(collection $collection): collection {
         $collection->add_database_table('tool_cc_scan', [
             'userid' => 'privacy:metadata:userid',
@@ -45,6 +61,12 @@ final class provider implements
         return $collection;
     }
 
+    /**
+     * Get contexts containing data for a user.
+     *
+     * @param int $userid User id.
+     * @return contextlist
+     */
     public static function get_contexts_for_userid(int $userid): contextlist {
         global $DB;
         $contextlist = new contextlist();
@@ -56,6 +78,11 @@ final class provider implements
         return $contextlist;
     }
 
+    /**
+     * Export personal data for approved contexts.
+     *
+     * @param approved_contextlist $contextlist Approved context list.
+     */
     public static function export_user_data(approved_contextlist $contextlist): void {
         global $DB;
         $contexts = $contextlist->get_contexts();
@@ -64,13 +91,17 @@ final class provider implements
         }
         $userid = $contextlist->get_user()->id;
         $records = $DB->get_records('tool_cc_scan', ['userid' => $userid], 'timecreated ASC',
-            'id, profileid, categoryid, status, courses, assessments, critical, warnings, notices, startedat, finishedat, timecreated');
+            'id, profileid, categoryid, status, courses, assessments, critical, warnings, notices, ' .
+                'startedat, finishedat, timecreated'
+        );
         $audits = [];
         foreach ($records as $record) {
             $audits[] = (array)$record;
         }
         $batches = $DB->get_records('tool_cc_act_batch', ['userid' => $userid], 'timecreated ASC',
-            'id, categoryid, action, status, summary, totalchanges, applied, skipped, failed, timecreated, timestarted, timefinished');
+            'id, categoryid, action, status, summary, totalchanges, applied, skipped, failed, ' .
+                'timecreated, timestarted, timefinished'
+        );
         $operations = [];
         foreach ($batches as $batch) {
             $operations[] = (array)$batch;
@@ -90,14 +121,28 @@ final class provider implements
         );
     }
 
+    /**
+     * Delete all personal data in a context.
+     *
+     * @param \context $context Context to clear.
+     */
     public static function delete_data_for_all_users_in_context(\context $context): void {
-        if ($context->contextlevel !== CONTEXT_SYSTEM) { return; }
+        if ($context->contextlevel !== CONTEXT_SYSTEM) {
+            return;
+        }
         self::delete_all_scans();
     }
 
+    /**
+     * Delete personal data for one user.
+     *
+     * @param approved_contextlist $contextlist Approved context list.
+     */
     public static function delete_data_for_user(approved_contextlist $contextlist): void {
         global $DB;
-        if (!$contextlist->get_contexts()) { return; }
+        if (!$contextlist->get_contexts()) {
+            return;
+        }
         $userid = $contextlist->get_user()->id;
         $scanids = $DB->get_fieldset_select('tool_cc_scan', 'id', 'userid = :userid', ['userid' => $userid]);
         if ($scanids) {
@@ -116,6 +161,9 @@ final class provider implements
         }
     }
 
+    /**
+     * Delete all stored scan and operation data.
+     */
     private static function delete_all_scans(): void {
         global $DB;
         $DB->delete_records('tool_cc_result');

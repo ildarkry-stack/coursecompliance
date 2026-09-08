@@ -14,6 +14,14 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
+/**
+ * Classes for the Course compliance plugin.
+ *
+ * @package    tool_coursecompliance
+ * @copyright  2026 MIA Academy
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
+
 namespace tool_coursecompliance;
 
 use core_course_category;
@@ -25,7 +33,7 @@ defined('MOODLE_INTERNAL') || die();
  * Scans course categories against a compliance profile.
  *
  * @package    tool_coursecompliance
- * @copyright  2026
+ * @copyright  2026 MIA Academy
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 final class scanner {
@@ -101,7 +109,14 @@ final class scanner {
                     );
                     $this->increment_outcome($totals, $outcome);
                     $this->increment_outcome($local, $outcome);
-                    $this->store_assessment_state($scanid, (int)$course->id, $type, null, $config[$type . 'idnumber'] ?? $type, $local);
+                    $this->store_assessment_state(
+                        $scanid,
+                        (int)$course->id,
+                        $type,
+                        null,
+                        $config[$type . 'idnumber'] ?? $type,
+                        $local
+                    );
                     continue;
                 }
 
@@ -201,6 +216,17 @@ final class scanner {
     /**
      * Save a direct violation such as a missing required assessment.
      *
+     * @param int $scanid Scan id.
+     * @param int $courseid Course id.
+     * @param string $component Audited component.
+     * @param string $rulecode Stable rule code.
+     * @param string $severity Violation severity.
+     * @param string $assessmenttype Assessment period.
+     * @param int $objectid Related object id.
+     * @param string $objectname Related object name.
+     * @param string $message Human-readable message.
+     * @param string $expected Expected value.
+     * @param string $actual Actual value.
      * @return string Severity or ignored.
      */
     private function store_direct_violation(
@@ -237,6 +263,18 @@ final class scanner {
 
     /**
      * Insert one result row.
+     *
+     * @param int $scanid Scan id.
+     * @param int $courseid Course id.
+     * @param string $component Audited component.
+     * @param string $rulecode Stable rule code.
+     * @param string $severity Violation severity.
+     * @param string $assessmenttype Assessment period.
+     * @param int $objectid Related object id.
+     * @param string $objectname Related object name.
+     * @param string $message Human-readable message.
+     * @param string $expected Expected value.
+     * @param string $actual Actual value.
      */
     private function insert_result(
         int $scanid,
@@ -340,13 +378,25 @@ final class scanner {
         $records = $DB->get_records_select('tool_cc_exception', $sql, $params);
         $lookup = [];
         foreach ($records as $record) {
-            $lookup[$this->exception_key((int)$record->courseid, $record->rulecode, $record->component, (int)$record->objectid)] = true;
+            $key = $this->exception_key(
+                (int)$record->courseid,
+                $record->rulecode,
+                $record->component,
+                (int)$record->objectid
+            );
+            $lookup[$key] = true;
         }
         return $lookup;
     }
 
     /**
      * Determine whether a result is excepted.
+     *
+     * @param int $courseid Course id.
+     * @param string $rulecode Stable rule code.
+     * @param string $component Audited component.
+     * @param int $objectid Related object id.
+     * @return bool
      */
     private function has_exception(int $courseid, string $rulecode, string $component, int $objectid): bool {
         $exact = $this->exception_key($courseid, $rulecode, $component, $objectid);
@@ -356,6 +406,12 @@ final class scanner {
 
     /**
      * Build exception lookup key.
+     *
+     * @param int $courseid Course id.
+     * @param string $rulecode Stable rule code.
+     * @param string $component Audited component.
+     * @param int $objectid Related object id.
+     * @return string
      */
     private function exception_key(int $courseid, string $rulecode, string $component, int $objectid): string {
         return $courseid . '|' . $component . '|' . $rulecode . '|' . $objectid;
@@ -407,7 +463,7 @@ final class scanner {
             $config['examidnumber'] ?? 'exam',
             $config['resit1idnumber'] ?? 'resit1',
             $config['resit2idnumber'] ?? 'resit2',
-        ], static fn($value): bool => trim((string)$value) !== '')));
+        ], static fn ($value): bool => trim((string)$value) !== '')));
         if (!$idnumbers) {
             return [];
         }

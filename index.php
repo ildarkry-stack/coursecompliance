@@ -14,6 +14,13 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
+/**
+ * Course compliance dashboard page.
+ *
+ * @package    tool_coursecompliance
+ * @copyright  2026 MIA Academy
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
 
 require_once(__DIR__ . '/../../../config.php');
 require_login();
@@ -39,7 +46,10 @@ if ($data = $form->get_data()) {
     $task->set_custom_data(['scanid' => $scanid]);
     $task->set_userid($USER->id);
     \core\task\manager::queue_adhoc_task($task);
-    redirect(new moodle_url('/admin/tool/coursecompliance/report.php', ['scanid' => $scanid]), get_string('scanqueued', 'tool_coursecompliance'));
+    redirect(
+        new moodle_url('/admin/tool/coursecompliance/report.php', ['scanid' => $scanid]),
+        get_string('scanqueued', 'tool_coursecompliance')
+    );
 }
 
 echo $OUTPUT->header();
@@ -74,7 +84,15 @@ $form->display();
 $scans = $DB->get_records('tool_cc_scan', null, 'timecreated DESC', '*', 0, 20);
 if ($scans) {
     $table = new html_table();
-    $table->head = [get_string('date'), get_string('status', 'tool_coursecompliance'), get_string('courses', 'tool_coursecompliance'), get_string('assessments', 'tool_coursecompliance'), get_string('critical', 'tool_coursecompliance'), get_string('warnings', 'tool_coursecompliance'), get_string('actions')];
+    $table->head = [
+        get_string('date'),
+        get_string('status', 'tool_coursecompliance'),
+        get_string('courses', 'tool_coursecompliance'),
+        get_string('assessments', 'tool_coursecompliance'),
+        get_string('critical', 'tool_coursecompliance'),
+        get_string('warnings', 'tool_coursecompliance'),
+        get_string('actions'),
+    ];
     foreach ($scans as $scan) {
         $table->data[] = [
             userdate($scan->timecreated),
@@ -83,7 +101,10 @@ if ($scans) {
             $scan->assessments,
             $scan->critical,
             $scan->warnings,
-            html_writer::link(new moodle_url('/admin/tool/coursecompliance/report.php', ['scanid' => $scan->id]), get_string('viewreport', 'tool_coursecompliance')),
+            html_writer::link(
+                new moodle_url('/admin/tool/coursecompliance/report.php', ['scanid' => $scan->id]),
+                get_string('viewreport', 'tool_coursecompliance')
+            ),
         ];
     }
     echo $OUTPUT->heading(get_string('recentscans', 'tool_coursecompliance'), 3);

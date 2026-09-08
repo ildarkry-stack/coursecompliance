@@ -14,12 +14,20 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
+/**
+ * English language strings for the plugin.
+ *
+ * @package    tool_coursecompliance
+ * @copyright  2026 MIA Academy
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
 
 defined('MOODLE_INTERNAL') || die();
 $string['pluginname'] = 'Course compliance center';
 $string['settings'] = 'Course compliance settings';
 $string['dashboard'] = 'Course compliance dashboard';
-$string['intro'] = 'Audit course configuration and assessment readiness. Activity Operations is available as a separate preview-first bulk administration module.';
+$string['intro'] = 'Audit course configuration and assessment readiness. Activity Operations is available as a ' .
+    'separate preview-first bulk administration module.';
 $string['defaultprofile'] = 'Default exam course';
 $string['defaultprofile_desc'] = 'Baseline profile for courses with an exam identified by the course module idnumber exam.';
 $string['category'] = 'Course category';
@@ -56,7 +64,8 @@ $string['present'] = 'Present';
 $string['missing'] = 'Missing';
 $string['unlimited'] = 'Unlimited';
 $string['retentiondays'] = 'Audit retention (days)';
-$string['retentiondays_desc'] = 'Completed audit data and activity-operation history older than this many days are deleted by a scheduled task.';
+$string['retentiondays_desc'] = 'Completed audit data and activity-operation history older than this many days are deleted ' .
+    'by a scheduled task.';
 $string['taskcleanup'] = 'Clean up old compliance audits';
 $string['v_course_startdate'] = 'Course start date is not configured.';
 $string['v_course_dates'] = 'Course end date is not later than the start date.';
@@ -71,14 +80,17 @@ $string['v_quiz_timelimit'] = 'Exam time limit is not configured.';
 $string['v_quiz_grade'] = 'Quiz maximum grade is zero or invalid.';
 $string['v_quiz_questions'] = 'Quiz contains no question slots.';
 $string['v_quiz_gradepass'] = 'Grade to pass is not configured for the exam.';
-$string['privacy:metadata'] = 'The Course compliance center stores administrator audit metadata, detected configuration issues, and activity-operation history. It does not store student submissions or answers.';
+$string['privacy:metadata'] = 'The Course compliance center stores administrator audit metadata, detected configuration ' .
+    'issues, and activity-operation history. It does not store student submissions or answers.';
 $string['privacy:metadata:scan'] = 'Audit runs';
 $string['privacy:metadata:userid'] = 'User who started the audit';
 $string['privacy:metadata:timecreated'] = 'Time the audit was created';
 
-
 $string['activityoperations'] = 'Activity Operations';
-$string['activityoperations_intro'] = 'Centralized timeline and bulk operations for Quiz, Assignment and Forum activities across a course category. Changes are previewed, conflict-checked, logged and applied by an adhoc task.';
+$string['activityoperations_intro'] = 'Centralized timeline and bulk operations for Quiz, Assignment and Forum ' .
+    'activities across a ' .
+    'course category. Changes are previewed, conflict-checked, logged and applied by an adhoc ' .
+    'task.';
 $string['allcourses'] = 'All courses in category and subcategories';
 $string['activitytype'] = 'Activity type';
 $string['activitysearch'] = 'Search activity, course or idnumber';
@@ -110,7 +122,8 @@ $string['assignstart'] = 'Submissions from';
 $string['duedate'] = 'Due';
 $string['cutoffdate'] = 'Cut-off';
 $string['bulkoperation'] = 'Bulk operation';
-$string['selectrowsfirst'] = 'Select up to 200 rows on this page. The next screen will show an exact preview before anything is changed.';
+$string['selectrowsfirst'] = 'Select up to 200 rows on this page. The next screen will show an exact preview before ' .
+    'anything is changed.';
 $string['operation'] = 'Operation';
 $string['operation_save_dates'] = 'Save edited dates';
 $string['operation_shift_dates'] = 'Shift configured dates';
@@ -154,7 +167,9 @@ $string['changestatus_applied'] = 'Applied';
 $string['changestatus_skipped'] = 'Skipped';
 $string['changestatus_failed'] = 'Failed';
 $string['confirmapply'] = 'Apply this batch';
-$string['previewconflictnote'] = 'Before applying each activity, the plugin re-checks the values captured by this preview. If a teacher changed the activity after preview, that activity is skipped instead of overwritten.';
+$string['previewconflictnote'] = 'Before applying each activity, the plugin re-checks the values captured by this preview. If ' .
+    'a teacher changed the activity after preview, that activity is skipped instead of ' .
+    'overwritten.';
 $string['batchrunning'] = 'This batch is queued or running. Moodle cron applies it in the background.';
 $string['batchqueued'] = 'The operation was queued. Moodle cron will apply it in the background.';
 $string['backtoactivities'] = 'Back to Activity Operations';
@@ -192,20 +207,26 @@ $string['activityoutsidescope'] = 'A selected activity is outside the category/c
 $string['emptyactivityname'] = 'The name operation would make activity “{$a}” empty.';
 $string['quizgradeitemlocked'] = 'The Quiz grade item is locked, so its dates were not changed.';
 $string['operation_rollback'] = 'Rollback previous batch';
-$string['batchsummary_rollback'] = 'Rollback batch #{$a->source}: {$a->eligible} change(s) eligible; {$a->conflicts} changed since the original operation and excluded.';
+$string['batchsummary_rollback'] = 'Rollback batch #{$a->source}: {$a->eligible} change(s) eligible; {$a->conflicts} changed ' .
+    'since the original operation and excluded.';
 $string['preparerollback'] = 'Prepare safe rollback';
 $string['rollbackpreviewcreated'] = 'A rollback preview has been created. Review it before applying.';
 $string['batchnotrollbackable'] = 'This batch cannot be rolled back.';
 $string['rollbackofrollback'] = 'A rollback batch cannot be used as the source of another rollback.';
-$string['nothingtorollback'] = 'There are no changes that can be rolled back safely. The affected activities may have changed since this batch was applied.';
+$string['nothingtorollback'] = 'There are no changes that can be rolled back safely. The affected activities may have ' .
+    'changed since this batch was applied.';
 $string['sourcebatch'] = 'Source batch';
 
 $string['coursecompliance:scheduleassessments'] = 'Plan assessment dates across course categories';
 $string['sessionplanning'] = 'Session planning';
-$string['sessionplanning_intro'] = 'Plan exam and resit windows across all courses in a category. Targets are resolved by course-module idnumber, previewed without changing Moodle, then applied by the shared background batch engine with conflict detection, audit history and safe rollback.';
+$string['sessionplanning_intro'] = 'Plan exam and resit windows across all courses in a category. Targets are resolved by ' .
+    'course-module idnumber, previewed without changing Moodle, then applied by the shared ' .
+    'background batch engine with conflict detection, audit history and safe rollback.';
 $string['includesubcategories'] = 'Include subcategories';
 $string['adjustassignmentdates'] = 'Keep Assignment secondary dates valid';
-$string['adjustassignmentdates_help'] = 'If an enabled cut-off date or grading due date would become earlier than the new due date, move it forward to the new due date. Disabled secondary dates remain disabled.';
+$string['adjustassignmentdates_help'] = 'If an enabled cut-off date or grading due date would become earlier ' .
+    'than the new due date, ' .
+    'move it forward to the new due date. Disabled secondary dates remain disabled.';
 $string['period_exam'] = 'Exam';
 $string['period_resit1'] = 'Resit 1';
 $string['period_resit2'] = 'Resit 2';
@@ -230,20 +251,25 @@ $string['viewsessionissues'] = 'View target issues';
 $string['backtobatch'] = 'Back to batch preview';
 $string['backtosessionplanning'] = 'Back to session planning';
 $string['batchhasnochanges'] = 'No activity values need to be changed in this batch. Review target issues if they exist.';
-$string['legacyexamdatesdetected'] = 'The legacy local_examdates plugin is installed. Course Compliance does not modify or reuse its history; new session operations use the unified Course Compliance batch engine.';
+$string['legacyexamdatesdetected'] = 'The legacy local_examdates plugin is installed. Course Compliance does not modify or reuse ' .
+    'its history; new session operations use the unified Course Compliance batch engine.';
 $string['gradingduedate'] = 'Grading due date';
 $string['dategradingdue'] = 'Grading due';
 $string['field_gradingduedate'] = 'Assignment grading due date';
 $string['invalidassigngradingdue'] = 'Assignment “{$a}” will have a grading due date earlier than its due date.';
-$string['duplicatesessiontargetconfig'] = 'The idnumber “{$a}” is assigned to more than one selected period for the same activity type.';
+$string['duplicatesessiontargetconfig'] = 'The idnumber “{$a}” is assigned to more than one selected period ' .
+    'for the same activity type.';
 $string['sessiondefaultcategory'] = 'Default session-planning category';
-$string['sessiondefaultcategory_desc'] = 'Preselect this course category when opening Session Planning. During migration, the old local_examdates default category is used when available.';
+$string['sessiondefaultcategory_desc'] = 'Preselect this course category when opening Session Planning. ' .
+    'During migration, the old ' .
+    'local_examdates default category is used when available.';
 $string['notselected'] = 'Not selected';
 
 // 0.4.0 - profiles, exceptions and advanced assessment auditing.
 $string['coursecompliance:manageprofiles'] = 'Manage compliance profiles and exceptions';
 $string['profiles'] = 'Compliance profiles';
-$string['profilesintro'] = 'Profiles define the expected course and assessment configuration. Different profiles can be used for exams, credits, practice courses or other course types.';
+$string['profilesintro'] = 'Profiles define the expected course and assessment configuration. Different profiles can be ' .
+    'used for exams, credits, practice courses or other course types.';
 $string['addprofile'] = 'Add profile';
 $string['editprofile'] = 'Edit profile';
 $string['duplicateprofile'] = 'Duplicate';
@@ -267,7 +293,8 @@ $string['resit2idnumber'] = 'Resit 2 idnumber';
 $string['requirecompletion'] = 'Require course completion tracking';
 $string['requireteacher'] = 'Require at least one teacher';
 $string['expectedattempts'] = 'Expected attempts';
-$string['expectedattempts_help'] = 'Set to 0 to skip the exact-attempt-count check. Moodle uses 0 in a quiz to mean unlimited attempts, so a profile value of 0 means this rule is disabled.';
+$string['expectedattempts_help'] = 'Set to 0 to skip the exact-attempt-count check. Moodle uses 0 in a quiz to mean unlimited ' .
+    'attempts, so a profile value of 0 means this rule is disabled.';
 $string['expectedtimelimit'] = 'Expected time limit';
 $string['expectedquizgrade'] = 'Expected maximum quiz grade';
 $string['requiregradepass'] = 'Require grade to pass';
@@ -280,21 +307,26 @@ $string['hidecorrectnesswhileopen'] = 'Hide correctness until the quiz closes';
 $string['requirepassword'] = 'Require quiz password';
 $string['requiresubnet'] = 'Require IP/subnet restriction';
 $string['expectedbrowsersecurity'] = 'Expected browser security value';
-$string['expectedbrowsersecurity_help'] = 'Leave empty to skip this check. Enter the Moodle browsersecurity value required by your environment, for example the value used by your configured browser security / Safe Exam Browser rule.';
+$string['expectedbrowsersecurity_help'] = 'Leave empty to skip this check. Enter the Moodle browsersecurity ' .
+    'value required by your ' .
+    'environment, for example the value used by your configured browser security / Safe Exam ' .
+    'Browser rule.';
 $string['warnoverrides'] = 'Report user/group overrides';
 $string['maxoverrideattempts'] = 'Maximum attempts allowed by an override (0 = no limit)';
 $string['maxoverrideextension'] = 'Maximum close-time extension allowed by an override';
 $string['invalidquestionrange'] = 'Maximum questions must be 0 or greater than or equal to minimum questions.';
 $string['positivevalueexpected'] = 'Values must not be negative.';
 $string['profilepreset_exam'] = 'Exam — base standard';
-$string['profilepreset_exam_desc'] = 'Base profile for courses with an exam. Requires the exam target and applies conservative assessment safety checks.';
+$string['profilepreset_exam_desc'] = 'Base profile for courses with an exam. Requires the exam target and applies conservative ' .
+    'assessment safety checks.';
 $string['profilepreset_credit'] = 'Credit — base standard';
 $string['profilepreset_credit_desc'] = 'Base profile for courses using a credit/credit test target (idnumber: credit).';
 $string['profilepreset_practice'] = 'Practice — base standard';
 $string['profilepreset_practice_desc'] = 'Course-level compliance profile for practice courses where a Quiz exam is not required.';
 
 $string['exceptions'] = 'Compliance exceptions';
-$string['exceptionsintro'] = 'An exception suppresses one specific rule for a course (and, where applicable, a specific activity). Exceptions are profile-specific and may expire automatically.';
+$string['exceptionsintro'] = 'An exception suppresses one specific rule for a course (and, where applicable, a specific ' .
+    'activity). Exceptions are profile-specific and may expire automatically.';
 $string['createexception'] = 'Create exception';
 $string['exceptionreason'] = 'Reason';
 $string['exceptionexpires'] = 'Expires';
@@ -324,7 +356,8 @@ $string['v_quiz_zero_marks'] = 'One or more Quiz slots have zero maximum marks.'
 $string['v_quiz_sumgrades'] = 'Quiz question total (sumgrades) is zero.';
 $string['v_quiz_gradepass_min'] = 'Grade to pass is lower than the profile minimum.';
 $string['v_quiz_gradepass_invalid'] = 'Grade to pass is higher than the Quiz maximum grade.';
-$string['v_quiz_rightanswer_open'] = 'Right answers can be shown immediately after an attempt or later while the Quiz is still open.';
+$string['v_quiz_rightanswer_open'] = 'Right answers can be shown immediately after an attempt or later while the Quiz is still ' .
+    'open.';
 $string['v_quiz_correctness_open'] = 'Correctness can be shown immediately after an attempt or later while the Quiz is still open.';
 $string['v_quiz_password'] = 'The profile requires a Quiz password, but no password is configured.';
 $string['v_quiz_subnet'] = 'The profile requires an IP/subnet restriction, but none is configured.';

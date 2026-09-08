@@ -14,13 +14,26 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
+/**
+ * Classes for the Course compliance plugin.
+ *
+ * @package    tool_coursecompliance
+ * @copyright  2026 MIA Academy
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
 
 namespace tool_coursecompliance\form;
 
 defined('MOODLE_INTERNAL') || die();
 require_once($CFG->libdir . '/formslib.php');
 
+/**
+ * Form used to start a compliance scan.
+ */
 final class scan_form extends \moodleform {
+    /**
+     * Define the form fields.
+     */
     protected function definition(): void {
         global $DB;
         $mform = $this->_form;

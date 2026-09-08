@@ -14,6 +14,14 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
+/**
+ * Activity Operations browser page.
+ *
+ * @package    tool_coursecompliance
+ * @copyright  2026 MIA Academy
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
+
 require_once(__DIR__ . '/../../../config.php');
 require_login();
 $systemcontext = context_system::instance();
@@ -41,7 +49,13 @@ if ($categoryid) {
     $category = \core_course_category::get($categoryid, MUST_EXIST, true);
     $categoryids = array_merge([$category->id], $category->get_all_children_ids());
     [$catsql, $catparams] = $DB->get_in_or_equal($categoryids, SQL_PARAMS_NAMED, 'menucat');
-    $coursemenu = $DB->get_records_select_menu('course', "category $catsql AND id <> :siteid", $catparams + ['siteid' => SITEID], 'fullname ASC', 'id, fullname');
+    $coursemenu = $DB->get_records_select_menu(
+        'course',
+        "category $catsql AND id <> :siteid",
+        $catparams + ['siteid' => SITEID],
+        'fullname ASC',
+        'id, fullname'
+    );
     if ($courseid && isset($coursemenu[$courseid])) {
         $sections = $DB->get_records('course_sections', ['course' => $courseid], 'section ASC', 'id,section,name');
         foreach ($sections as $section) {
@@ -167,25 +181,73 @@ foreach ($activities as $activity) {
     $editurl = new moodle_url('/course/modedit.php', ['update' => $activity->cmid, 'return' => 1]);
     $type = get_string('modulename', $activity->modname);
     $activitylabel = html_writer::link($activityurl, format_string($activity->activityname)) .
-        html_writer::tag('small', s($type) . ($activity->idnumber ? ' · ' . s($activity->idnumber) : ''), ['class' => 'text-muted d-block']);
-    $section = $activity->sectionname !== '' ? format_string($activity->sectionname) : get_string('sectionnum', 'tool_coursecompliance', $activity->sectionnum);
+        html_writer::tag(
+            'small',
+            s($type) . ($activity->idnumber ? ' · ' . s($activity->idnumber) : ''),
+            ['class' => 'text-muted d-block']
+        );
+    $section = $activity->sectionname !== ''
+        ? format_string($activity->sectionname)
+        : get_string('sectionnum', 'tool_coursecompliance', $activity->sectionnum);
     $visibilitytext = get_string('visibility_' . $activity->visibilitystate, 'tool_coursecompliance');
-    $restrictions = empty($activity->availability) ? get_string('none', 'tool_coursecompliance') : get_string('configured', 'tool_coursecompliance');
+    $restrictions = empty($activity->availability)
+        ? get_string('none', 'tool_coursecompliance')
+        : get_string('configured', 'tool_coursecompliance');
 
     if ($activity->modname === 'quiz') {
-        $date1 = tool_coursecompliance_activity_date_cell($activity, 'timeopen', get_string('quizopen', 'tool_coursecompliance'), $editable);
-        $date2 = tool_coursecompliance_activity_date_cell($activity, 'timeclose', get_string('quizclose', 'tool_coursecompliance'), $editable);
+        $date1 = tool_coursecompliance_activity_date_cell(
+            $activity,
+            'timeopen',
+            get_string('quizopen', 'tool_coursecompliance'),
+            $editable
+        );
+        $date2 = tool_coursecompliance_activity_date_cell(
+            $activity,
+            'timeclose',
+            get_string('quizclose', 'tool_coursecompliance'),
+            $editable
+        );
         $date3 = '—';
         $date4 = '—';
     } elseif ($activity->modname === 'assign') {
-        $date1 = tool_coursecompliance_activity_date_cell($activity, 'allowsubmissionsfromdate', get_string('assignstart', 'tool_coursecompliance'), $editable);
-        $date2 = tool_coursecompliance_activity_date_cell($activity, 'duedate', get_string('duedate', 'tool_coursecompliance'), $editable);
-        $date3 = tool_coursecompliance_activity_date_cell($activity, 'cutoffdate', get_string('cutoffdate', 'tool_coursecompliance'), $editable);
-        $date4 = tool_coursecompliance_activity_date_cell($activity, 'gradingduedate', get_string('gradingduedate', 'tool_coursecompliance'), $editable);
+        $date1 = tool_coursecompliance_activity_date_cell(
+            $activity,
+            'allowsubmissionsfromdate',
+            get_string('assignstart', 'tool_coursecompliance'),
+            $editable
+        );
+        $date2 = tool_coursecompliance_activity_date_cell(
+            $activity,
+            'duedate',
+            get_string('duedate', 'tool_coursecompliance'),
+            $editable
+        );
+        $date3 = tool_coursecompliance_activity_date_cell(
+            $activity,
+            'cutoffdate',
+            get_string('cutoffdate', 'tool_coursecompliance'),
+            $editable
+        );
+        $date4 = tool_coursecompliance_activity_date_cell(
+            $activity,
+            'gradingduedate',
+            get_string('gradingduedate', 'tool_coursecompliance'),
+            $editable
+        );
     } else {
         $date1 = '—';
-        $date2 = tool_coursecompliance_activity_date_cell($activity, 'duedate', get_string('duedate', 'tool_coursecompliance'), $editable);
-        $date3 = tool_coursecompliance_activity_date_cell($activity, 'cutoffdate', get_string('cutoffdate', 'tool_coursecompliance'), $editable);
+        $date2 = tool_coursecompliance_activity_date_cell(
+            $activity,
+            'duedate',
+            get_string('duedate', 'tool_coursecompliance'),
+            $editable
+        );
+        $date3 = tool_coursecompliance_activity_date_cell(
+            $activity,
+            'cutoffdate',
+            get_string('cutoffdate', 'tool_coursecompliance'),
+            $editable
+        );
         $date4 = '—';
     }
 
@@ -226,7 +288,13 @@ if ($canmanage) {
 
     echo html_writer::start_div('col-md-2');
     echo html_writer::label(get_string('shiftamount', 'tool_coursecompliance'), 'id_shiftamount', true);
-    echo html_writer::empty_tag('input', ['type' => 'number', 'name' => 'shiftamount', 'id' => 'id_shiftamount', 'value' => 1, 'class' => 'form-control']);
+    echo html_writer::empty_tag('input', [
+        'type' => 'number',
+        'name' => 'shiftamount',
+        'id' => 'id_shiftamount',
+        'value' => 1,
+        'class' => 'form-control',
+    ]);
     echo html_writer::end_div();
 
     echo html_writer::start_div('col-md-2');
@@ -250,12 +318,22 @@ if ($canmanage) {
 
     echo html_writer::start_div('col-md-3');
     echo html_writer::label(get_string('findtext', 'tool_coursecompliance'), 'id_findtext', true);
-    echo html_writer::empty_tag('input', ['type' => 'text', 'name' => 'findtext', 'id' => 'id_findtext', 'class' => 'form-control']);
+    echo html_writer::empty_tag('input', [
+        'type' => 'text',
+        'name' => 'findtext',
+        'id' => 'id_findtext',
+        'class' => 'form-control',
+    ]);
     echo html_writer::end_div();
 
     echo html_writer::start_div('col-md-3');
     echo html_writer::label(get_string('replacetext', 'tool_coursecompliance'), 'id_replacetext', true);
-    echo html_writer::empty_tag('input', ['type' => 'text', 'name' => 'replacetext', 'id' => 'id_replacetext', 'class' => 'form-control']);
+    echo html_writer::empty_tag('input', [
+        'type' => 'text',
+        'name' => 'replacetext',
+        'id' => 'id_replacetext',
+        'class' => 'form-control',
+    ]);
     echo html_writer::end_div();
     echo html_writer::end_div();
 

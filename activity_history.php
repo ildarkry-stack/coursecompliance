@@ -14,6 +14,14 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
+/**
+ * Activity operation history page.
+ *
+ * @package    tool_coursecompliance
+ * @copyright  2026 MIA Academy
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
+
 require_once(__DIR__ . '/../../../config.php');
 require_login();
 $systemcontext = context_system::instance();
@@ -23,8 +31,16 @@ $page = max(0, optional_param('page', 0, PARAM_INT));
 $perpage = 50;
 $total = $DB->count_records('tool_cc_act_batch');
 $batches = $DB->get_records('tool_cc_act_batch', null, 'timecreated DESC', '*', $page * $perpage, $perpage);
-$userids = array_unique(array_map(static fn($b) => (int)$b->userid, $batches));
-$users = $userids ? $DB->get_records_list('user', 'id', $userids, '', 'id,firstname,lastname,firstnamephonetic,lastnamephonetic,middlename,alternatename') : [];
+$userids = array_unique(array_map(static fn ($b) => (int)$b->userid, $batches));
+$users = $userids
+    ? $DB->get_records_list(
+        'user',
+        'id',
+        $userids,
+        '',
+        'id,firstname,lastname,firstnamephonetic,lastnamephonetic,middlename,alternatename'
+    )
+    : [];
 
 $PAGE->set_context($systemcontext);
 $PAGE->set_url(new moodle_url('/admin/tool/coursecompliance/activity_history.php', ['page' => $page]));
@@ -55,17 +71,29 @@ foreach ($batches as $batch) {
         $user ? fullname($user) : '#' . $batch->userid,
         get_string('operation_' . $batch->action, 'tool_coursecompliance'),
         !empty($batch->sourcebatchid)
-            ? html_writer::link(new moodle_url('/admin/tool/coursecompliance/activity_batch.php', ['batchid' => $batch->sourcebatchid]), '#' . $batch->sourcebatchid)
+            ? html_writer::link(
+                new moodle_url('/admin/tool/coursecompliance/activity_batch.php', ['batchid' => $batch->sourcebatchid]),
+                '#' . $batch->sourcebatchid
+            )
             : '—',
         get_string('batchstatus_' . $batch->status, 'tool_coursecompliance'),
         $batch->totalchanges,
         $batch->applied,
         $batch->skipped,
         $batch->failed,
-        html_writer::link(new moodle_url('/admin/tool/coursecompliance/activity_batch.php', ['batchid' => $batch->id]), get_string('view', 'tool_coursecompliance')),
+        html_writer::link(
+            new moodle_url('/admin/tool/coursecompliance/activity_batch.php', ['batchid' => $batch->id]),
+            get_string('view', 'tool_coursecompliance')
+        ),
     ];
 }
 echo html_writer::table($table);
 echo $OUTPUT->paging_bar($total, $page, $perpage, new moodle_url('/admin/tool/coursecompliance/activity_history.php'));
-echo html_writer::div(html_writer::link(new moodle_url('/admin/tool/coursecompliance/activities.php'), get_string('backtoactivities', 'tool_coursecompliance')), 'mt-3');
+echo html_writer::div(
+    html_writer::link(
+        new moodle_url('/admin/tool/coursecompliance/activities.php'),
+        get_string('backtoactivities', 'tool_coursecompliance')
+    ),
+    'mt-3'
+);
 echo $OUTPUT->footer();

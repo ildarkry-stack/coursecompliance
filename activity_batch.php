@@ -5,6 +5,22 @@
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+
+/**
+ * Activity operation batch preview page.
+ *
+ * @package    tool_coursecompliance
+ * @copyright  2026 MIA Academy
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
 
 require_once(__DIR__ . '/../../../config.php');
 require_login();
@@ -32,10 +48,17 @@ $PAGE->set_title(get_string('operationpreview', 'tool_coursecompliance'));
 $PAGE->set_heading(get_string('operationpreview', 'tool_coursecompliance'));
 
 $totalchanges = $DB->count_records('tool_cc_act_change', ['batchid' => $batchid]);
-$changes = $DB->get_records('tool_cc_act_change', ['batchid' => $batchid], 'courseid ASC, cmid ASC, id ASC', '*', $page * $perpage, $perpage);
-$courseids = array_values(array_unique(array_map(static fn($c) => (int)$c->courseid, $changes)));
+$changes = $DB->get_records(
+    'tool_cc_act_change',
+    ['batchid' => $batchid],
+    'courseid ASC, cmid ASC, id ASC',
+    '*',
+    $page * $perpage,
+    $perpage
+);
+$courseids = array_values(array_unique(array_map(static fn ($c) => (int)$c->courseid, $changes)));
 $courses = $courseids ? $DB->get_records_list('course', 'id', $courseids, '', 'id,fullname') : [];
-$cmids = array_values(array_unique(array_map(static fn($c) => (int)$c->cmid, $changes)));
+$cmids = array_values(array_unique(array_map(static fn ($c) => (int)$c->cmid, $changes)));
 $activities = $cmids ? (new \tool_coursecompliance\activity_repository())->get_by_cmids($cmids) : [];
 $sessionissues = $batch->action === 'session_schedule'
     ? $DB->count_records('tool_cc_session_issue', ['batchid' => $batchid])
@@ -99,7 +122,10 @@ if ($batch->action === 'session_schedule') {
     $summary->data[] = [
         get_string('sessionissues', 'tool_coursecompliance'),
         $sessionissues
-            ? html_writer::link(new moodle_url('/admin/tool/coursecompliance/session_issues.php', ['batchid' => $batchid]), (string)$sessionissues)
+            ? html_writer::link(
+                new moodle_url('/admin/tool/coursecompliance/session_issues.php', ['batchid' => $batchid]),
+                (string)$sessionissues
+            )
             : '0',
     ];
 }
@@ -117,7 +143,10 @@ echo html_writer::table($summary);
 if ($batch->action === 'session_schedule' && $sessionissues) {
     echo html_writer::div(
         get_string('sessionissuesnotice', 'tool_coursecompliance', $sessionissues) . ' ' .
-        html_writer::link(new moodle_url('/admin/tool/coursecompliance/session_issues.php', ['batchid' => $batchid]), get_string('viewsessionissues', 'tool_coursecompliance')),
+        html_writer::link(
+            new moodle_url('/admin/tool/coursecompliance/session_issues.php', ['batchid' => $batchid]),
+            get_string('viewsessionissues', 'tool_coursecompliance')
+        ),
         'alert alert-warning'
     );
 }
@@ -179,7 +208,10 @@ if ($batch->status === 'preview' && (int)$batch->totalchanges > 0 && $canmanageb
     echo html_writer::div(get_string('previewconflictnote', 'tool_coursecompliance'), 'text-muted mt-2');
 } elseif (in_array($batch->status, ['queued', 'running'], true)) {
     echo html_writer::div(get_string('batchrunning', 'tool_coursecompliance'), 'alert alert-info');
-    echo $OUTPUT->single_button(new moodle_url('/admin/tool/coursecompliance/activity_batch.php', ['batchid' => $batchid]), get_string('refresh'));
+    echo $OUTPUT->single_button(
+        new moodle_url('/admin/tool/coursecompliance/activity_batch.php', ['batchid' => $batchid]),
+        get_string('refresh')
+    );
 } elseif ($batch->status === 'failed' && $batch->errormessage) {
     echo html_writer::div(s($batch->errormessage), 'alert alert-danger');
 }

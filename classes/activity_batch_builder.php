@@ -14,6 +14,14 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
+/**
+ * Classes for the Course compliance plugin.
+ *
+ * @package    tool_coursecompliance
+ * @copyright  2026 MIA Academy
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
+
 namespace tool_coursecompliance;
 
 use tool_coursecompliance\local\activity\date_helper;
@@ -22,7 +30,7 @@ use tool_coursecompliance\local\activity\date_helper;
  * Creates immutable previews for activity operations.
  *
  * @package    tool_coursecompliance
- * @copyright  2026
+ * @copyright  2026 MIA Academy
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 final class activity_batch_builder {
@@ -141,7 +149,7 @@ final class activity_batch_builder {
             throw new \moodle_exception('nothingtorollback', 'tool_coursecompliance');
         }
 
-        $cmids = array_values(array_unique(array_map(static fn($change) => (int)$change->cmid, $appliedchanges)));
+        $cmids = array_values(array_unique(array_map(static fn ($change) => (int)$change->cmid, $appliedchanges)));
         $activities = (new activity_repository())->get_by_cmids($cmids);
         $changes = [];
         $conflicts = 0;

@@ -1,5 +1,15 @@
 # Changelog
 
+
+## 0.4.1-alpha — CI hardening
+
+- Added Moodle-compliant file, class and method PHPDoc where required.
+- Restored the complete GPL header in `activity_batch.php`.
+- Reworked long PHP lines to stay within the Moodle 132-character guideline.
+- Normalized anonymous function and arrow-function spacing.
+- Made GitHub Actions resolve either repository-root or nested `coursecompliance/` layouts.
+- Pinned the CI toolchain to the maintained Moodle Plugin CI 4.5 line and skipped plugin Node setup.
+
 ## 0.4.0-alpha (2026-09-08)
 
 - Added editable compliance profiles with Exam, Credit and Practice presets.

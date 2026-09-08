@@ -14,6 +14,14 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
+/**
+ * Classes for the Course compliance plugin.
+ *
+ * @package    tool_coursecompliance
+ * @copyright  2026 MIA Academy
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
+
 namespace tool_coursecompliance;
 
 use core_course_category;
@@ -25,7 +33,7 @@ use core_course_category;
  * UI a common timeline model while all writes remain module-specific.
  *
  * @package    tool_coursecompliance
- * @copyright  2026
+ * @copyright  2026 MIA Academy
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 final class activity_repository {
@@ -232,7 +240,8 @@ final class activity_repository {
                                       cs.section AS sectionnum, cs.name AS sectionname,
                                       'assign' AS modname, a.id AS instanceid, a.name AS activityname,
                                       cm.idnumber, cm.visible, cm.visibleoncoursepage, cm.availability,
-                                      a.allowsubmissionsfromdate AS date1, a.duedate AS date2, a.cutoffdate AS date3, a.gradingduedate AS date4
+                                      a.allowsubmissionsfromdate AS date1, a.duedate AS date2,
+                                      a.cutoffdate AS date3, a.gradingduedate AS date4
                                  FROM {course_modules} cm
                                  JOIN {modules} m ON m.id = cm.module AND m.name = 'assign'
                                  JOIN {assign} a ON a.id = cm.instance AND a.course = cm.course

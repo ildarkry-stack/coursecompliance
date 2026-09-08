@@ -14,6 +14,14 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
+/**
+ * Compliance exceptions management page.
+ *
+ * @package    tool_coursecompliance
+ * @copyright  2026 MIA Academy
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
+
 require_once(__DIR__ . '/../../../config.php');
 
 require_login();
@@ -24,7 +32,10 @@ $delete = optional_param('delete', 0, PARAM_INT);
 if ($delete) {
     require_sesskey();
     $DB->delete_records('tool_cc_exception', ['id' => $delete]);
-    redirect(new moodle_url('/admin/tool/coursecompliance/exceptions.php'), get_string('exceptiondeleted', 'tool_coursecompliance'));
+    redirect(
+        new moodle_url('/admin/tool/coursecompliance/exceptions.php'),
+        get_string('exceptiondeleted', 'tool_coursecompliance')
+    );
 }
 
 $PAGE->set_context($context);

@@ -14,12 +14,25 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
+/**
+ * Classes for the Course compliance plugin.
+ *
+ * @package    tool_coursecompliance
+ * @copyright  2026 MIA Academy
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
 
 namespace tool_coursecompliance\task;
 
 defined('MOODLE_INTERNAL') || die();
 
+/**
+ * Ad hoc task that runs a compliance scan.
+ */
 final class run_scan extends \core\task\adhoc_task {
+    /**
+     * Execute the scan task.
+     */
     public function execute(): void {
         global $DB;
         $data = $this->get_custom_data();

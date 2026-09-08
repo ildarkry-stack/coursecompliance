@@ -14,6 +14,14 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
+/**
+ * Assessment audit report page.
+ *
+ * @package    tool_coursecompliance
+ * @copyright  2026 MIA Academy
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
+
 require_once(__DIR__ . '/../../../config.php');
 
 require_login();
@@ -73,7 +81,9 @@ $table->head = [
 foreach ($states as $state) {
     $status = (int)$state->critical > 0
         ? get_string('severity_critical', 'tool_coursecompliance')
-        : ((int)$state->warnings > 0 ? get_string('severity_warning', 'tool_coursecompliance') : get_string('ready', 'tool_coursecompliance'));
+        : ((int)$state->warnings > 0
+            ? get_string('severity_warning', 'tool_coursecompliance')
+            : get_string('ready', 'tool_coursecompliance'));
     $objectname = empty($state->existsflag) ? get_string('missing', 'tool_coursecompliance') : format_string($state->objectname);
     $table->data[] = [
         html_writer::link(new moodle_url('/course/view.php', ['id' => $state->courseid]), format_string($state->fullname)),

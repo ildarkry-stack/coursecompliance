@@ -14,12 +14,31 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
+/**
+ * Classes for the Course compliance plugin.
+ *
+ * @package    tool_coursecompliance
+ * @copyright  2026 MIA Academy
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
 
 namespace tool_coursecompliance\local\rule;
 
 defined('MOODLE_INTERNAL') || die();
 
+/**
+ * Immutable description of one rule violation.
+ */
 final class violation {
+    /**
+     * Create a violation value object.
+     *
+     * @param string $message Human-readable violation message.
+     * @param string $expected Expected value.
+     * @param string $actual Actual value.
+     * @param int $objectid Related object id.
+     * @param string $objectname Related object name.
+     */
     public function __construct(
         public readonly string $message,
         public readonly string $expected = '',

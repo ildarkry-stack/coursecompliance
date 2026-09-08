@@ -14,15 +14,33 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
+/**
+ * Classes for the Course compliance plugin.
+ *
+ * @package    tool_coursecompliance
+ * @copyright  2026 MIA Academy
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
 
 namespace tool_coursecompliance\task;
 
 defined('MOODLE_INTERNAL') || die();
 
+/**
+ * Scheduled task that removes expired audit and operation history.
+ */
 final class cleanup_scans extends \core\task\scheduled_task {
+    /**
+     * Get the localized task name.
+     *
+     * @return string
+     */
     public function get_name(): string {
         return get_string('taskcleanup', 'tool_coursecompliance');
     }
+    /**
+     * Delete expired scan and batch records.
+     */
     public function execute(): void {
         global $DB;
         $days = max(1, (int)get_config('tool_coursecompliance', 'retentiondays'));

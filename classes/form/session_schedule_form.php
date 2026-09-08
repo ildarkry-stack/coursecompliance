@@ -14,13 +14,21 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
+/**
+ * Classes for the Course compliance plugin.
+ *
+ * @package    tool_coursecompliance
+ * @copyright  2026 MIA Academy
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
+
 namespace tool_coursecompliance\form;
 
 /**
  * Form for planning exam and resit windows across a course category.
  *
  * @package    tool_coursecompliance
- * @copyright  2026
+ * @copyright  2026 MIA Academy
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 final class session_schedule_form extends \moodleform {
@@ -101,7 +109,13 @@ final class session_schedule_form extends \moodleform {
         return make_timestamp($parts['year'], $parts['mon'], $parts['mday'], $hour, $minute);
     }
 
-    /** @inheritdoc */
+    /**
+     * Validate session planning input.
+     *
+     * @param array $data Submitted form data.
+     * @param array $files Submitted files.
+     * @return array Validation errors.
+     */
     public function validation($data, $files): array {
         $errors = [];
         $selected = false;

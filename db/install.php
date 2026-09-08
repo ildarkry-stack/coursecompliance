@@ -18,7 +18,7 @@
  * Installation steps for tool_coursecompliance.
  *
  * @package    tool_coursecompliance
- * @copyright  2026
+ * @copyright  2026 MIA Academy
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 

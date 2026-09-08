@@ -18,7 +18,7 @@
  * Upgrade steps for tool_coursecompliance.
  *
  * @package    tool_coursecompliance
- * @copyright  2026
+ * @copyright  2026 MIA Academy
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
@@ -122,7 +122,6 @@ function xmldb_tool_coursecompliance_upgrade(int $oldversion): bool {
 
         upgrade_plugin_savepoint(true, 2026090803, 'tool', 'coursecompliance');
     }
-
 
     if ($oldversion < 2026090804) {
         $table = new xmldb_table('tool_cc_scan');

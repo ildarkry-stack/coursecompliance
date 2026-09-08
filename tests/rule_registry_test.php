@@ -14,13 +14,21 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
+/**
+ * Tests for the Course compliance plugin.
+ *
+ * @package    tool_coursecompliance
+ * @copyright  2026 MIA Academy
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
+
 namespace tool_coursecompliance;
 
 /**
  * Tests for built-in audit rules.
  *
  * @package    tool_coursecompliance
- * @copyright  2026
+ * @copyright  2026 MIA Academy
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  * @covers \tool_coursecompliance\rule_registry
  */
@@ -94,6 +102,8 @@ final class rule_registry_test extends \advanced_testcase {
 
     /**
      * Build a representative Quiz record.
+     *
+     * @return \stdClass
      */
     private function quiz_record(): \stdClass {
         return (object)[
@@ -116,6 +126,9 @@ final class rule_registry_test extends \advanced_testcase {
 
     /**
      * Build a representative Quiz rule context.
+     *
+     * @param \stdClass $quiz Quiz record.
+     * @return array
      */
     private function quiz_context(\stdClass $quiz): array {
         return [

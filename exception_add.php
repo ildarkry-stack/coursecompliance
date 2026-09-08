@@ -14,6 +14,14 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
+/**
+ * Compliance exception editor page.
+ *
+ * @package    tool_coursecompliance
+ * @copyright  2026 MIA Academy
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
+
 require_once(__DIR__ . '/../../../config.php');
 
 require_login();
@@ -53,7 +61,10 @@ if ($data = $form->get_data()) {
         'timemodified' => $now,
     ];
     $DB->insert_record('tool_cc_exception', $record);
-    redirect(new moodle_url('/admin/tool/coursecompliance/report.php', ['scanid' => $scan->id]), get_string('exceptioncreated', 'tool_coursecompliance'));
+    redirect(
+        new moodle_url('/admin/tool/coursecompliance/report.php', ['scanid' => $scan->id]),
+        get_string('exceptioncreated', 'tool_coursecompliance')
+    );
 }
 
 echo $OUTPUT->header();

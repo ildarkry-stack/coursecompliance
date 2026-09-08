@@ -14,6 +14,14 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
+/**
+ * Session planning issues page.
+ *
+ * @package    tool_coursecompliance
+ * @copyright  2026 MIA Academy
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
+
 require_once(__DIR__ . '/../../../config.php');
 require_login();
 $systemcontext = context_system::instance();
@@ -35,7 +43,7 @@ $issues = $DB->get_records(
     $page * $perpage,
     $perpage
 );
-$courseids = array_values(array_unique(array_map(static fn($issue) => (int)$issue->courseid, $issues)));
+$courseids = array_values(array_unique(array_map(static fn ($issue) => (int)$issue->courseid, $issues)));
 $courses = $courseids ? $DB->get_records_list('course', 'id', $courseids, '', 'id,fullname') : [];
 
 $PAGE->set_context($systemcontext);

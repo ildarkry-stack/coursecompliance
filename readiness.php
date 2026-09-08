@@ -14,6 +14,14 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
+/**
+ * Session readiness dashboard page.
+ *
+ * @package    tool_coursecompliance
+ * @copyright  2026 MIA Academy
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
+
 require_once(__DIR__ . '/../../../config.php');
 
 require_login();
@@ -119,7 +127,11 @@ $problems = $DB->get_records_sql($sql, ['scanid' => $scanid], 0, 15);
 if ($problems) {
     echo $OUTPUT->heading(get_string('topassessmentproblems', 'tool_coursecompliance'), 3);
     $problemtable = new html_table();
-    $problemtable->head = [get_string('severity', 'tool_coursecompliance'), get_string('rule', 'tool_coursecompliance'), get_string('count')];
+    $problemtable->head = [
+        get_string('severity', 'tool_coursecompliance'),
+        get_string('rule', 'tool_coursecompliance'),
+        get_string('count'),
+    ];
     foreach ($problems as $problem) {
         $problemtable->data[] = [
             get_string('severity_' . $problem->severity, 'tool_coursecompliance'),

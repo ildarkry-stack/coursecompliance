@@ -14,6 +14,14 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
+/**
+ * Classes for the Course compliance plugin.
+ *
+ * @package    tool_coursecompliance
+ * @copyright  2026 MIA Academy
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
+
 namespace tool_coursecompliance\form;
 
 defined('MOODLE_INTERNAL') || die();
@@ -23,7 +31,7 @@ require_once($CFG->libdir . '/formslib.php');
  * Form for creating and editing compliance profiles.
  *
  * @package    tool_coursecompliance
- * @copyright  2026
+ * @copyright  2026 MIA Academy
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 final class profile_form extends \moodleform {
@@ -38,7 +46,12 @@ final class profile_form extends \moodleform {
         $mform->addElement('text', 'name', get_string('profilename', 'tool_coursecompliance'), ['size' => 60]);
         $mform->setType('name', PARAM_TEXT);
         $mform->addRule('name', null, 'required', null, 'client');
-        $mform->addElement('textarea', 'description', get_string('profiledescription', 'tool_coursecompliance'), ['rows' => 4, 'cols' => 70]);
+        $mform->addElement(
+            'textarea',
+            'description',
+            get_string('profiledescription', 'tool_coursecompliance'),
+            ['rows' => 4, 'cols' => 70]
+        );
         $mform->setType('description', PARAM_TEXT);
         $mform->addElement('advcheckbox', 'enabled', get_string('enabled', 'tool_coursecompliance'));
 
@@ -59,7 +72,12 @@ final class profile_form extends \moodleform {
         $mform->addElement('text', 'examattempts', get_string('expectedattempts', 'tool_coursecompliance'), ['size' => 6]);
         $mform->setType('examattempts', PARAM_INT);
         $mform->addHelpButton('examattempts', 'expectedattempts', 'tool_coursecompliance');
-        $mform->addElement('duration', 'examtimelimit', get_string('expectedtimelimit', 'tool_coursecompliance'), ['optional' => true]);
+        $mform->addElement(
+            'duration',
+            'examtimelimit',
+            get_string('expectedtimelimit', 'tool_coursecompliance'),
+            ['optional' => true]
+        );
         $mform->addElement('text', 'examgrade', get_string('expectedquizgrade', 'tool_coursecompliance'), ['size' => 8]);
         $mform->setType('examgrade', PARAM_FLOAT);
         $mform->addElement('advcheckbox', 'requiregradepass', get_string('requiregradepass', 'tool_coursecompliance'));
@@ -74,20 +92,39 @@ final class profile_form extends \moodleform {
 
         $mform->addElement('header', 'reviewchecks', get_string('reviewchecks', 'tool_coursecompliance'));
         $mform->addElement('advcheckbox', 'hideanswerswhileopen', get_string('hideanswerswhileopen', 'tool_coursecompliance'));
-        $mform->addElement('advcheckbox', 'hidecorrectnesswhileopen', get_string('hidecorrectnesswhileopen', 'tool_coursecompliance'));
+        $mform->addElement(
+            'advcheckbox',
+            'hidecorrectnesswhileopen',
+            get_string('hidecorrectnesswhileopen', 'tool_coursecompliance')
+        );
 
         $mform->addElement('header', 'accesschecks', get_string('accesschecks', 'tool_coursecompliance'));
         $mform->addElement('advcheckbox', 'requirepassword', get_string('requirepassword', 'tool_coursecompliance'));
         $mform->addElement('advcheckbox', 'requiresubnet', get_string('requiresubnet', 'tool_coursecompliance'));
-        $mform->addElement('text', 'expectedbrowsersecurity', get_string('expectedbrowsersecurity', 'tool_coursecompliance'), ['size' => 32]);
+        $mform->addElement(
+            'text',
+            'expectedbrowsersecurity',
+            get_string('expectedbrowsersecurity', 'tool_coursecompliance'),
+            ['size' => 32]
+        );
         $mform->setType('expectedbrowsersecurity', PARAM_ALPHANUMEXT);
         $mform->addHelpButton('expectedbrowsersecurity', 'expectedbrowsersecurity', 'tool_coursecompliance');
 
         $mform->addElement('header', 'overridechecks', get_string('overridechecks', 'tool_coursecompliance'));
         $mform->addElement('advcheckbox', 'warnoverrides', get_string('warnoverrides', 'tool_coursecompliance'));
-        $mform->addElement('text', 'maxoverrideattempts', get_string('maxoverrideattempts', 'tool_coursecompliance'), ['size' => 6]);
+        $mform->addElement(
+            'text',
+            'maxoverrideattempts',
+            get_string('maxoverrideattempts', 'tool_coursecompliance'),
+            ['size' => 6]
+        );
         $mform->setType('maxoverrideattempts', PARAM_INT);
-        $mform->addElement('duration', 'maxoverrideextension', get_string('maxoverrideextension', 'tool_coursecompliance'), ['optional' => true]);
+        $mform->addElement(
+            'duration',
+            'maxoverrideextension',
+            get_string('maxoverrideextension', 'tool_coursecompliance'),
+            ['optional' => true]
+        );
 
         $this->add_action_buttons(true, get_string('savechanges'));
     }

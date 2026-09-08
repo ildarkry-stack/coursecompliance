@@ -36,6 +36,19 @@ jobs:
           path: plugin
           persist-credentials: false
 
+      - name: Resolve plugin path
+        shell: bash
+        run: |
+          if [[ -f "plugin/version.php" ]]; then
+            echo "PLUGIN_PATH=./plugin" >> "$GITHUB_ENV"
+          elif [[ -f "plugin/coursecompliance/version.php" ]]; then
+            echo "PLUGIN_PATH=./plugin/coursecompliance" >> "$GITHUB_ENV"
+          else
+            echo "Cannot find tool_coursecompliance version.php" >&2
+            find plugin -maxdepth 3 -type f | sort | head -100
+            exit 1
+          fi
+
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
@@ -46,13 +59,14 @@ jobs:
 
       - name: Initialise moodle-plugin-ci
         run: |
-          composer create-project -n --no-dev --prefer-dist moodlehq/moodle-plugin-ci ci ^4.5
+          composer create-project -n --no-dev --prefer-dist moodlehq/moodle-plugin-ci ci ^4.5.11
           echo "$(cd ci/bin; pwd)" >> "$GITHUB_PATH"
           echo "$(cd ci/vendor/bin; pwd)" >> "$GITHUB_PATH"
+          echo "NVM_DIR=$HOME/.nvm" >> "$GITHUB_ENV"
           sudo locale-gen en_AU.UTF-8
 
       - name: Install Moodle test site
-        run: moodle-plugin-ci install --plugin ./plugin --db-host=127.0.0.1
+        run: moodle-plugin-ci install --plugin "$PLUGIN_PATH" --db-host=127.0.0.1 --no-plugin-node
         env:
           DB: pgsql
           MOODLE_BRANCH: ${{ matrix.moodle-branch }}
@@ -75,7 +89,7 @@ jobs:
 
       - name: PHPDoc checker
         if: ${{ !cancelled() }}
-        run: moodle-plugin-ci phpdoc
+        run: moodle-plugin-ci phpdoc --max-warnings 0
 
       - name: PHPUnit
         if: ${{ !cancelled() }}

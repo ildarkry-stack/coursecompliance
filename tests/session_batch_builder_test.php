@@ -14,13 +14,21 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
+/**
+ * Tests for the Course compliance plugin.
+ *
+ * @package    tool_coursecompliance
+ * @copyright  2026 MIA Academy
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
+
 namespace tool_coursecompliance;
 
 /**
  * Integration tests for session scheduling preview batches.
  *
  * @package    tool_coursecompliance
- * @copyright  2026
+ * @copyright  2026 MIA Academy
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  * @covers \tool_coursecompliance\session_batch_builder
  */
@@ -73,6 +81,9 @@ final class session_batch_builder_test extends \advanced_testcase {
 
     /**
      * Build minimal planner data.
+     *
+     * @param int $categoryid Course category id.
+     * @return \stdClass
      */
     private function form_data(int $categoryid): \stdClass {
         return (object)[

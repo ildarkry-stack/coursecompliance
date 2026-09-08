@@ -14,6 +14,13 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
+/**
+ * Compliance scan report page.
+ *
+ * @package    tool_coursecompliance
+ * @copyright  2026 MIA Academy
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
 
 require_once(__DIR__ . '/../../../config.php');
 require_login();
@@ -37,7 +44,10 @@ echo $OUTPUT->heading(format_string($category->name) . ' — ' . format_string($
 
 if ($scan->status === 'queued' || $scan->status === 'running') {
     echo html_writer::div(get_string('scanrunning', 'tool_coursecompliance'), 'alert alert-info');
-    echo $OUTPUT->single_button(new moodle_url('/admin/tool/coursecompliance/report.php', ['scanid' => $scanid]), get_string('refresh'));
+    echo $OUTPUT->single_button(
+        new moodle_url('/admin/tool/coursecompliance/report.php', ['scanid' => $scanid]),
+        get_string('refresh')
+    );
     echo $OUTPUT->footer();
     exit;
 }
@@ -74,8 +84,16 @@ echo html_writer::div(
 $baseurl = new moodle_url('/admin/tool/coursecompliance/report.php', ['scanid' => $scanid]);
 echo html_writer::div(
     html_writer::link($baseurl, get_string('all', 'tool_coursecompliance'), ['class' => 'btn btn-secondary me-2']) . ' ' .
-    html_writer::link(new moodle_url($baseurl, ['severity' => 'critical']), get_string('critical', 'tool_coursecompliance'), ['class' => 'btn btn-danger me-2']) . ' ' .
-    html_writer::link(new moodle_url($baseurl, ['severity' => 'warning']), get_string('warnings', 'tool_coursecompliance'), ['class' => 'btn btn-warning']),
+    html_writer::link(
+        new moodle_url($baseurl, ['severity' => 'critical']),
+        get_string('critical', 'tool_coursecompliance'),
+        ['class' => 'btn btn-danger me-2']
+    ) . ' ' .
+    html_writer::link(
+        new moodle_url($baseurl, ['severity' => 'warning']),
+        get_string('warnings', 'tool_coursecompliance'),
+        ['class' => 'btn btn-warning']
+    ),
     'mb-3'
 );
 
@@ -97,7 +115,17 @@ $sql = "SELECT r.*, c.fullname, c.shortname
 $results = $DB->get_records_sql($sql, $params, 0, 5000);
 
 $table = new html_table();
-$table->head = [get_string('severity', 'tool_coursecompliance'), get_string('course'), get_string('assessmentperiod', 'tool_coursecompliance'), get_string('component', 'tool_coursecompliance'), get_string('rule', 'tool_coursecompliance'), get_string('problem', 'tool_coursecompliance'), get_string('expected', 'tool_coursecompliance'), get_string('actual', 'tool_coursecompliance'), get_string('actions')];
+$table->head = [
+    get_string('severity', 'tool_coursecompliance'),
+    get_string('course'),
+    get_string('assessmentperiod', 'tool_coursecompliance'),
+    get_string('component', 'tool_coursecompliance'),
+    get_string('rule', 'tool_coursecompliance'),
+    get_string('problem', 'tool_coursecompliance'),
+    get_string('expected', 'tool_coursecompliance'),
+    get_string('actual', 'tool_coursecompliance'),
+    get_string('actions'),
+];
 foreach ($results as $result) {
     $courseurl = new moodle_url('/course/view.php', ['id' => $result->courseid]);
     $actions = '';
