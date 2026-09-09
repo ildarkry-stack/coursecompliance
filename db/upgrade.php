@@ -264,5 +264,10 @@ function xmldb_tool_coursecompliance_upgrade(int $oldversion): bool {
         upgrade_plugin_savepoint(true, 2026090900, 'tool', 'coursecompliance');
     }
 
+    if ($oldversion < 2026090901) {
+        // Code-style-only release; no database changes are required.
+        upgrade_plugin_savepoint(true, 2026090901, 'tool', 'coursecompliance');
+    }
+
     return true;
 }

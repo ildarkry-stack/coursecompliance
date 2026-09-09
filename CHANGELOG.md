@@ -1,3 +1,8 @@
+## 0.4.4-alpha-ci-fixed - 2026-09-09
+
+- Restored the required `MOODLE_INTERNAL` guard in form classes that include `formslib.php`.
+- Fixes Moodle CodeSniffer `MoodleInternalGlobalState` errors.
+
 # Changelog
 
 ## 0.4.3-alpha — CI validation and coding-style hardening
