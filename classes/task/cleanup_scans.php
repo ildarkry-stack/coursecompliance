@@ -24,8 +24,6 @@
 
 namespace tool_coursecompliance\task;
 
-defined('MOODLE_INTERNAL') || die();
-
 /**
  * Scheduled task that removes expired audit and operation history.
  */
@@ -45,19 +43,24 @@ final class cleanup_scans extends \core\task\scheduled_task {
         global $DB;
         $days = max(1, (int)get_config('tool_coursecompliance', 'retentiondays'));
         $cutoff = time() - ($days * DAYSECS);
-        $oldscans = $DB->get_fieldset_select('tool_cc_scan', 'id', 'timecreated < :cutoff', ['cutoff' => $cutoff]);
+        $oldscans = $DB->get_fieldset_select('tool_coursecompliance_scan', 'id', 'timecreated < :cutoff', ['cutoff' => $cutoff]);
         if ($oldscans) {
             [$insql, $params] = $DB->get_in_or_equal($oldscans, SQL_PARAMS_NAMED, 'scan');
-            $DB->delete_records_select('tool_cc_result', "scanid $insql", $params);
-            $DB->delete_records_select('tool_cc_assessment', "scanid $insql", $params);
-            $DB->delete_records_select('tool_cc_scan', "id $insql", $params);
+            $DB->delete_records_select('tool_coursecompliance_result', "scanid $insql", $params);
+            $DB->delete_records_select('tool_coursecompliance_assessment', "scanid $insql", $params);
+            $DB->delete_records_select('tool_coursecompliance_scan', "id $insql", $params);
         }
-        $oldbatches = $DB->get_fieldset_select('tool_cc_act_batch', 'id', 'timecreated < :cutoff', ['cutoff' => $cutoff]);
+        $oldbatches = $DB->get_fieldset_select(
+            'tool_coursecompliance_act_batch',
+            'id',
+            'timecreated < :cutoff',
+            ['cutoff' => $cutoff]
+        );
         if ($oldbatches) {
             [$insql, $params] = $DB->get_in_or_equal($oldbatches, SQL_PARAMS_NAMED, 'batch');
-            $DB->delete_records_select('tool_cc_act_change', "batchid $insql", $params);
-            $DB->delete_records_select('tool_cc_session_issue', "batchid $insql", $params);
-            $DB->delete_records_select('tool_cc_act_batch', "id $insql", $params);
+            $DB->delete_records_select('tool_coursecompliance_act_change', "batchid $insql", $params);
+            $DB->delete_records_select('tool_coursecompliance_session_issue', "batchid $insql", $params);
+            $DB->delete_records_select('tool_coursecompliance_act_batch', "id $insql", $params);
         }
     }
 }

@@ -28,7 +28,7 @@ require_sesskey();
 $systemcontext = context_system::instance();
 
 $batchid = required_param('batchid', PARAM_INT);
-$batch = $DB->get_record('tool_cc_act_batch', ['id' => $batchid], '*', MUST_EXIST);
+$batch = $DB->get_record('tool_coursecompliance_act_batch', ['id' => $batchid], '*', MUST_EXIST);
 \tool_coursecompliance\local\batch_access::require_manage($batch);
 if ($batch->status !== 'preview') {
     throw new moodle_exception('batchnotpreview', 'tool_coursecompliance');
@@ -39,7 +39,7 @@ if ((int)$batch->userid !== (int)$USER->id && !is_siteadmin()) {
 
 $transaction = $DB->start_delegated_transaction();
 $batch->status = 'queued';
-$DB->update_record('tool_cc_act_batch', $batch);
+$DB->update_record('tool_coursecompliance_act_batch', $batch);
 $task = new \tool_coursecompliance\task\apply_activity_batch();
 $task->set_custom_data(['batchid' => $batchid]);
 $task->set_userid($USER->id);

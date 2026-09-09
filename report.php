@@ -29,8 +29,8 @@ require_capability('tool/coursecompliance:view', context_system::instance());
 $scanid = required_param('scanid', PARAM_INT);
 $severity = optional_param('severity', '', PARAM_ALPHA);
 $assessmenttype = optional_param('assessmenttype', '', PARAM_ALPHANUMEXT);
-$scan = $DB->get_record('tool_cc_scan', ['id' => $scanid], '*', MUST_EXIST);
-$profile = $DB->get_record('tool_cc_profile', ['id' => $scan->profileid], '*', MUST_EXIST);
+$scan = $DB->get_record('tool_coursecompliance_scan', ['id' => $scanid], '*', MUST_EXIST);
+$profile = $DB->get_record('tool_coursecompliance_profile', ['id' => $scan->profileid], '*', MUST_EXIST);
 $category = \core_course_category::get($scan->categoryid, MUST_EXIST, true);
 
 $PAGE->set_context(context_system::instance());
@@ -108,7 +108,7 @@ if (in_array($assessmenttype, ['exam', 'resit1', 'resit2'], true)) {
     $params['assessmenttype'] = $assessmenttype;
 }
 $sql = "SELECT r.*, c.fullname, c.shortname
-          FROM {tool_cc_result} r
+          FROM {tool_coursecompliance_result} r
           JOIN {course} c ON c.id = r.courseid
          WHERE $where
       ORDER BY CASE r.severity WHEN 'critical' THEN 1 WHEN 'warning' THEN 2 ELSE 3 END, c.fullname, r.rulecode";

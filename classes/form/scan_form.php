@@ -24,7 +24,6 @@
 
 namespace tool_coursecompliance\form;
 
-defined('MOODLE_INTERNAL') || die();
 require_once($CFG->libdir . '/formslib.php');
 
 /**
@@ -38,7 +37,7 @@ final class scan_form extends \moodleform {
         global $DB;
         $mform = $this->_form;
         $categories = \core_course_category::make_categories_list();
-        $profiles = $DB->get_records_menu('tool_cc_profile', ['enabled' => 1], 'name ASC', 'id,name');
+        $profiles = $DB->get_records_menu('tool_coursecompliance_profile', ['enabled' => 1], 'name ASC', 'id,name');
         $mform->addElement('select', 'categoryid', get_string('category', 'tool_coursecompliance'), $categories);
         $mform->setType('categoryid', PARAM_INT);
         $mform->addRule('categoryid', null, 'required', null, 'client');

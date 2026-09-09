@@ -30,8 +30,8 @@ require_capability('tool/coursecompliance:view', $context);
 
 $scanid = required_param('scanid', PARAM_INT);
 $type = optional_param('assessmenttype', '', PARAM_ALPHANUMEXT);
-$scan = $DB->get_record('tool_cc_scan', ['id' => $scanid, 'status' => 'complete'], '*', MUST_EXIST);
-$profile = $DB->get_record('tool_cc_profile', ['id' => $scan->profileid], '*', MUST_EXIST);
+$scan = $DB->get_record('tool_coursecompliance_scan', ['id' => $scanid, 'status' => 'complete'], '*', MUST_EXIST);
+$profile = $DB->get_record('tool_coursecompliance_profile', ['id' => $scan->profileid], '*', MUST_EXIST);
 
 $PAGE->set_context($context);
 $PAGE->set_url(new moodle_url('/admin/tool/coursecompliance/assessment.php', ['scanid' => $scanid]));
@@ -60,7 +60,7 @@ if (in_array($type, ['exam', 'resit1', 'resit2'], true)) {
     $params['assessmenttype'] = $type;
 }
 $sql = "SELECT a.*, c.fullname
-          FROM {tool_cc_assessment} a
+          FROM {tool_coursecompliance_assessment} a
           JOIN {course} c ON c.id = a.courseid
          WHERE $where
       ORDER BY a.critical DESC, a.warnings DESC, a.score ASC, c.fullname";

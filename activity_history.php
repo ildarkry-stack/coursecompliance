@@ -29,8 +29,8 @@ require_capability('tool/coursecompliance:view', $systemcontext);
 
 $page = max(0, optional_param('page', 0, PARAM_INT));
 $perpage = 50;
-$total = $DB->count_records('tool_cc_act_batch');
-$batches = $DB->get_records('tool_cc_act_batch', null, 'timecreated DESC', '*', $page * $perpage, $perpage);
+$total = $DB->count_records('tool_coursecompliance_act_batch');
+$batches = $DB->get_records('tool_coursecompliance_act_batch', null, 'timecreated DESC', '*', $page * $perpage, $perpage);
 $userids = array_unique(array_map(static fn ($b) => (int)$b->userid, $batches));
 $users = $userids
     ? $DB->get_records_list(

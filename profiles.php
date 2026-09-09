@@ -34,7 +34,7 @@ $PAGE->set_pagelayout('admin');
 $PAGE->set_title(get_string('profiles', 'tool_coursecompliance'));
 $PAGE->set_heading(get_string('profiles', 'tool_coursecompliance'));
 
-$profiles = $DB->get_records('tool_cc_profile', null, 'enabled DESC, name ASC');
+$profiles = $DB->get_records('tool_coursecompliance_profile', null, 'enabled DESC, name ASC');
 
 echo $OUTPUT->header();
 echo $OUTPUT->heading(get_string('profiles', 'tool_coursecompliance'));

@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='UTF-8'?>
-<XMLDB xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" PATH="admin/tool/coursecompliance/db" VERSION="2026090806" COMMENT="XMLDB file for tool_coursecompliance" xsi:noNamespaceSchemaLocation="../../../lib/xmldb/xmldb.xsd">
+<XMLDB xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" PATH="admin/tool/coursecompliance/db" VERSION="2026090900" COMMENT="XMLDB file for tool_coursecompliance" xsi:noNamespaceSchemaLocation="../../../lib/xmldb/xmldb.xsd">
   <TABLES>
-    <TABLE NAME="tool_cc_profile" COMMENT="Compliance profiles">
+    <TABLE NAME="tool_coursecompliance_profile" COMMENT="Compliance profiles">
       <FIELDS>
         <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true" />
         <FIELD NAME="name" TYPE="char" LENGTH="255" NOTNULL="true" />
@@ -15,7 +15,7 @@
         <KEY NAME="primary" TYPE="primary" FIELDS="id" />
       </KEYS>
     </TABLE>
-    <TABLE NAME="tool_cc_scan" COMMENT="Compliance scan runs">
+    <TABLE NAME="tool_coursecompliance_scan" COMMENT="Compliance scan runs">
       <FIELDS>
         <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true" />
         <FIELD NAME="profileid" TYPE="int" LENGTH="10" NOTNULL="true" />
@@ -35,14 +35,14 @@
       </FIELDS>
       <KEYS>
         <KEY NAME="primary" TYPE="primary" FIELDS="id" />
-        <KEY NAME="profile_fk" TYPE="foreign" FIELDS="profileid" REFTABLE="tool_cc_profile" REFFIELDS="id" />
+        <KEY NAME="profile_fk" TYPE="foreign" FIELDS="profileid" REFTABLE="tool_coursecompliance_profile" REFFIELDS="id" />
       </KEYS>
       <INDEXES>
         <INDEX NAME="status_idx" UNIQUE="false" FIELDS="status" />
         <INDEX NAME="created_idx" UNIQUE="false" FIELDS="timecreated" />
       </INDEXES>
     </TABLE>
-    <TABLE NAME="tool_cc_result" COMMENT="Rule violations found by scans">
+    <TABLE NAME="tool_coursecompliance_result" COMMENT="Rule violations found by scans">
       <FIELDS>
         <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true" />
         <FIELD NAME="scanid" TYPE="int" LENGTH="10" NOTNULL="true" />
@@ -60,7 +60,7 @@
       </FIELDS>
       <KEYS>
         <KEY NAME="primary" TYPE="primary" FIELDS="id" />
-        <KEY NAME="scan_fk" TYPE="foreign" FIELDS="scanid" REFTABLE="tool_cc_scan" REFFIELDS="id" />
+        <KEY NAME="scan_fk" TYPE="foreign" FIELDS="scanid" REFTABLE="tool_coursecompliance_scan" REFFIELDS="id" />
       </KEYS>
       <INDEXES>
         <INDEX NAME="scan_course_idx" UNIQUE="false" FIELDS="scanid, courseid" />
@@ -69,7 +69,7 @@
         <INDEX NAME="scan_assessment_idx" UNIQUE="false" FIELDS="scanid, assessmenttype" />
       </INDEXES>
     </TABLE>
-    <TABLE NAME="tool_cc_act_batch" COMMENT="Preview and execution batches for centralized activity operations">
+    <TABLE NAME="tool_coursecompliance_act_batch" COMMENT="Preview and execution batches for centralized activity operations">
       <FIELDS>
         <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true" />
         <FIELD NAME="userid" TYPE="int" LENGTH="10" NOTNULL="true" />
@@ -97,7 +97,7 @@
         <INDEX NAME="created_idx" UNIQUE="false" FIELDS="timecreated" />
       </INDEXES>
     </TABLE>
-    <TABLE NAME="tool_cc_act_change" COMMENT="Expected and new values for activity operation batches">
+    <TABLE NAME="tool_coursecompliance_act_change" COMMENT="Expected and new values for activity operation batches">
       <FIELDS>
         <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true" />
         <FIELD NAME="batchid" TYPE="int" LENGTH="10" NOTNULL="true" />
@@ -115,7 +115,7 @@
       </FIELDS>
       <KEYS>
         <KEY NAME="primary" TYPE="primary" FIELDS="id" />
-        <KEY NAME="batch_fk" TYPE="foreign" FIELDS="batchid" REFTABLE="tool_cc_act_batch" REFFIELDS="id" />
+        <KEY NAME="batch_fk" TYPE="foreign" FIELDS="batchid" REFTABLE="tool_coursecompliance_act_batch" REFFIELDS="id" />
       </KEYS>
       <INDEXES>
         <INDEX NAME="batch_cmid_idx" UNIQUE="false" FIELDS="batchid, cmid" />
@@ -123,7 +123,7 @@
         <INDEX NAME="course_idx" UNIQUE="false" FIELDS="courseid" />
       </INDEXES>
     </TABLE>
-    <TABLE NAME="tool_cc_session_issue" COMMENT="Issues found while resolving assessment schedule targets">
+    <TABLE NAME="tool_coursecompliance_session_issue" COMMENT="Issues found while resolving assessment schedule targets">
       <FIELDS>
         <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true" />
         <FIELD NAME="batchid" TYPE="int" LENGTH="10" NOTNULL="true" />
@@ -137,14 +137,14 @@
       </FIELDS>
       <KEYS>
         <KEY NAME="primary" TYPE="primary" FIELDS="id" />
-        <KEY NAME="batch_fk" TYPE="foreign" FIELDS="batchid" REFTABLE="tool_cc_act_batch" REFFIELDS="id" />
+        <KEY NAME="batch_fk" TYPE="foreign" FIELDS="batchid" REFTABLE="tool_coursecompliance_act_batch" REFFIELDS="id" />
       </KEYS>
       <INDEXES>
         <INDEX NAME="batch_issue_idx" UNIQUE="false" FIELDS="batchid, issuecode" />
         <INDEX NAME="course_idx" UNIQUE="false" FIELDS="courseid" />
       </INDEXES>
     </TABLE>
-    <TABLE NAME="tool_cc_assessment" COMMENT="Assessment readiness snapshot for completed scans">
+    <TABLE NAME="tool_coursecompliance_assessment" COMMENT="Assessment readiness snapshot for completed scans">
       <FIELDS>
         <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true" />
         <FIELD NAME="scanid" TYPE="int" LENGTH="10" NOTNULL="true" />
@@ -163,14 +163,14 @@
       </FIELDS>
       <KEYS>
         <KEY NAME="primary" TYPE="primary" FIELDS="id" />
-        <KEY NAME="scan_fk" TYPE="foreign" FIELDS="scanid" REFTABLE="tool_cc_scan" REFFIELDS="id" />
+        <KEY NAME="scan_fk" TYPE="foreign" FIELDS="scanid" REFTABLE="tool_coursecompliance_scan" REFFIELDS="id" />
       </KEYS>
       <INDEXES>
         <INDEX NAME="scan_type_idx" UNIQUE="false" FIELDS="scanid, assessmenttype" />
         <INDEX NAME="scan_course_idx" UNIQUE="false" FIELDS="scanid, courseid" />
       </INDEXES>
     </TABLE>
-    <TABLE NAME="tool_cc_exception" COMMENT="Explicit course and rule exceptions for compliance profiles">
+    <TABLE NAME="tool_coursecompliance_exception" COMMENT="Explicit course and rule exceptions for compliance profiles">
       <FIELDS>
         <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true" />
         <FIELD NAME="profileid" TYPE="int" LENGTH="10" NOTNULL="true" />
@@ -187,7 +187,7 @@
       </FIELDS>
       <KEYS>
         <KEY NAME="primary" TYPE="primary" FIELDS="id" />
-        <KEY NAME="profile_fk" TYPE="foreign" FIELDS="profileid" REFTABLE="tool_cc_profile" REFFIELDS="id" />
+        <KEY NAME="profile_fk" TYPE="foreign" FIELDS="profileid" REFTABLE="tool_coursecompliance_profile" REFFIELDS="id" />
       </KEYS>
       <INDEXES>
         <INDEX NAME="profile_course_idx" UNIQUE="false" FIELDS="profileid, courseid" />

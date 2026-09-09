@@ -77,8 +77,10 @@ final class activity_batch_builder {
                 continue;
             }
             $activity = $activities[$cmid];
-            if (!in_array((int)$activity->categoryid, $allowedcategories, true)
-                    || (!empty($filters['courseid']) && (int)$activity->courseid !== (int)$filters['courseid'])) {
+            if (
+                !in_array((int)$activity->categoryid, $allowedcategories, true)
+                || (!empty($filters['courseid']) && (int)$activity->courseid !== (int)$filters['courseid'])
+            ) {
                 throw new \moodle_exception('activityoutsidescope', 'tool_coursecompliance');
             }
             $context = \context_module::instance($cmid);
@@ -95,7 +97,7 @@ final class activity_batch_builder {
         }
 
         $transaction = $DB->start_delegated_transaction();
-        $batchid = $DB->insert_record('tool_cc_act_batch', (object)[
+        $batchid = $DB->insert_record('tool_coursecompliance_act_batch', (object)[
             'userid' => $userid,
             'categoryid' => $categoryid,
             'sourcebatchid' => 0,
@@ -113,7 +115,7 @@ final class activity_batch_builder {
         ]);
         foreach ($changes as $change) {
             $change->batchid = $batchid;
-            $DB->insert_record('tool_cc_act_change', $change);
+            $DB->insert_record('tool_coursecompliance_act_change', $change);
         }
         $transaction->allow_commit();
         return $batchid;
@@ -133,7 +135,7 @@ final class activity_batch_builder {
     public function create_rollback(int $sourcebatchid, int $userid): int {
         global $DB;
 
-        $source = $DB->get_record('tool_cc_act_batch', ['id' => $sourcebatchid], '*', MUST_EXIST);
+        $source = $DB->get_record('tool_coursecompliance_act_batch', ['id' => $sourcebatchid], '*', MUST_EXIST);
         if (!in_array($source->status, ['complete', 'partial'], true) || empty($source->applied)) {
             throw new \moodle_exception('batchnotrollbackable', 'tool_coursecompliance');
         }
@@ -141,7 +143,7 @@ final class activity_batch_builder {
             throw new \moodle_exception('rollbackofrollback', 'tool_coursecompliance');
         }
 
-        $appliedchanges = $DB->get_records('tool_cc_act_change', [
+        $appliedchanges = $DB->get_records('tool_coursecompliance_act_change', [
             'batchid' => $sourcebatchid,
             'status' => 'applied',
         ], 'cmid ASC, id ASC');
@@ -187,7 +189,7 @@ final class activity_batch_builder {
         }
 
         $transaction = $DB->start_delegated_transaction();
-        $batchid = $DB->insert_record('tool_cc_act_batch', (object)[
+        $batchid = $DB->insert_record('tool_coursecompliance_act_batch', (object)[
             'userid' => $userid,
             'categoryid' => (int)$source->categoryid,
             'sourcebatchid' => $sourcebatchid,
@@ -209,7 +211,7 @@ final class activity_batch_builder {
         ]);
         foreach ($changes as $change) {
             $change->batchid = $batchid;
-            $DB->insert_record('tool_cc_act_change', $change);
+            $DB->insert_record('tool_coursecompliance_act_change', $change);
         }
         $transaction->allow_commit();
 
@@ -263,7 +265,7 @@ final class activity_batch_builder {
                     $changes[] = $this->make_change($activity, $field, (string)$oldvalue, (string)$newvalue);
                 }
             }
-        } elseif ($action === 'shift_dates') {
+        } else if ($action === 'shift_dates') {
             $amount = (int)($options['shiftamount'] ?? 0);
             $unit = (string)($options['shiftunit'] ?? 'day');
             if ($amount === 0) {
@@ -278,7 +280,7 @@ final class activity_batch_builder {
                 }
             }
             $this->validate_dates($activity->modname, $newdates, $activity->activityname);
-        } elseif ($action === 'visibility') {
+        } else if ($action === 'visibility') {
             $newstate = (string)($options['visibilitystate'] ?? '');
             if (!in_array($newstate, ['show', 'hide', 'stealth'], true)) {
                 throw new \moodle_exception('invalidvisibilitystate', 'tool_coursecompliance');
@@ -295,7 +297,7 @@ final class activity_batch_builder {
                     $newstate
                 );
             }
-        } elseif ($action === 'rename') {
+        } else if ($action === 'rename') {
             $find = (string)($options['findtext'] ?? '');
             $replace = (string)($options['replacetext'] ?? '');
             if ($find === '') {
@@ -327,19 +329,25 @@ final class activity_batch_builder {
             if (!empty($dates['timeopen']) && !empty($dates['timeclose']) && $dates['timeclose'] <= $dates['timeopen']) {
                 throw new \moodle_exception('invalidquizdates', 'tool_coursecompliance', '', $activityname);
             }
-        } elseif ($modname === 'assign') {
-            if (!empty($dates['allowsubmissionsfromdate']) && !empty($dates['duedate'])
-                    && $dates['duedate'] < $dates['allowsubmissionsfromdate']) {
+        } else if ($modname === 'assign') {
+            if (
+                !empty($dates['allowsubmissionsfromdate'])
+                && !empty($dates['duedate'])
+                && $dates['duedate'] < $dates['allowsubmissionsfromdate']
+            ) {
                 throw new \moodle_exception('invalidassigndates', 'tool_coursecompliance', '', $activityname);
             }
             if (!empty($dates['duedate']) && !empty($dates['cutoffdate']) && $dates['cutoffdate'] < $dates['duedate']) {
                 throw new \moodle_exception('invalidassigncutoff', 'tool_coursecompliance', '', $activityname);
             }
-            if (!empty($dates['duedate']) && !empty($dates['gradingduedate'])
-                    && $dates['gradingduedate'] < $dates['duedate']) {
+            if (
+                !empty($dates['duedate'])
+                && !empty($dates['gradingduedate'])
+                && $dates['gradingduedate'] < $dates['duedate']
+            ) {
                 throw new \moodle_exception('invalidassigngradingdue', 'tool_coursecompliance', '', $activityname);
             }
-        } elseif ($modname === 'forum') {
+        } else if ($modname === 'forum') {
             if (!empty($dates['duedate']) && !empty($dates['cutoffdate']) && $dates['cutoffdate'] < $dates['duedate']) {
                 throw new \moodle_exception('invalidforumcutoff', 'tool_coursecompliance', '', $activityname);
             }
@@ -387,8 +395,11 @@ final class activity_batch_builder {
             ]);
         }
         if ($action === 'visibility') {
-            return get_string('batchsummary_visibility', 'tool_coursecompliance',
-                get_string('visibility_' . ($options['visibilitystate'] ?? 'show'), 'tool_coursecompliance'));
+            return get_string(
+                'batchsummary_visibility',
+                'tool_coursecompliance',
+                get_string('visibility_' . ($options['visibilitystate'] ?? 'show'), 'tool_coursecompliance')
+            );
         }
         if ($action === 'rename') {
             return get_string('batchsummary_rename', 'tool_coursecompliance', (object)[

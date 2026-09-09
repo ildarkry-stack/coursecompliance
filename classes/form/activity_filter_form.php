@@ -32,7 +32,9 @@ namespace tool_coursecompliance\form;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 final class activity_filter_form extends \moodleform {
-    /** @inheritdoc */
+    /**
+     * Define the activity filter form.
+     */
     protected function definition(): void {
         $mform = $this->_form;
         $custom = $this->_customdata ?? [];

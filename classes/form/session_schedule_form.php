@@ -32,7 +32,9 @@ namespace tool_coursecompliance\form;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 final class session_schedule_form extends \moodleform {
-    /** @inheritdoc */
+    /**
+     * Define the session planning form.
+     */
     protected function definition(): void {
         $mform = $this->_form;
         $categories = \core_course_category::make_categories_list('tool/coursecompliance:scheduleassessments');

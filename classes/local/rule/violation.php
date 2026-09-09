@@ -15,7 +15,7 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Classes for the Course compliance plugin.
+ * Rule violation value object.
  *
  * @package    tool_coursecompliance
  * @copyright  2026 MIA Academy
@@ -24,12 +24,25 @@
 
 namespace tool_coursecompliance\local\rule;
 
-defined('MOODLE_INTERNAL') || die();
-
 /**
  * Immutable description of one rule violation.
  */
 final class violation {
+    /** @var string Human-readable violation message. */
+    public readonly string $message;
+
+    /** @var string Expected value. */
+    public readonly string $expected;
+
+    /** @var string Actual value. */
+    public readonly string $actual;
+
+    /** @var int Related object id. */
+    public readonly int $objectid;
+
+    /** @var string Related object name. */
+    public readonly string $objectname;
+
     /**
      * Create a violation value object.
      *
@@ -40,11 +53,16 @@ final class violation {
      * @param string $objectname Related object name.
      */
     public function __construct(
-        public readonly string $message,
-        public readonly string $expected = '',
-        public readonly string $actual = '',
-        public readonly int $objectid = 0,
-        public readonly string $objectname = ''
+        string $message,
+        string $expected = '',
+        string $actual = '',
+        int $objectid = 0,
+        string $objectname = ''
     ) {
+        $this->message = $message;
+        $this->expected = $expected;
+        $this->actual = $actual;
+        $this->objectid = $objectid;
+        $this->objectname = $objectname;
     }
 }

@@ -234,7 +234,7 @@ final class activity_repository {
                                  JOIN {course} c ON c.id = cm.course
                             LEFT JOIN {course_sections} cs ON cs.id = cm.section
                                 WHERE c.category $catsql {$coursewhere}";
-            } elseif ($modname === 'assign') {
+            } else if ($modname === 'assign') {
                 $branches[] = "SELECT cm.id AS cmid, c.id AS courseid, c.category AS categoryid,
                                       c.fullname AS coursename, c.shortname AS courseshortname,
                                       cs.section AS sectionnum, cs.name AS sectionname,
@@ -287,28 +287,28 @@ final class activity_repository {
         $visibility = (string)($filters['visibility'] ?? 'all');
         if ($visibility === 'show') {
             $outerwhere[] = 'x.visible = 1 AND x.visibleoncoursepage = 1';
-        } elseif ($visibility === 'hide') {
+        } else if ($visibility === 'hide') {
             $outerwhere[] = 'x.visible = 0';
-        } elseif ($visibility === 'stealth') {
+        } else if ($visibility === 'stealth') {
             $outerwhere[] = 'x.visible = 1 AND x.visibleoncoursepage = 0';
         }
 
         $restrictions = (string)($filters['restrictions'] ?? 'all');
         if ($restrictions === 'configured') {
             $outerwhere[] = "x.availability IS NOT NULL AND x.availability <> ''";
-        } elseif ($restrictions === 'none') {
+        } else if ($restrictions === 'none') {
             $outerwhere[] = "(x.availability IS NULL OR x.availability = '')";
         }
 
         $datestate = (string)($filters['datestate'] ?? 'all');
         if ($datestate === 'hasdates') {
             $outerwhere[] = '(x.date1 > 0 OR x.date2 > 0 OR x.date3 > 0 OR x.date4 > 0)';
-        } elseif ($datestate === 'nodates') {
+        } else if ($datestate === 'nodates') {
             $outerwhere[] = '(x.date1 = 0 AND x.date2 = 0 AND x.date3 = 0 AND x.date4 = 0)';
-        } elseif ($datestate === 'upcoming') {
+        } else if ($datestate === 'upcoming') {
             $outerwhere[] = 'x.date1 > :nowupcoming';
             $params['nowupcoming'] = time();
-        } elseif ($datestate === 'overdue') {
+        } else if ($datestate === 'overdue') {
             $outerwhere[] = 'x.date2 > 0 AND x.date2 < :nowoverdue';
             $params['nowoverdue'] = time();
         }

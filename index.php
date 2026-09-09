@@ -35,7 +35,7 @@ $PAGE->set_heading(get_string('pluginname', 'tool_coursecompliance'));
 $form = new \tool_coursecompliance\form\scan_form();
 if ($data = $form->get_data()) {
     require_capability('tool/coursecompliance:scan', context_system::instance());
-    $scanid = $DB->insert_record('tool_cc_scan', (object)[
+    $scanid = $DB->insert_record('tool_coursecompliance_scan', (object)[
         'profileid' => $data->profileid,
         'categoryid' => $data->categoryid,
         'userid' => $USER->id,
@@ -81,7 +81,7 @@ if (has_capability('tool/coursecompliance:manageprofiles', context_system::insta
 echo html_writer::div(implode(' ', $dashboardlinks), 'mb-4');
 $form->display();
 
-$scans = $DB->get_records('tool_cc_scan', null, 'timecreated DESC', '*', 0, 20);
+$scans = $DB->get_records('tool_coursecompliance_scan', null, 'timecreated DESC', '*', 0, 20);
 if ($scans) {
     $table = new html_table();
     $table->head = [

@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.4.3-alpha — CI validation and coding-style hardening
+
+- Renamed plugin database tables to the required `tool_coursecompliance_*` prefix and added a safe upgrade rename step from the earlier `tool_cc_*` tables.
+- Fixed PHPDoc parameter lists reported by Moodle PHPDoc Checker.
+- Sorted English and Russian language string keys according to Moodle coding style.
+- Reworked `rule_registry.php` and remaining multiline calls/control structures to Moodle/PSR formatting.
+- Replaced disallowed `elseif` usages with `else if`.
+- Removed unnecessary `MOODLE_INTERNAL` checks from autoloaded class files and `db/install.php`.
+- Fixed privacy provider formatting, member-variable PHPDoc, form/task method documentation and whitespace warnings.
+- Kept fresh installs and upgrades from 0.4.2 and earlier on the same data model.
+
 
 ## 0.4.1-alpha — CI hardening
 

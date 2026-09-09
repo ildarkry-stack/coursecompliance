@@ -15,7 +15,7 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Classes for the Course compliance plugin.
+ * Base compliance rule implementation.
  *
  * @package    tool_coursecompliance
  * @copyright  2026 MIA Academy
@@ -24,12 +24,19 @@
 
 namespace tool_coursecompliance\local\rule;
 
-defined('MOODLE_INTERNAL') || die();
-
 /**
  * Base implementation shared by compliance rules.
  */
 abstract class base_rule implements rule {
+    /** @var string Stable rule code. */
+    private readonly string $code;
+
+    /** @var string Audited component. */
+    private readonly string $component;
+
+    /** @var string Rule severity. */
+    private readonly string $severity;
+
     /**
      * Create a rule.
      *
@@ -37,11 +44,10 @@ abstract class base_rule implements rule {
      * @param string $component Audited component.
      * @param string $severity Rule severity.
      */
-    public function __construct(
-        private readonly string $code,
-        private readonly string $component,
-        private readonly string $severity
-    ) {
+    public function __construct(string $code, string $component, string $severity) {
+        $this->code = $code;
+        $this->component = $component;
+        $this->severity = $severity;
     }
 
     /**
@@ -52,6 +58,7 @@ abstract class base_rule implements rule {
     public function get_code(): string {
         return $this->code;
     }
+
     /**
      * Get the audited component.
      *
@@ -60,6 +67,7 @@ abstract class base_rule implements rule {
     public function get_component(): string {
         return $this->component;
     }
+
     /**
      * Get the rule severity.
      *

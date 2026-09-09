@@ -53,9 +53,9 @@ final class session_batch_builder_test extends \advanced_testcase {
 
         $data = $this->form_data($category->id);
         $batchid = (new session_batch_builder())->create($data, $USER->id);
-        $batch = $DB->get_record('tool_cc_act_batch', ['id' => $batchid], '*', MUST_EXIST);
+        $batch = $DB->get_record('tool_coursecompliance_act_batch', ['id' => $batchid], '*', MUST_EXIST);
         $this->assertSame(2, (int)$batch->totalchanges);
-        $this->assertCount(2, $DB->get_records('tool_cc_act_change', ['batchid' => $batchid]));
+        $this->assertCount(2, $DB->get_records('tool_coursecompliance_act_change', ['batchid' => $batchid]));
     }
 
     /**

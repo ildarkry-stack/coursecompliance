@@ -209,7 +209,7 @@ foreach ($activities as $activity) {
         );
         $date3 = '—';
         $date4 = '—';
-    } elseif ($activity->modname === 'assign') {
+    } else if ($activity->modname === 'assign') {
         $date1 = tool_coursecompliance_activity_date_cell(
             $activity,
             'allowsubmissionsfromdate',

@@ -24,7 +24,6 @@
 
 namespace tool_coursecompliance\form;
 
-defined('MOODLE_INTERNAL') || die();
 require_once($CFG->libdir . '/formslib.php');
 
 /**

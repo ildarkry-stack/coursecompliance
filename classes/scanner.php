@@ -27,8 +27,6 @@ namespace tool_coursecompliance;
 use core_course_category;
 use tool_coursecompliance\local\rule\rule;
 
-defined('MOODLE_INTERNAL') || die();
-
 /**
  * Scans course categories against a compliance profile.
  *
@@ -48,15 +46,15 @@ final class scanner {
     public function run(int $scanid): void {
         global $DB;
 
-        $scan = $DB->get_record('tool_cc_scan', ['id' => $scanid], '*', MUST_EXIST);
-        $profile = $DB->get_record('tool_cc_profile', ['id' => $scan->profileid], '*', MUST_EXIST);
+        $scan = $DB->get_record('tool_coursecompliance_scan', ['id' => $scanid], '*', MUST_EXIST);
+        $profile = $DB->get_record('tool_coursecompliance_profile', ['id' => $scan->profileid], '*', MUST_EXIST);
         $config = profile_config::decode($profile->configjson);
 
         $scan->status = 'running';
         $scan->startedat = time();
-        $DB->update_record('tool_cc_scan', $scan);
-        $DB->delete_records('tool_cc_result', ['scanid' => $scanid]);
-        $DB->delete_records('tool_cc_assessment', ['scanid' => $scanid]);
+        $DB->update_record('tool_coursecompliance_scan', $scan);
+        $DB->delete_records('tool_coursecompliance_result', ['scanid' => $scanid]);
+        $DB->delete_records('tool_coursecompliance_assessment', ['scanid' => $scanid]);
 
         $category = core_course_category::get($scan->categoryid, MUST_EXIST, true);
         $categoryids = array_merge([$category->id], $category->get_all_children_ids());
@@ -168,7 +166,7 @@ final class scanner {
         $scan->notices = $totals['notice'];
         $scan->ignored = $totals['ignored'];
         $scan->finishedat = time();
-        $DB->update_record('tool_cc_scan', $scan);
+        $DB->update_record('tool_coursecompliance_scan', $scan);
     }
 
     /**
@@ -291,7 +289,7 @@ final class scanner {
     ): void {
         global $DB;
 
-        $DB->insert_record('tool_cc_result', (object)[
+        $DB->insert_record('tool_coursecompliance_result', (object)[
             'scanid' => $scanid,
             'courseid' => $courseid,
             'component' => $component,
@@ -310,7 +308,7 @@ final class scanner {
     /**
      * Increment counters for an outcome.
      *
-     * @param array<string, int> $counters Counters.
+     * @param array $counters Counters.
      * @param string|null $outcome Outcome.
      */
     private function increment_outcome(array &$counters, ?string $outcome): void {
@@ -327,7 +325,7 @@ final class scanner {
      * @param string $type Assessment type.
      * @param \stdClass|null $quiz Quiz record or null when missing.
      * @param string $idnumber Course-module idnumber.
-     * @param array<string, int> $local Local counters.
+     * @param array $local Local counters.
      */
     private function store_assessment_state(
         int $scanid,
@@ -340,7 +338,7 @@ final class scanner {
         global $DB;
 
         $score = max(0, 100 - ($local['critical'] * 25) - ($local['warning'] * 8) - ($local['notice'] * 2));
-        $DB->insert_record('tool_cc_assessment', (object)[
+        $DB->insert_record('tool_coursecompliance_assessment', (object)[
             'scanid' => $scanid,
             'courseid' => $courseid,
             'assessmenttype' => $type,
@@ -375,7 +373,7 @@ final class scanner {
         $params['now'] = time();
         $sql = "profileid = :profileid AND enabled = 1 AND courseid $insql
                 AND (expiresat = 0 OR expiresat > :now)";
-        $records = $DB->get_records_select('tool_cc_exception', $sql, $params);
+        $records = $DB->get_records_select('tool_coursecompliance_exception', $sql, $params);
         $lookup = [];
         foreach ($records as $record) {
             $key = $this->exception_key(

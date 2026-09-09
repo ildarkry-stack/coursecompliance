@@ -45,7 +45,7 @@ final class batch_access {
             return has_capability('tool/coursecompliance:scheduleassessments', $context);
         }
         if ($batch->action === 'rollback' && !empty($batch->sourcebatchid)) {
-            $source = $DB->get_record('tool_cc_act_batch', ['id' => (int)$batch->sourcebatchid]);
+            $source = $DB->get_record('tool_coursecompliance_act_batch', ['id' => (int)$batch->sourcebatchid]);
             if ($source && $source->action === 'session_schedule') {
                 $context = \context_coursecat::instance((int)$source->categoryid);
                 return has_capability('tool/coursecompliance:scheduleassessments', $context);
@@ -69,7 +69,7 @@ final class batch_access {
             return;
         }
         if ($batch->action === 'rollback' && !empty($batch->sourcebatchid)) {
-            $source = $DB->get_record('tool_cc_act_batch', ['id' => (int)$batch->sourcebatchid]);
+            $source = $DB->get_record('tool_coursecompliance_act_batch', ['id' => (int)$batch->sourcebatchid]);
             if ($source && $source->action === 'session_schedule') {
                 require_capability(
                     'tool/coursecompliance:scheduleassessments',
@@ -80,5 +80,4 @@ final class batch_access {
         }
         require_capability('tool/coursecompliance:manageactivities', \context_system::instance());
     }
-
 }

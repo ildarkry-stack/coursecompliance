@@ -31,7 +31,7 @@ require_capability('tool/coursecompliance:manageprofiles', $context);
 $delete = optional_param('delete', 0, PARAM_INT);
 if ($delete) {
     require_sesskey();
-    $DB->delete_records('tool_cc_exception', ['id' => $delete]);
+    $DB->delete_records('tool_coursecompliance_exception', ['id' => $delete]);
     redirect(
         new moodle_url('/admin/tool/coursecompliance/exceptions.php'),
         get_string('exceptiondeleted', 'tool_coursecompliance')
@@ -45,8 +45,8 @@ $PAGE->set_title(get_string('exceptions', 'tool_coursecompliance'));
 $PAGE->set_heading(get_string('exceptions', 'tool_coursecompliance'));
 
 $sql = "SELECT e.*, p.name AS profilename, c.fullname
-          FROM {tool_cc_exception} e
-          JOIN {tool_cc_profile} p ON p.id = e.profileid
+          FROM {tool_coursecompliance_exception} e
+          JOIN {tool_coursecompliance_profile} p ON p.id = e.profileid
           JOIN {course} c ON c.id = e.courseid
       ORDER BY e.enabled DESC, e.timecreated DESC";
 $exceptions = $DB->get_records_sql($sql);

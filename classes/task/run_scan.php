@@ -24,8 +24,6 @@
 
 namespace tool_coursecompliance\task;
 
-defined('MOODLE_INTERNAL') || die();
-
 /**
  * Ad hoc task that runs a compliance scan.
  */
@@ -40,11 +38,11 @@ final class run_scan extends \core\task\adhoc_task {
         try {
             (new \tool_coursecompliance\scanner())->run($scanid);
         } catch (\Throwable $e) {
-            if ($scan = $DB->get_record('tool_cc_scan', ['id' => $scanid])) {
+            if ($scan = $DB->get_record('tool_coursecompliance_scan', ['id' => $scanid])) {
                 $scan->status = 'failed';
                 $scan->finishedat = time();
                 $scan->errormessage = $e->getMessage();
-                $DB->update_record('tool_cc_scan', $scan);
+                $DB->update_record('tool_coursecompliance_scan', $scan);
             }
             throw $e;
         }

@@ -32,9 +32,9 @@ $id = optional_param('id', 0, PARAM_INT);
 $copy = optional_param('copy', 0, PARAM_INT);
 $profile = null;
 if ($id) {
-    $profile = $DB->get_record('tool_cc_profile', ['id' => $id], '*', MUST_EXIST);
-} elseif ($copy) {
-    $profile = $DB->get_record('tool_cc_profile', ['id' => $copy], '*', MUST_EXIST);
+    $profile = $DB->get_record('tool_coursecompliance_profile', ['id' => $id], '*', MUST_EXIST);
+} else if ($copy) {
+    $profile = $DB->get_record('tool_coursecompliance_profile', ['id' => $copy], '*', MUST_EXIST);
     $profile->id = 0;
     $profile->name = get_string('copyofprofile', 'tool_coursecompliance', $profile->name);
 }
@@ -79,10 +79,10 @@ if ($data = $form->get_data()) {
     ];
     if (!empty($data->id)) {
         $record->id = $data->id;
-        $DB->update_record('tool_cc_profile', $record);
+        $DB->update_record('tool_coursecompliance_profile', $record);
     } else {
         $record->timecreated = time();
-        $DB->insert_record('tool_cc_profile', $record);
+        $DB->insert_record('tool_coursecompliance_profile', $record);
     }
     redirect(new moodle_url('/admin/tool/coursecompliance/profiles.php'), get_string('profilesaved', 'tool_coursecompliance'));
 }

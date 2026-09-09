@@ -29,7 +29,7 @@ require_sesskey();
 $systemcontext = context_system::instance();
 
 $sourcebatchid = required_param('batchid', PARAM_INT);
-$source = $DB->get_record('tool_cc_act_batch', ['id' => $sourcebatchid], '*', MUST_EXIST);
+$source = $DB->get_record('tool_coursecompliance_act_batch', ['id' => $sourcebatchid], '*', MUST_EXIST);
 \tool_coursecompliance\local\batch_access::require_manage($source);
 if ((int)$source->userid !== (int)$USER->id && !is_siteadmin()) {
     require_capability('tool/coursecompliance:manageactivities', $systemcontext);

@@ -30,7 +30,7 @@ require_capability('tool/coursecompliance:view', $context);
 
 $scanid = optional_param('scanid', 0, PARAM_INT);
 if (!$scanid) {
-    $scanid = (int)$DB->get_field_sql("SELECT MAX(id) FROM {tool_cc_scan} WHERE status = 'complete'");
+    $scanid = (int)$DB->get_field_sql("SELECT MAX(id) FROM {tool_coursecompliance_scan} WHERE status = 'complete'");
 }
 
 $PAGE->set_context($context);
@@ -48,10 +48,10 @@ if (!$scanid) {
     exit;
 }
 
-$scan = $DB->get_record('tool_cc_scan', ['id' => $scanid, 'status' => 'complete'], '*', MUST_EXIST);
-$profile = $DB->get_record('tool_cc_profile', ['id' => $scan->profileid], '*', MUST_EXIST);
+$scan = $DB->get_record('tool_coursecompliance_scan', ['id' => $scanid, 'status' => 'complete'], '*', MUST_EXIST);
+$profile = $DB->get_record('tool_coursecompliance_profile', ['id' => $scan->profileid], '*', MUST_EXIST);
 $category = \core_course_category::get($scan->categoryid, MUST_EXIST, true);
-$states = $DB->get_records('tool_cc_assessment', ['scanid' => $scanid], 'assessmenttype, courseid');
+$states = $DB->get_records('tool_coursecompliance_assessment', ['scanid' => $scanid], 'assessmenttype, courseid');
 
 $periods = [];
 $scoretotal = 0;
@@ -73,7 +73,7 @@ foreach ($states as $state) {
     }
     if ((int)$state->critical > 0) {
         $period['critical']++;
-    } elseif ((int)$state->warnings > 0) {
+    } else if ((int)$state->warnings > 0) {
         $period['warning']++;
     } else {
         $period['ready']++;
@@ -119,7 +119,7 @@ foreach ($periods as $type => $period) {
 echo html_writer::table($table);
 
 $sql = "SELECT rulecode, severity, COUNT(1) AS issuecount
-          FROM {tool_cc_result}
+          FROM {tool_coursecompliance_result}
          WHERE scanid = :scanid AND component = 'quiz'
       GROUP BY rulecode, severity
       ORDER BY issuecount DESC";

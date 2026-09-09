@@ -44,16 +44,16 @@ final class activity_manager {
     public function apply_batch(int $batchid): void {
         global $DB;
 
-        $batch = $DB->get_record('tool_cc_act_batch', ['id' => $batchid], '*', MUST_EXIST);
+        $batch = $DB->get_record('tool_coursecompliance_act_batch', ['id' => $batchid], '*', MUST_EXIST);
         if (!in_array($batch->status, ['queued', 'running'], true)) {
             throw new \moodle_exception('batchnotqueued', 'tool_coursecompliance');
         }
         $batch->status = 'running';
         $batch->timestarted = $batch->timestarted ?: time();
-        $DB->update_record('tool_cc_act_batch', $batch);
+        $DB->update_record('tool_coursecompliance_act_batch', $batch);
 
         $cmids = $DB->get_fieldset_sql(
-            'SELECT DISTINCT cmid FROM {tool_cc_act_change} WHERE batchid = :batchid ORDER BY cmid ASC',
+            'SELECT DISTINCT cmid FROM {tool_coursecompliance_act_change} WHERE batchid = :batchid ORDER BY cmid ASC',
             ['batchid' => $batchid]
         );
         $applied = 0;
@@ -69,7 +69,7 @@ final class activity_manager {
             [$cmsql, $cmparams] = $DB->get_in_or_equal($cmchunk, SQL_PARAMS_NAMED, 'batchcm');
             $params = $cmparams + ['batchid' => $batchid];
             $changes = $DB->get_records_select(
-                'tool_cc_act_change',
+                'tool_coursecompliance_act_change',
                 "batchid = :batchid AND cmid $cmsql",
                 $params,
                 'cmid ASC, id ASC'
@@ -123,7 +123,7 @@ final class activity_manager {
             }
         }
 
-        $batch = $DB->get_record('tool_cc_act_batch', ['id' => $batchid], '*', MUST_EXIST);
+        $batch = $DB->get_record('tool_coursecompliance_act_batch', ['id' => $batchid], '*', MUST_EXIST);
         $batch->applied = $applied;
         $batch->skipped = $skipped;
         $batch->failed = $failed;
@@ -133,7 +133,7 @@ final class activity_manager {
             $batch->status = ($skipped || $failed) ? 'partial' : 'complete';
         }
         $batch->timefinished = time();
-        $DB->update_record('tool_cc_act_batch', $batch);
+        $DB->update_record('tool_coursecompliance_act_batch', $batch);
     }
 
     /**
@@ -151,9 +151,9 @@ final class activity_manager {
         foreach ($changes as $change) {
             if (in_array($change->fieldname, activity_repository::date_fields($activity->modname), true)) {
                 $datechanges[$change->fieldname] = (int)$change->newvalue;
-            } elseif ($change->fieldname === 'name') {
+            } else if ($change->fieldname === 'name') {
                 $rename = $change->newvalue;
-            } elseif ($change->fieldname === 'visibilitystate') {
+            } else if ($change->fieldname === 'visibilitystate') {
                 $visibility = $change->newvalue;
             }
         }
@@ -207,7 +207,7 @@ final class activity_manager {
             }
             if ($visibility === 'hide') {
                 set_coursemodule_visible($activity->cmid, 0, 1);
-            } elseif ($visibility === 'stealth') {
+            } else if ($visibility === 'stealth') {
                 set_coursemodule_visible($activity->cmid, 1, 0);
             } else {
                 set_coursemodule_visible($activity->cmid, 1, 1);
@@ -250,7 +250,7 @@ final class activity_manager {
             $change->status = $status;
             $change->message = $message;
             $change->timeapplied = $status === 'applied' ? time() : 0;
-            $DB->update_record('tool_cc_act_change', $change);
+            $DB->update_record('tool_coursecompliance_act_change', $change);
         }
     }
 }

@@ -15,7 +15,7 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Classes for the Course compliance plugin.
+ * Privacy provider for Course compliance.
  *
  * @package    tool_coursecompliance
  * @copyright  2026 MIA Academy
@@ -29,15 +29,12 @@ use core_privacy\local\request\approved_contextlist;
 use core_privacy\local\request\contextlist;
 use core_privacy\local\request\writer;
 
-defined('MOODLE_INTERNAL') || die();
-
 /**
  * Privacy provider for Course compliance data.
  */
 final class provider implements
-        \core_privacy\local\metadata\provider,
-        \core_privacy\local\request\plugin\provider {
-
+    \core_privacy\local\metadata\provider,
+    \core_privacy\local\request\plugin\provider {
     /**
      * Describe personal data stored by the plugin.
      *
@@ -45,19 +42,31 @@ final class provider implements
      * @return collection
      */
     public static function get_metadata(collection $collection): collection {
-        $collection->add_database_table('tool_cc_scan', [
-            'userid' => 'privacy:metadata:userid',
-            'timecreated' => 'privacy:metadata:timecreated',
-        ], 'privacy:metadata:scan');
-        $collection->add_database_table('tool_cc_act_batch', [
-            'userid' => 'privacy:metadata:activitybatch:userid',
-            'timecreated' => 'privacy:metadata:timecreated',
-        ], 'privacy:metadata:activitybatch');
-        $collection->add_database_table('tool_cc_exception', [
-            'userid' => 'privacy:metadata:exception:userid',
-            'reason' => 'privacy:metadata:exception:reason',
-            'timecreated' => 'privacy:metadata:timecreated',
-        ], 'privacy:metadata:exception');
+        $collection->add_database_table(
+            'tool_coursecompliance_scan',
+            [
+                'userid' => 'privacy:metadata:userid',
+                'timecreated' => 'privacy:metadata:timecreated',
+            ],
+            'privacy:metadata:scan'
+        );
+        $collection->add_database_table(
+            'tool_coursecompliance_act_batch',
+            [
+                'userid' => 'privacy:metadata:activitybatch:userid',
+                'timecreated' => 'privacy:metadata:timecreated',
+            ],
+            'privacy:metadata:activitybatch'
+        );
+        $collection->add_database_table(
+            'tool_coursecompliance_exception',
+            [
+                'userid' => 'privacy:metadata:exception:userid',
+                'reason' => 'privacy:metadata:exception:reason',
+                'timecreated' => 'privacy:metadata:timecreated',
+            ],
+            'privacy:metadata:exception'
+        );
         return $collection;
     }
 
@@ -69,10 +78,13 @@ final class provider implements
      */
     public static function get_contexts_for_userid(int $userid): contextlist {
         global $DB;
+
         $contextlist = new contextlist();
-        if ($DB->record_exists('tool_cc_scan', ['userid' => $userid])
-                || $DB->record_exists('tool_cc_act_batch', ['userid' => $userid])
-                || $DB->record_exists('tool_cc_exception', ['userid' => $userid])) {
+        if (
+            $DB->record_exists('tool_coursecompliance_scan', ['userid' => $userid])
+            || $DB->record_exists('tool_coursecompliance_act_batch', ['userid' => $userid])
+            || $DB->record_exists('tool_coursecompliance_exception', ['userid' => $userid])
+        ) {
             $contextlist->add_system_context();
         }
         return $contextlist;
@@ -85,12 +97,17 @@ final class provider implements
      */
     public static function export_user_data(approved_contextlist $contextlist): void {
         global $DB;
+
         $contexts = $contextlist->get_contexts();
         if (!$contexts) {
             return;
         }
+
         $userid = $contextlist->get_user()->id;
-        $records = $DB->get_records('tool_cc_scan', ['userid' => $userid], 'timecreated ASC',
+        $records = $DB->get_records(
+            'tool_coursecompliance_scan',
+            ['userid' => $userid],
+            'timecreated ASC',
             'id, profileid, categoryid, status, courses, assessments, critical, warnings, notices, ' .
                 'startedat, finishedat, timecreated'
         );
@@ -98,7 +115,11 @@ final class provider implements
         foreach ($records as $record) {
             $audits[] = (array)$record;
         }
-        $batches = $DB->get_records('tool_cc_act_batch', ['userid' => $userid], 'timecreated ASC',
+
+        $batches = $DB->get_records(
+            'tool_coursecompliance_act_batch',
+            ['userid' => $userid],
+            'timecreated ASC',
             'id, categoryid, action, status, summary, totalchanges, applied, skipped, failed, ' .
                 'timecreated, timestarted, timefinished'
         );
@@ -106,18 +127,29 @@ final class provider implements
         foreach ($batches as $batch) {
             $operations[] = (array)$batch;
         }
-        $exceptions = $DB->get_records('tool_cc_exception', ['userid' => $userid], 'timecreated ASC',
-            'id, profileid, courseid, rulecode, component, objectid, reason, expiresat, enabled, timecreated');
+
+        $exceptions = $DB->get_records(
+            'tool_coursecompliance_exception',
+            ['userid' => $userid],
+            'timecreated ASC',
+            'id, profileid, courseid, rulecode, component, objectid, reason, expiresat, enabled, timecreated'
+        );
         $exceptiondata = [];
         foreach ($exceptions as $exception) {
             $exceptiondata[] = (array)$exception;
         }
+
         if (!$audits && !$operations && !$exceptiondata) {
             return;
         }
+
         writer::with_context(\context_system::instance())->export_data(
             [get_string('pluginname', 'tool_coursecompliance')],
-            (object)['audits' => $audits, 'activityoperations' => $operations, 'exceptions' => $exceptiondata]
+            (object)[
+                'audits' => $audits,
+                'activityoperations' => $operations,
+                'exceptions' => $exceptiondata,
+            ]
         );
     }
 
@@ -140,24 +172,37 @@ final class provider implements
      */
     public static function delete_data_for_user(approved_contextlist $contextlist): void {
         global $DB;
+
         if (!$contextlist->get_contexts()) {
             return;
         }
+
         $userid = $contextlist->get_user()->id;
-        $scanids = $DB->get_fieldset_select('tool_cc_scan', 'id', 'userid = :userid', ['userid' => $userid]);
+        $scanids = $DB->get_fieldset_select(
+            'tool_coursecompliance_scan',
+            'id',
+            'userid = :userid',
+            ['userid' => $userid]
+        );
         if ($scanids) {
             [$insql, $params] = $DB->get_in_or_equal($scanids, SQL_PARAMS_NAMED, 'scan');
-            $DB->delete_records_select('tool_cc_result', "scanid $insql", $params);
-            $DB->delete_records_select('tool_cc_assessment', "scanid $insql", $params);
-            $DB->delete_records_select('tool_cc_scan', "id $insql", $params);
+            $DB->delete_records_select('tool_coursecompliance_result', "scanid $insql", $params);
+            $DB->delete_records_select('tool_coursecompliance_assessment', "scanid $insql", $params);
+            $DB->delete_records_select('tool_coursecompliance_scan', "id $insql", $params);
         }
-        $DB->delete_records('tool_cc_exception', ['userid' => $userid]);
-        $batchids = $DB->get_fieldset_select('tool_cc_act_batch', 'id', 'userid = :userid', ['userid' => $userid]);
+
+        $DB->delete_records('tool_coursecompliance_exception', ['userid' => $userid]);
+        $batchids = $DB->get_fieldset_select(
+            'tool_coursecompliance_act_batch',
+            'id',
+            'userid = :userid',
+            ['userid' => $userid]
+        );
         if ($batchids) {
             [$insql, $params] = $DB->get_in_or_equal($batchids, SQL_PARAMS_NAMED, 'batch');
-            $DB->delete_records_select('tool_cc_act_change', "batchid $insql", $params);
-            $DB->delete_records_select('tool_cc_session_issue', "batchid $insql", $params);
-            $DB->delete_records_select('tool_cc_act_batch', "id $insql", $params);
+            $DB->delete_records_select('tool_coursecompliance_act_change', "batchid $insql", $params);
+            $DB->delete_records_select('tool_coursecompliance_session_issue', "batchid $insql", $params);
+            $DB->delete_records_select('tool_coursecompliance_act_batch', "id $insql", $params);
         }
     }
 
@@ -166,12 +211,13 @@ final class provider implements
      */
     private static function delete_all_scans(): void {
         global $DB;
-        $DB->delete_records('tool_cc_result');
-        $DB->delete_records('tool_cc_assessment');
-        $DB->delete_records('tool_cc_scan');
-        $DB->delete_records('tool_cc_exception');
-        $DB->delete_records('tool_cc_act_change');
-        $DB->delete_records('tool_cc_session_issue');
-        $DB->delete_records('tool_cc_act_batch');
+
+        $DB->delete_records('tool_coursecompliance_result');
+        $DB->delete_records('tool_coursecompliance_assessment');
+        $DB->delete_records('tool_coursecompliance_scan');
+        $DB->delete_records('tool_coursecompliance_exception');
+        $DB->delete_records('tool_coursecompliance_act_change');
+        $DB->delete_records('tool_coursecompliance_session_issue');
+        $DB->delete_records('tool_coursecompliance_act_batch');
     }
 }

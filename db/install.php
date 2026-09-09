@@ -22,8 +22,6 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-defined('MOODLE_INTERNAL') || die();
-
 /**
  * Install tool_coursecompliance defaults.
  */
@@ -46,7 +44,7 @@ function xmldb_tool_coursecompliance_install(): void {
         ],
     ];
     foreach ($presets as $kind => $preset) {
-        $DB->insert_record('tool_cc_profile', (object)[
+        $DB->insert_record('tool_coursecompliance_profile', (object)[
             'name' => $preset['name'],
             'description' => $preset['description'],
             'enabled' => 1,

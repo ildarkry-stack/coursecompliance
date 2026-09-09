@@ -29,8 +29,8 @@ $context = context_system::instance();
 require_capability('tool/coursecompliance:manageprofiles', $context);
 
 $resultid = required_param('resultid', PARAM_INT);
-$result = $DB->get_record('tool_cc_result', ['id' => $resultid], '*', MUST_EXIST);
-$scan = $DB->get_record('tool_cc_scan', ['id' => $result->scanid], '*', MUST_EXIST);
+$result = $DB->get_record('tool_coursecompliance_result', ['id' => $resultid], '*', MUST_EXIST);
+$scan = $DB->get_record('tool_coursecompliance_scan', ['id' => $result->scanid], '*', MUST_EXIST);
 $course = $DB->get_record('course', ['id' => $result->courseid], '*', MUST_EXIST);
 
 $PAGE->set_context($context);
@@ -60,7 +60,7 @@ if ($data = $form->get_data()) {
         'timecreated' => $now,
         'timemodified' => $now,
     ];
-    $DB->insert_record('tool_cc_exception', $record);
+    $DB->insert_record('tool_coursecompliance_exception', $record);
     redirect(
         new moodle_url('/admin/tool/coursecompliance/report.php', ['scanid' => $scan->id]),
         get_string('exceptioncreated', 'tool_coursecompliance')

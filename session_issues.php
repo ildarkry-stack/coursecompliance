@@ -30,13 +30,13 @@ require_capability('tool/coursecompliance:view', $systemcontext);
 $batchid = required_param('batchid', PARAM_INT);
 $page = max(0, optional_param('page', 0, PARAM_INT));
 $perpage = 100;
-$batch = $DB->get_record('tool_cc_act_batch', ['id' => $batchid], '*', MUST_EXIST);
+$batch = $DB->get_record('tool_coursecompliance_act_batch', ['id' => $batchid], '*', MUST_EXIST);
 if ($batch->action !== 'session_schedule') {
     throw new moodle_exception('invalidoperation', 'tool_coursecompliance');
 }
-$total = $DB->count_records('tool_cc_session_issue', ['batchid' => $batchid]);
+$total = $DB->count_records('tool_coursecompliance_session_issue', ['batchid' => $batchid]);
 $issues = $DB->get_records(
-    'tool_cc_session_issue',
+    'tool_coursecompliance_session_issue',
     ['batchid' => $batchid],
     'courseid ASC, assessmenttype ASC, modname ASC',
     '*',

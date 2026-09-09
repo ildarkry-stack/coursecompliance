@@ -32,7 +32,9 @@ namespace tool_coursecompliance\task;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 final class apply_activity_batch extends \core\task\adhoc_task {
-    /** @inheritdoc */
+    /**
+     * Apply the queued activity-operation batch.
+     */
     public function execute(): void {
         global $DB;
         $data = $this->get_custom_data();
@@ -40,11 +42,11 @@ final class apply_activity_batch extends \core\task\adhoc_task {
         try {
             (new \tool_coursecompliance\activity_manager())->apply_batch($batchid);
         } catch (\Throwable $e) {
-            if ($batch = $DB->get_record('tool_cc_act_batch', ['id' => $batchid])) {
+            if ($batch = $DB->get_record('tool_coursecompliance_act_batch', ['id' => $batchid])) {
                 $batch->status = 'failed';
                 $batch->timefinished = time();
                 $batch->errormessage = $e->getMessage();
-                $DB->update_record('tool_cc_act_batch', $batch);
+                $DB->update_record('tool_coursecompliance_act_batch', $batch);
             }
             mtrace('Course Compliance activity batch #' . $batchid . ' failed: ' . $e->getMessage());
         }

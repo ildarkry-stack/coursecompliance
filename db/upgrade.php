@@ -205,7 +205,6 @@ function xmldb_tool_coursecompliance_upgrade(int $oldversion): bool {
         upgrade_plugin_savepoint(true, 2026090804, 'tool', 'coursecompliance');
     }
 
-
     if ($oldversion < 2026090806) {
         // Normalize course-level result rows and use a meaningful XMLDB default.
         $table = new xmldb_table('tool_cc_result');
@@ -224,7 +223,7 @@ function xmldb_tool_coursecompliance_upgrade(int $oldversion): bool {
             $dbman->change_field_default($table, $field);
         }
 
-        // idnumber is always explicitly supplied by the assessment scanner, so no default is required.
+        // Idnumber is always explicitly supplied by the assessment scanner, so no default is required.
         $table = new xmldb_table('tool_cc_assessment');
         $field = new xmldb_field(
             'idnumber',
@@ -241,6 +240,28 @@ function xmldb_tool_coursecompliance_upgrade(int $oldversion): bool {
         }
 
         upgrade_plugin_savepoint(true, 2026090806, 'tool', 'coursecompliance');
+    }
+
+    if ($oldversion < 2026090900) {
+        $renames = [
+            'tool_cc_profile' => 'tool_coursecompliance_profile',
+            'tool_cc_scan' => 'tool_coursecompliance_scan',
+            'tool_cc_result' => 'tool_coursecompliance_result',
+            'tool_cc_act_batch' => 'tool_coursecompliance_act_batch',
+            'tool_cc_act_change' => 'tool_coursecompliance_act_change',
+            'tool_cc_session_issue' => 'tool_coursecompliance_session_issue',
+            'tool_cc_assessment' => 'tool_coursecompliance_assessment',
+            'tool_cc_exception' => 'tool_coursecompliance_exception',
+        ];
+        foreach ($renames as $oldname => $newname) {
+            $oldtable = new xmldb_table($oldname);
+            $newtable = new xmldb_table($newname);
+            if ($dbman->table_exists($oldtable) && !$dbman->table_exists($newtable)) {
+                $dbman->rename_table($oldtable, $newname);
+            }
+        }
+
+        upgrade_plugin_savepoint(true, 2026090900, 'tool', 'coursecompliance');
     }
 
     return true;

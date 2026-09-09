@@ -24,8 +24,6 @@
 
 namespace tool_coursecompliance\local\rule;
 
-defined('MOODLE_INTERNAL') || die();
-
 /**
  * Rule implementation backed by a callback.
  */

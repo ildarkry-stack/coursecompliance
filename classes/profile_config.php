@@ -24,8 +24,6 @@
 
 namespace tool_coursecompliance;
 
-defined('MOODLE_INTERNAL') || die();
-
 /**
  * Normalises compliance profile configuration.
  *
@@ -85,7 +83,7 @@ final class profile_config {
     /**
      * Encode configuration for storage.
      *
-     * @param array<string, mixed> $config Configuration.
+     * @param array $config Configuration.
      * @return string
      */
     public static function encode(array $config): string {
@@ -107,7 +105,7 @@ final class profile_config {
             $config['examidnumber'] = 'credit';
             $config['examattempts'] = 2;
             $config['hideanswerswhileopen'] = true;
-        } elseif ($kind === 'practice') {
+        } else if ($kind === 'practice') {
             $config['requireexam'] = false;
             $config['requireresit1'] = false;
             $config['requireresit2'] = false;

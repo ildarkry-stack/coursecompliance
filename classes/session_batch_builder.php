@@ -100,7 +100,7 @@ final class session_batch_builder {
         ];
 
         $transaction = $DB->start_delegated_transaction();
-        $batchid = $DB->insert_record('tool_cc_act_batch', (object)[
+        $batchid = $DB->insert_record('tool_coursecompliance_act_batch', (object)[
             'userid' => $userid,
             'categoryid' => $categoryid,
             'sourcebatchid' => 0,
@@ -149,7 +149,7 @@ final class session_batch_builder {
                         $adjustassignmentdates
                     );
                     foreach ($fieldchanges as $field => [$oldvalue, $newvalue]) {
-                        $DB->insert_record('tool_cc_act_change', (object)[
+                        $DB->insert_record('tool_coursecompliance_act_change', (object)[
                             'batchid' => $batchid,
                             'cmid' => (int)$activity->cmid,
                             'courseid' => (int)$course->id,
@@ -169,7 +169,7 @@ final class session_batch_builder {
             }
         }
 
-        $DB->set_field('tool_cc_act_batch', 'totalchanges', $totalchanges, ['id' => $batchid]);
+        $DB->set_field('tool_coursecompliance_act_batch', 'totalchanges', $totalchanges, ['id' => $batchid]);
         $transaction->allow_commit();
         return $batchid;
     }
@@ -327,7 +327,7 @@ final class session_batch_builder {
         string $details
     ): void {
         global $DB;
-        $DB->insert_record('tool_cc_session_issue', (object)[
+        $DB->insert_record('tool_coursecompliance_session_issue', (object)[
             'batchid' => $batchid,
             'courseid' => (int)$course->id,
             'assessmenttype' => $period,
