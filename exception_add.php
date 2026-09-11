@@ -69,6 +69,7 @@ if ($data = $form->get_data()) {
 }
 
 echo $OUTPUT->header();
+echo \tool_coursecompliance\ui::primary_navigation('audit');
 echo $OUTPUT->heading(get_string('createexception', 'tool_coursecompliance'));
 echo html_writer::div(
     format_string($course->fullname) . '<br>' . s($result->rulecode) . '<br>' . s($result->message),

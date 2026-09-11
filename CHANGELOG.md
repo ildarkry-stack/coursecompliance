@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.7.0-alpha
+
+- Moved all user-facing pages into a dedicated **Course quality control** subsection under Site administration → Courses.
+- Reduced admin-tree clutter: Exceptions and Activity operation history now live as secondary tabs inside Standards and Activity Operations.
+- Merged the standalone Assessment Auditor into the **Audit and reports** workspace; the old route remains as a compatibility redirect.
+- Added a consistent primary navigation bar and context-specific secondary navigation across the plugin.
+- Added native Moodle charts to the dashboard, detailed compliance report, and session-readiness report.
+- Added visual metric cards and status/severity badges for faster scanning of results.
+- Reworked the dashboard around the main workflow: run audit → inspect readiness → open detailed report.
+- Improved Blueprint presentation: captured access restrictions and completion rules are now shown in readable form instead of raw JSON.
+- Moved low-frequency technical Blueprint fields into Moodle's advanced controls to reduce form clutter.
+- Removed the legacy `local_examdates` notice and obsolete duplicated UI strings.
+- Kept internal workflow pages (preview/apply/rollback, Blueprint editors, exception creation, session issues) out of the admin tree while preserving all functionality.
+
 ## 0.6.0-alpha
 
 - Reworked Course Blueprint into an explicit A–D rule constructor instead of comparing every captured property.
@@ -114,3 +128,19 @@
 ## 0.1.0-alpha — 2026-09-08
 
 - Initial Course Compliance and Quiz Assessment auditor.
+
+## 0.6.4-alpha-native-quiz-review
+- Reworked Blueprint Quiz review options to mirror the Moodle 5.1 native period-oriented UI.
+- Uses the same core labels and ordering for the eight review options.
+- Added native dependencies between Attempt, Maximum marks, Marks and feedback options.
+- Enforces Moodle core fixed states for the "During the attempt" period.
+
+## 0.6.5-alpha-native-availability
+
+- Replaced Blueprint access-restriction JSON editing with Moodle 5.1's native `core_availability` editor.
+- Added one native restriction editor for each `exam`, `resit1` and `resit2` target.
+- Limited Grade and Activity completion dependencies to the configured assessment targets in both the UI and server-side validation.
+- Stored course-specific course-module and grade-item IDs as portable assessment idnumbers so Blueprint rules can be reused across courses.
+- Kept native Date, User profile, Restriction set and other enabled Moodle availability conditions available.
+- Rebuilt the EN/RU language files from the last intact baseline to repair previously truncated multi-line strings.
+

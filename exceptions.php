@@ -50,12 +50,37 @@ $sql = "SELECT e.*, p.name AS profilename, c.fullname
           JOIN {course} c ON c.id = e.courseid
       ORDER BY e.enabled DESC, e.timecreated DESC";
 $exceptions = $DB->get_records_sql($sql);
+$activecount = 0;
+foreach ($exceptions as $exception) {
+    if (!empty($exception->enabled) && (empty($exception->expiresat) || $exception->expiresat >= time())) {
+        $activecount++;
+    }
+}
 
 echo $OUTPUT->header();
+echo \tool_coursecompliance\ui::primary_navigation('standards');
+echo \tool_coursecompliance\ui::standards_navigation('exceptions');
 echo $OUTPUT->heading(get_string('exceptions', 'tool_coursecompliance'));
-echo html_writer::div(get_string('exceptionsintro', 'tool_coursecompliance'), 'alert alert-info');
+echo \tool_coursecompliance\ui::intro(get_string('exceptionsintro', 'tool_coursecompliance'));
+echo \tool_coursecompliance\ui::metric_cards([
+    [
+        'label' => get_string('activeexceptions', 'tool_coursecompliance'),
+        'value' => $activecount,
+    ],
+    [
+        'label' => get_string('exceptions_total', 'tool_coursecompliance'),
+        'value' => count($exceptions),
+    ],
+]);
+
+if (!$exceptions) {
+    echo $OUTPUT->notification(get_string('noexceptions', 'tool_coursecompliance'), 'info');
+    echo $OUTPUT->footer();
+    exit;
+}
 
 $table = new html_table();
+$table->attributes['class'] = 'generaltable table-sm';
 $table->head = [
     get_string('profile', 'tool_coursecompliance'),
     get_string('course'),
@@ -72,11 +97,14 @@ foreach ($exceptions as $exception) {
     ]);
     $table->data[] = [
         format_string($exception->profilename),
-        html_writer::link(new moodle_url('/course/view.php', ['id' => $exception->courseid]), format_string($exception->fullname)),
+        html_writer::link(
+            new moodle_url('/course/view.php', ['id' => $exception->courseid]),
+            format_string($exception->fullname)
+        ),
         s($exception->rulecode),
         s($exception->reason),
         $expires,
-        html_writer::link($deleteurl, get_string('delete')),
+        html_writer::link($deleteurl, get_string('delete'), ['class' => 'text-danger']),
     ];
 }
 echo html_writer::table($table);

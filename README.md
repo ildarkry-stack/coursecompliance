@@ -89,5 +89,13 @@ direct edit links into Moodle and filtered links from Assessment Auditor to the 
 
 Version 0.6 turns the template course into a selective institutional standard. Importing a course stores an immutable snapshot; the **Blueprint checks** page then lets an administrator decide exactly which values are enforced and whether each value comes from the template or is entered manually.
 
-The constructor covers course settings, content counts and required pages, independent `exam` / `resit1` / `resit2` checks, a visual Quiz review-options matrix, access restrictions, activity completion, course-grade formula/max grade and course-completion conditions. The detailed report explains what is missing, what differs, expected/actual values and the recommended place to fix the problem.
+The constructor covers course settings, content counts and required pages, independent `exam` / `resit1` / `resit2` checks, a visual Quiz review-options matrix, access restrictions, activity completion, course-grade formula/max grade and course-completion conditions. Access restrictions for `exam`, `resit1` and `resit2` are edited through Moodle's native availability interface; Grade and Activity completion dependencies are limited to those three stable assessment idnumbers. The detailed report explains what is missing, what differs, expected/actual values and the recommended place to fix the problem.
+
+## 0.7 Information architecture and visual reports
+
+Version 0.7 reorganises the plugin as a single Course quality control workspace under **Site administration → Courses**. The admin tree now exposes only the main destinations: Overview, Audit and reports, Course standards, Session planning, Activity operations and Settings. Exceptions and operation history remain available as secondary tabs rather than separate top-level entries.
+
+The standalone Assessment Auditor is merged into the Audit and reports page. Existing links to `assessment.php` are preserved through a compatibility redirect. Reports now use Moodle's native chart API for severity distribution, missing-vs-misconfigured requirements, exam/resit readiness and recent audit trends. Metric cards, badges and shared navigation make the main workflow easier to scan without removing the underlying audit detail.
+
+Blueprint pages also avoid raw technical values where possible: stored access restrictions and activity completion settings are displayed in human-readable form, while low-frequency technical fields are moved under Moodle's advanced form controls.
 

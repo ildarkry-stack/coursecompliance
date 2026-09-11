@@ -59,8 +59,10 @@ if ($importcourseid > 0) {
 }
 
 echo $OUTPUT->header();
+echo \tool_coursecompliance\ui::primary_navigation('standards');
+echo \tool_coursecompliance\ui::standards_navigation('profiles');
 echo $OUTPUT->heading(get_string('blueprintforprofile', 'tool_coursecompliance', format_string($profile->name)));
-echo html_writer::div(get_string('blueprintintro', 'tool_coursecompliance'), 'alert alert-info');
+echo \tool_coursecompliance\ui::intro(get_string('blueprintintro', 'tool_coursecompliance'));
 echo html_writer::div(
     html_writer::link(
         new moodle_url('/admin/tool/coursecompliance/blueprint_rules.php', ['profileid' => $profileid]),
@@ -73,19 +75,31 @@ echo html_writer::div(
 $blueprint = $config['blueprint'] ?? [];
 if ($blueprint) {
     echo $OUTPUT->heading(get_string('currentblueprint', 'tool_coursecompliance'), 3);
-    $meta = new html_table();
-    $meta->data = [
-        [get_string('sourcecourse', 'tool_coursecompliance'), s((string)($blueprint['sourcefullname'] ?? ''))],
-        [get_string('blueprintversion', 'tool_coursecompliance'), (int)($config['blueprintversion'] ?? 1)],
+    echo html_writer::div(
+        get_string('sourcecourse', 'tool_coursecompliance') . ': ' .
+            s((string)($blueprint['sourcefullname'] ?? '')) . ' · ' .
+            get_string('capturedat', 'tool_coursecompliance') . ': ' .
+            (!empty($blueprint['capturedat']) ? userdate((int)$blueprint['capturedat']) : '—'),
+        'text-muted mb-3'
+    );
+    echo \tool_coursecompliance\ui::metric_cards([
         [
-            get_string('capturedat', 'tool_coursecompliance'),
-            !empty($blueprint['capturedat']) ? userdate((int)$blueprint['capturedat']) : '—',
+            'label' => get_string('blueprintversion', 'tool_coursecompliance'),
+            'value' => (int)($config['blueprintversion'] ?? 1),
         ],
-        [get_string('blueprintactivities', 'tool_coursecompliance'), count($blueprint['activities'] ?? [])],
-        [get_string('blueprintsections', 'tool_coursecompliance'), count($blueprint['sections'] ?? [])],
-        [get_string('blueprintformulas', 'tool_coursecompliance'), count($blueprint['gradeformulas'] ?? [])],
-    ];
-    echo html_writer::table($meta);
+        [
+            'label' => get_string('blueprintactivities', 'tool_coursecompliance'),
+            'value' => count($blueprint['activities'] ?? []),
+        ],
+        [
+            'label' => get_string('blueprintsections', 'tool_coursecompliance'),
+            'value' => count($blueprint['sections'] ?? []),
+        ],
+        [
+            'label' => get_string('blueprintformulas', 'tool_coursecompliance'),
+            'value' => count($blueprint['gradeformulas'] ?? []),
+        ],
+    ]);
 
     if (!empty($blueprint['activities'])) {
         $table = new html_table();
@@ -101,10 +115,12 @@ if ($blueprint) {
                 s($idnumber),
                 s((string)$activity['modname']),
                 format_string((string)$activity['name']),
-                empty($activity['availability'])
-                    ? get_string('none', 'tool_coursecompliance')
-                    : s((string)$activity['availability']),
-                s(json_encode($activity['completion'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)),
+                s(\tool_coursecompliance\blueprint_manager::format_availability_for_display(
+                    (string)($activity['availability'] ?? '')
+                )),
+                s(\tool_coursecompliance\blueprint_manager::format_completion_for_display(
+                    is_array($activity['completion'] ?? null) ? $activity['completion'] : []
+                )),
             ];
         }
         echo html_writer::table($table);

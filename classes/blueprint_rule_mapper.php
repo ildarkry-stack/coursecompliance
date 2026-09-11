@@ -94,6 +94,10 @@ final class blueprint_rule_mapper {
                                 !empty($data->{$field}) ? 1 : 0;
                         }
                     }
+                    // Match core Quiz: the attempt is always available during an attempt,
+                    // while overall feedback is never available during an attempt.
+                    $rules['assessments'][$type]['review_manual']['reviewattempt']['during'] = 1;
+                    $rules['assessments'][$type]['review_manual']['reviewoverallfeedback']['during'] = 0;
                     continue;
                 }
                 $field = 'assessment_' . $type . '_' . $key;

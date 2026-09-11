@@ -226,7 +226,7 @@ final class activity_batch_builder {
      * @return string|int
      */
     private function current_value(\stdClass $activity, string $field): string|int {
-        if (array_key_exists($field, $activity->dates)) {
+        if (is_array($activity->dates ?? null) && array_key_exists($field, $activity->dates)) {
             return (int)$activity->dates[$field];
         }
         if ($field === 'name') {
@@ -248,19 +248,20 @@ final class activity_batch_builder {
      */
     private function build_activity_changes(\stdClass $activity, string $action, array $options): array {
         $changes = [];
+        $dates = is_array($activity->dates ?? null) ? $activity->dates : [];
         if ($action === 'save_dates') {
             $newdates = [];
             foreach (activity_repository::date_fields($activity->modname) as $field) {
                 $key = 'date_' . $activity->cmid . '_' . $field;
                 if (!array_key_exists($key, $options)) {
-                    $newdates[$field] = (int)$activity->dates[$field];
+                    $newdates[$field] = (int)($dates[$field] ?? 0);
                     continue;
                 }
                 $newdates[$field] = date_helper::from_input_value((string)$options[$key]);
             }
             $this->validate_dates($activity->modname, $newdates, $activity->activityname);
             foreach ($newdates as $field => $newvalue) {
-                $oldvalue = (int)$activity->dates[$field];
+                $oldvalue = (int)($dates[$field] ?? 0);
                 if ($newvalue !== $oldvalue) {
                     $changes[] = $this->make_change($activity, $field, (string)$oldvalue, (string)$newvalue);
                 }
@@ -273,7 +274,7 @@ final class activity_batch_builder {
             }
             $newdates = [];
             foreach (activity_repository::date_fields($activity->modname) as $field) {
-                $oldvalue = (int)$activity->dates[$field];
+                $oldvalue = (int)($dates[$field] ?? 0);
                 $newdates[$field] = date_helper::shift($oldvalue, $amount, $unit);
                 if ($oldvalue && $newdates[$field] !== $oldvalue) {
                     $changes[] = $this->make_change($activity, $field, (string)$oldvalue, (string)$newdates[$field]);

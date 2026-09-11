@@ -140,10 +140,14 @@ final class blueprint_manager {
         $cms = $DB->get_records_sql($sql, $courseparams);
         $instancesbymod = [];
         $cmidmaps = [];
+        $cmidnumberbyinstance = [];
         foreach ($cms as $cm) {
             $courseid = (int)$cm->course;
-            $cmidmaps[$courseid][(int)$cm->id] = trim((string)$cm->idnumber);
-            $instancesbymod[(string)$cm->modname][] = (int)$cm->instance;
+            $idnumber = trim((string)$cm->idnumber);
+            $modname = (string)$cm->modname;
+            $cmidmaps[$courseid][(int)$cm->id] = $idnumber;
+            $cmidnumberbyinstance[$courseid][$modname][(int)$cm->instance] = $idnumber;
+            $instancesbymod[$modname][] = (int)$cm->instance;
         }
 
         $instancenames = self::load_instance_names($instancesbymod);
@@ -155,12 +159,18 @@ final class blueprint_manager {
             'courseid, id'
         );
         $gradeidmaps = [];
+        $availabilitygradeidmaps = [];
         $quizgradeitems = [];
         $coursegradeitems = [];
         foreach ($gradeitems as $item) {
             $courseid = (int)$item->courseid;
             $idnumber = trim((string)$item->idnumber);
             $gradeidmaps[$courseid][(int)$item->id] = $idnumber;
+            $moduleidnumber = $cmidnumberbyinstance[$courseid][(string)$item->itemmodule]
+                [(int)$item->iteminstance] ?? '';
+            $availabilitygradeidmaps[$courseid][(int)$item->id] = $moduleidnumber !== ''
+                ? $moduleidnumber
+                : $idnumber;
             if ((string)$item->itemmodule === 'quiz' && (int)$item->itemnumber === 0) {
                 $quizgradeitems[$courseid][(int)$item->iteminstance] = $item;
             }
@@ -200,7 +210,7 @@ final class blueprint_manager {
                 'availability' => self::normalise_availability(
                     (string)($cm->availability ?? ''),
                     $cmidmaps[$courseid] ?? [],
-                    $gradeidmaps[$courseid] ?? [],
+                    $availabilitygradeidmaps[$courseid] ?? [],
                     $groupmaps[$courseid] ?? [],
                     $groupingmaps[$courseid] ?? []
                 ),
@@ -892,6 +902,7 @@ final class blueprint_manager {
             return;
         }
         $templateformulas = $blueprint['gradeformulas'] ?? [];
+        $templateformulas = is_array($templateformulas) ? $templateformulas : [];
         if (array_key_exists($idnumber, $templateformulas)) {
             self::compare_formula(
                 $problems,
@@ -1613,6 +1624,36 @@ final class blueprint_manager {
                 ($enabled ? implode(', ', $enabled) : get_string('none', 'tool_coursecompliance'));
         }
         return implode('; ', $parts);
+    }
+
+    /**
+     * Format normalised availability rules for user-facing pages.
+     *
+     * @param string $json Normalised JSON.
+     * @return string Human-readable description.
+     */
+    public static function format_availability_for_display(string $json): string {
+        return self::describe_availability($json);
+    }
+
+    /**
+     * Format activity completion settings for user-facing pages.
+     *
+     * @param array $completion Completion data.
+     * @return string Human-readable description.
+     */
+    public static function format_completion_for_display(array $completion): string {
+        return self::describe_completion($completion);
+    }
+
+    /**
+     * Format course completion criteria for user-facing pages.
+     *
+     * @param array $criteria Completion criteria.
+     * @return string Human-readable description.
+     */
+    public static function format_completion_criteria_for_display(array $criteria): string {
+        return self::describe_completion_criteria($criteria);
     }
 
     /**

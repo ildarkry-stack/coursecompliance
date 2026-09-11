@@ -52,4 +52,20 @@ final class blueprint_rule_mapper_test extends \advanced_testcase {
         );
         $this->assertSame(7, $formdata->profileid);
     }
+
+    /**
+     * Core Quiz fixed review states survive form processing.
+     */
+    public function test_native_during_review_states_are_enforced(): void {
+        $rules = profile_config::blueprint_rule_defaults();
+        $formdata = blueprint_rule_mapper::to_form_data($rules, 9);
+        $formdata->assessment_exam_review_reviewattempt_during = 0;
+        $formdata->assessment_exam_review_reviewoverallfeedback_during = 1;
+
+        $mapped = blueprint_rule_mapper::from_form_data($formdata, $rules);
+
+        $this->assertSame(1, $mapped['assessments']['exam']['review_manual']['reviewattempt']['during']);
+        $this->assertSame(0, $mapped['assessments']['exam']['review_manual']['reviewoverallfeedback']['during']);
+    }
+
 }

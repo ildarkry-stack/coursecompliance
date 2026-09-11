@@ -112,6 +112,11 @@ function tool_coursecompliance_session_period(array $batchconfig, ?\stdClass $ac
 }
 
 echo $OUTPUT->header();
+$primarynav = $batch->action === 'session_schedule' ? 'session' : 'operations';
+echo \tool_coursecompliance\ui::primary_navigation($primarynav);
+if ($primarynav === 'operations') {
+    echo \tool_coursecompliance\ui::operations_navigation('history');
+}
 echo $OUTPUT->heading(get_string('operationpreview', 'tool_coursecompliance') . ' #' . $batch->id);
 echo html_writer::div(s($batch->summary), 'alert alert-info');
 

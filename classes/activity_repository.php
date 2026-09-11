@@ -63,7 +63,12 @@ final class activity_repository {
     public function get(array $filters, int $offset, int $limit): array {
         global $DB;
         [$sql, $params] = $this->build_browser_sql($filters, false);
-        return array_values($DB->get_records_sql($sql, $params, $offset, $limit));
+        $records = $DB->get_records_sql($sql, $params, $offset, $limit);
+        $activities = [];
+        foreach ($records as $record) {
+            $activities[] = $this->normalise_browser_row($record);
+        }
+        return $activities;
     }
 
     /**
@@ -186,6 +191,55 @@ final class activity_repository {
         foreach (self::date_fields($row->modname) as $field) {
             $row->dates[$field] = isset($instance->{$field}) ? (int)$instance->{$field} : 0;
         }
+        return $row;
+    }
+
+    /**
+     * Normalize one activity returned by the browser UNION query.
+     *
+     * The browser query uses generic date1-date4 aliases so Quiz, Assignment,
+     * and Forum can be returned by one UNION. Convert those aliases back to
+     * the module-specific date fields expected by the UI and batch engine.
+     *
+     * @param \stdClass $row Browser query row.
+     * @return \stdClass Normalized activity record.
+     */
+    private function normalise_browser_row(\stdClass $row): \stdClass {
+        $date1 = (int)($row->date1 ?? 0);
+        $date2 = (int)($row->date2 ?? 0);
+        $date3 = (int)($row->date3 ?? 0);
+        $date4 = (int)($row->date4 ?? 0);
+        $row->dates = match ((string)$row->modname) {
+            'quiz' => [
+                'timeopen' => $date1,
+                'timeclose' => $date2,
+            ],
+            'assign' => [
+                'allowsubmissionsfromdate' => $date1,
+                'duedate' => $date2,
+                'cutoffdate' => $date3,
+                'gradingduedate' => $date4,
+            ],
+            'forum' => [
+                'duedate' => $date2,
+                'cutoffdate' => $date3,
+            ],
+            default => [],
+        };
+
+        $row->cmid = (int)$row->cmid;
+        $row->courseid = (int)$row->courseid;
+        $row->categoryid = (int)$row->categoryid;
+        $row->instanceid = (int)$row->instanceid;
+        $row->sectionnum = isset($row->sectionnum) ? (int)$row->sectionnum : 0;
+        $row->sectionname = $row->sectionname ?? '';
+        $row->idnumber = $row->idnumber ?? '';
+        $row->availability = $row->availability ?? '';
+        $row->visible = (int)$row->visible;
+        $row->visibleoncoursepage = (int)$row->visibleoncoursepage;
+        $row->visibilitystate = self::visibility_state($row->visible, $row->visibleoncoursepage);
+
+        unset($row->date1, $row->date2, $row->date3, $row->date4);
         return $row;
     }
 

@@ -50,4 +50,27 @@ final class scan_form extends \moodleform {
         $mform->addRule('profileid', null, 'required', null, 'client');
         $this->add_action_buttons(false, get_string('startscan', 'tool_coursecompliance'));
     }
+
+    /**
+     * Validate submitted scan parameters.
+     *
+     * @param array $data Submitted form data.
+     * @param array $files Submitted files.
+     * @return array Validation errors.
+     */
+    public function validation($data, $files): array {
+        global $DB;
+
+        $errors = parent::validation($data, $files);
+        $profileid = (int)($data['profileid'] ?? 0);
+        $profileexists = $profileid > 0 && $DB->record_exists(
+            'tool_coursecompliance_profile',
+            ['id' => $profileid, 'enabled' => 1]
+        );
+        if (!$profileexists) {
+            $errors['profileid'] = get_string('profilemustbeselected', 'tool_coursecompliance');
+        }
+
+        return $errors;
+    }
 }

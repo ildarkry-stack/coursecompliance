@@ -62,8 +62,10 @@ if ($data = $form->get_data()) {
 }
 
 echo $OUTPUT->header();
+echo \tool_coursecompliance\ui::primary_navigation('standards');
+echo \tool_coursecompliance\ui::standards_navigation('profiles');
 echo $OUTPUT->heading(get_string('blueprintrulesforprofile', 'tool_coursecompliance', format_string($profile->name)));
-echo html_writer::div(get_string('blueprintrulesintro', 'tool_coursecompliance'), 'alert alert-info');
+echo \tool_coursecompliance\ui::intro(get_string('blueprintrulesintro', 'tool_coursecompliance'));
 
 if (empty($config['blueprint'])) {
     echo html_writer::div(get_string('blueprintrulesnotemplate', 'tool_coursecompliance'), 'alert alert-warning');

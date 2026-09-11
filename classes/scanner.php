@@ -47,7 +47,13 @@ final class scanner {
         global $DB;
 
         $scan = $DB->get_record('tool_coursecompliance_scan', ['id' => $scanid], '*', MUST_EXIST);
-        $profile = $DB->get_record('tool_coursecompliance_profile', ['id' => $scan->profileid], '*', MUST_EXIST);
+        $profileid = (int)$scan->profileid;
+        $profile = $profileid > 0
+            ? $DB->get_record('tool_coursecompliance_profile', ['id' => $profileid])
+            : false;
+        if (!$profile) {
+            throw new \moodle_exception('scaninvalidprofile', 'tool_coursecompliance');
+        }
         $config = profile_config::decode($profile->configjson);
 
         $scan->status = 'running';

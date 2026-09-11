@@ -204,14 +204,30 @@ final class blueprint_rules_form extends \moodleform {
             $prefix . 'availability_source',
             get_string('availabilityconditions', 'tool_coursecompliance')
         );
+        // Keep the portable JSON in the profile, but edit it through Moodle's
+        // native availability UI on a dedicated page. This avoids exposing raw
+        // JSON and lets exam/resit rules use the same interface as activities.
         $mform->addElement(
             'textarea',
             $prefix . 'availability_manual',
-            get_string('manualjson', 'tool_coursecompliance'),
-            ['rows' => 4, 'cols' => 80]
+            '',
+            ['class' => 'd-none', 'rows' => 1, 'cols' => 1]
         );
         $mform->setType($prefix . 'availability_manual', PARAM_RAW_TRIMMED);
-        $mform->disabledIf($prefix . 'availability_manual', $prefix . 'availability_source', 'neq', 'manual');
+        $availabilityurl = new \moodle_url('/admin/tool/coursecompliance/availability_rules.php', [
+            'profileid' => (int)($this->_customdata['profileid'] ?? 0),
+            'type' => $type,
+        ]);
+        $mform->addElement(
+            'static',
+            $prefix . 'availability_editor',
+            '',
+            \html_writer::link(
+                $availabilityurl,
+                get_string('configureavailability', 'tool_coursecompliance'),
+                ['class' => 'btn btn-secondary']
+            ) . ' ' . get_string('configureavailabilityhelp', 'tool_coursecompliance')
+        );
 
         $this->add_source_select(
             $prefix . 'completion_source',
@@ -225,6 +241,7 @@ final class blueprint_rules_form extends \moodleform {
         );
         $mform->setType($prefix . 'completion_manual', PARAM_RAW_TRIMMED);
         $mform->disabledIf($prefix . 'completion_manual', $prefix . 'completion_source', 'neq', 'manual');
+        $mform->setAdvanced($prefix . 'completion_manual');
 
         $this->add_source_select($prefix . 'review_source', get_string('reviewoptions', 'quiz'));
         $this->add_review_matrix($prefix);
@@ -245,6 +262,12 @@ final class blueprint_rules_form extends \moodleform {
             'neq',
             'manual'
         );
+        $mform->setAdvanced($prefix . 'password_source');
+        $mform->setAdvanced($prefix . 'password_manual');
+        $mform->setAdvanced($prefix . 'subnet_source');
+        $mform->setAdvanced($prefix . 'subnet_manual');
+        $mform->setAdvanced($prefix . 'browsersecurity_source');
+        $mform->setAdvanced($prefix . 'browsersecurity_manual');
 
         $mform->addElement(
             'select',
@@ -275,6 +298,10 @@ final class blueprint_rules_form extends \moodleform {
             $prefix . 'zero_mark_forbidden',
             get_string('zeromarkforbidden', 'tool_coursecompliance')
         );
+        $mform->setAdvanced($prefix . 'dates_source');
+        $mform->setAdvanced($prefix . 'questions_min');
+        $mform->setAdvanced($prefix . 'questions_max');
+        $mform->setAdvanced($prefix . 'zero_mark_forbidden');
     }
 
     /**
@@ -341,6 +368,7 @@ final class blueprint_rules_form extends \moodleform {
         );
         $mform->setType('completion_manual', PARAM_RAW_TRIMMED);
         $mform->disabledIf('completion_manual', 'completion_source', 'neq', 'manual');
+        $mform->setAdvanced('completion_manual');
     }
 
     /**
@@ -452,44 +480,96 @@ final class blueprint_rules_form extends \moodleform {
     }
 
     /**
-     * Add a visual Quiz review-options matrix.
+     * Add Quiz review options using the same period-oriented layout as core Quiz.
+     *
+     * The stored field names remain Blueprint-specific, but the visual structure,
+     * labels and independent option relationships follow Moodle's Quiz form.
      *
      * @param string $prefix Field prefix.
      */
     private function add_review_matrix(string $prefix): void {
+        global $OUTPUT;
+
         $mform = $this->_form;
+        $reviewfields = [
+            'reviewattempt' => ['theattempt', 'quiz'],
+            'reviewcorrectness' => ['whethercorrect', 'question'],
+            'reviewmaxmarks' => ['maxmarks', 'quiz'],
+            'reviewmarks' => ['marks', 'quiz'],
+            'reviewspecificfeedback' => ['specificfeedback', 'question'],
+            'reviewgeneralfeedback' => ['generalfeedback', 'question'],
+            'reviewrightanswer' => ['rightanswer', 'question'],
+            'reviewoverallfeedback' => ['reviewoverallfeedback', 'quiz'],
+        ];
+        $periods = [
+            'during' => 'reviewduring',
+            'immediately' => 'reviewimmediately',
+            'open' => 'reviewopen',
+            'closed' => 'reviewclosed',
+        ];
+
         $mform->addElement(
             'static',
             $prefix . 'reviewhelp',
             '',
-            get_string('reviewmatrixhelp', 'tool_coursecompliance')
+            get_string('reviewmatrixnativehelp', 'tool_coursecompliance')
         );
-        foreach (self::REVIEW_FIELDS as $field) {
-            $elements = [];
-            foreach (self::REVIEW_PERIODS as $period) {
+
+        // A hidden lock lets us reproduce the two always-disabled core Quiz options.
+        $lockname = $prefix . 'review_native_lock';
+        $mform->addElement('hidden', $lockname, 1);
+        $mform->setType($lockname, PARAM_BOOL);
+
+        foreach ($periods as $period => $periodstring) {
+            $group = [];
+            foreach ($reviewfields as $field => [$identifier, $component]) {
                 $name = $prefix . 'review_' . $field . '_' . $period;
-                $elements[] = $mform->createElement(
-                    'advcheckbox',
-                    $name,
-                    get_string('reviewperiod_' . $period, 'tool_coursecompliance')
-                );
+                $label = get_string($identifier, $component);
+                $group[] = $mform->createElement('html', \html_writer::start_div('review_option_item'));
+                $element = $mform->createElement('checkbox', $name, '', $label);
+                if ($period === 'during') {
+                    $element->_helpbutton = $OUTPUT->render(new \help_icon($identifier, $component));
+                }
+                $group[] = $element;
+                $group[] = $mform->createElement('html', \html_writer::end_div());
             }
-            $mform->addGroup(
-                $elements,
-                $prefix . 'group_' . $field,
-                get_string('reviewfield_' . $field, 'tool_coursecompliance'),
-                [' '],
-                false
-            );
-            foreach (self::REVIEW_PERIODS as $period) {
-                $mform->disabledIf(
-                    $prefix . 'review_' . $field . '_' . $period,
-                    $prefix . 'review_source',
-                    'neq',
-                    'manual'
-                );
+
+            $groupname = $prefix . 'review_' . $period . '_optionsgrp';
+            $mform->addGroup($group, $groupname, get_string($periodstring, 'quiz'), null, false);
+
+            foreach (array_keys($reviewfields) as $field) {
+                $name = $prefix . 'review_' . $field . '_' . $period;
+                $mform->disabledIf($name, $prefix . 'review_source', 'neq', 'manual');
+            }
+
+            $marksname = $prefix . 'review_reviewmarks_' . $period;
+            $maxmarksname = $prefix . 'review_reviewmaxmarks_' . $period;
+            $mform->disabledIf($marksname, $maxmarksname);
+
+            if ($period !== 'during') {
+                $attemptname = $prefix . 'review_reviewattempt_' . $period;
+                foreach (
+                    [
+                        'reviewcorrectness',
+                        'reviewspecificfeedback',
+                        'reviewgeneralfeedback',
+                        'reviewrightanswer',
+                    ] as $dependentfield
+                ) {
+                    $mform->disabledIf(
+                        $prefix . 'review_' . $dependentfield . '_' . $period,
+                        $attemptname
+                    );
+                }
             }
         }
+
+        $duringattempt = $prefix . 'review_reviewattempt_during';
+        $duringoverallfeedback = $prefix . 'review_reviewoverallfeedback_during';
+        $mform->setDefault($duringattempt, 1);
+        $mform->setDefault($duringoverallfeedback, 0);
+        $mform->disabledIf($duringattempt, $lockname, 'eq', 1);
+        $mform->disabledIf($duringoverallfeedback, $lockname, 'eq', 1);
     }
 
     /**

@@ -24,7 +24,8 @@
 
 require_once(__DIR__ . '/../../../config.php');
 require_login();
-require_capability('tool/coursecompliance:view', context_system::instance());
+$context = context_system::instance();
+require_capability('tool/coursecompliance:view', $context);
 
 $scanid = required_param('scanid', PARAM_INT);
 $severity = optional_param('severity', '', PARAM_ALPHA);
@@ -35,9 +36,9 @@ $page = optional_param('page', 0, PARAM_INT);
 $perpage = 100;
 
 $scan = $DB->get_record('tool_coursecompliance_scan', ['id' => $scanid], '*', MUST_EXIST);
-$profile = $DB->get_record('tool_coursecompliance_profile', ['id' => $scan->profileid], '*', MUST_EXIST);
+$profile = $DB->get_record('tool_coursecompliance_profile', ['id' => $scan->profileid]);
 $category = \core_course_category::get($scan->categoryid, MUST_EXIST, true);
-$config = \tool_coursecompliance\profile_config::decode($profile->configjson);
+$config = $profile ? \tool_coursecompliance\profile_config::decode($profile->configjson) : [];
 
 $urlparams = ['scanid' => $scanid];
 if ($severity !== '') {
@@ -52,14 +53,22 @@ if ($courseid > 0) {
 if ($kind !== '') {
     $urlparams['kind'] = $kind;
 }
-$PAGE->set_context(context_system::instance());
+$PAGE->set_context($context);
 $PAGE->set_url(new moodle_url('/admin/tool/coursecompliance/report.php', $urlparams));
 $PAGE->set_pagelayout('admin');
 $PAGE->set_title(get_string('detailedreport', 'tool_coursecompliance'));
 $PAGE->set_heading(get_string('detailedreport', 'tool_coursecompliance'));
 
+
 echo $OUTPUT->header();
-echo $OUTPUT->heading(format_string($category->name) . ' — ' . format_string($profile->name));
+echo \tool_coursecompliance\ui::primary_navigation('audit');
+$profilename = $profile ? format_string($profile->name) : get_string('missingprofile', 'tool_coursecompliance');
+echo $OUTPUT->heading(get_string('detailedreport', 'tool_coursecompliance'));
+echo html_writer::div(
+    format_string($category->name) . ' · ' . $profilename . ' · ' . userdate((int)$scan->timecreated),
+    'text-muted mb-3'
+);
+
 if (!empty($config['blueprint']) && is_array($config['blueprint'])) {
     $source = (object)[
         'course' => $config['blueprint']['sourcefullname'] ?? '',
@@ -68,11 +77,15 @@ if (!empty($config['blueprint']) && is_array($config['blueprint'])) {
             ? userdate((int)$config['blueprint']['capturedat'])
             : '—',
     ];
-    echo html_writer::div(get_string('blueprintreportsource', 'tool_coursecompliance', $source), 'alert alert-light');
+    echo html_writer::div(get_string('blueprintreportsource', 'tool_coursecompliance', $source), 'small text-muted mb-3');
 }
 
 if ($scan->status === 'queued' || $scan->status === 'running') {
-    echo html_writer::div(get_string('scanrunning', 'tool_coursecompliance'), 'alert alert-info');
+    echo html_writer::div(
+        \tool_coursecompliance\ui::status_badge((string)$scan->status) . ' ' .
+            s(get_string('scanrunning', 'tool_coursecompliance')),
+        'alert alert-info'
+    );
     echo $OUTPUT->single_button(
         new moodle_url('/admin/tool/coursecompliance/report.php', ['scanid' => $scanid]),
         get_string('refresh')
@@ -81,57 +94,14 @@ if ($scan->status === 'queued' || $scan->status === 'running') {
     exit;
 }
 if ($scan->status === 'failed') {
-    echo html_writer::div(get_string('scanfailed', 'tool_coursecompliance') . ': ' . s($scan->errormessage), 'alert alert-danger');
+    echo html_writer::div(
+        \tool_coursecompliance\ui::status_badge('failed') . ' ' .
+            s(get_string('scanfailed', 'tool_coursecompliance') . ': ' . $scan->errormessage),
+        'alert alert-danger'
+    );
     echo $OUTPUT->footer();
     exit;
 }
-
-$summary = new html_table();
-$summary->attributes['class'] = 'generaltable';
-$summary->data = [
-    [get_string('courses', 'tool_coursecompliance'), $scan->courses],
-    [get_string('assessments', 'tool_coursecompliance'), $scan->assessments],
-    [get_string('critical', 'tool_coursecompliance'), $scan->critical],
-    [get_string('warnings', 'tool_coursecompliance'), $scan->warnings],
-    [get_string('notices', 'tool_coursecompliance'), $scan->notices],
-    [get_string('ignored', 'tool_coursecompliance'), $scan->ignored ?? 0],
-];
-echo html_writer::table($summary);
-
-echo html_writer::div(
-    html_writer::link(
-        new moodle_url('/admin/tool/coursecompliance/readiness.php', ['scanid' => $scanid]),
-        get_string('sessionreadiness', 'tool_coursecompliance'),
-        ['class' => 'btn btn-primary me-2']
-    ) . ' ' . html_writer::link(
-        new moodle_url('/admin/tool/coursecompliance/assessment.php', ['scanid' => $scanid]),
-        get_string('assessmentauditor', 'tool_coursecompliance'),
-        ['class' => 'btn btn-secondary']
-    ),
-    'mb-3'
-);
-
-$allparams = ['scanid' => $scanid];
-$baseurl = new moodle_url('/admin/tool/coursecompliance/report.php', $allparams);
-$filterlinks = [
-    html_writer::link($baseurl, get_string('all', 'tool_coursecompliance'), ['class' => 'btn btn-secondary me-2']),
-    html_writer::link(
-        new moodle_url($baseurl, ['severity' => 'critical']),
-        get_string('critical', 'tool_coursecompliance'),
-        ['class' => 'btn btn-danger me-2']
-    ),
-    html_writer::link(
-        new moodle_url($baseurl, ['severity' => 'warning']),
-        get_string('warnings', 'tool_coursecompliance'),
-        ['class' => 'btn btn-warning me-2']
-    ),
-    html_writer::link(
-        new moodle_url($baseurl, ['kind' => 'missing']),
-        get_string('onlymissing', 'tool_coursecompliance'),
-        ['class' => 'btn btn-outline-danger']
-    ),
-];
-echo html_writer::div(implode(' ', $filterlinks), 'mb-3');
 
 $allresultssql = "SELECT r.*, c.fullname, c.shortname, cm.id AS cmid
                    FROM {tool_coursecompliance_result} r
@@ -159,25 +129,69 @@ foreach ($allresults as $result) {
         $mismatchcount++;
     }
 }
-
-$overview = new html_table();
-$overview->attributes['class'] = 'generaltable';
-$overview->head = [
-    get_string('affectedcourses', 'tool_coursecompliance'),
-    get_string('missingitems', 'tool_coursecompliance'),
-    get_string('configurationmismatches', 'tool_coursecompliance'),
-];
 $missingcount = array_sum(array_map(static fn ($item) => $item['count'], $missing));
-$overview->data[] = [count($affectedcourses), $missingcount, $mismatchcount];
-echo $OUTPUT->heading(get_string('problemoverview', 'tool_coursecompliance'), 3);
-echo html_writer::table($overview);
+$totalproblems = (int)$scan->critical + (int)$scan->warnings + (int)$scan->notices;
+
+echo \tool_coursecompliance\ui::metric_cards([
+    [
+        'label' => get_string('courses', 'tool_coursecompliance'),
+        'value' => (int)$scan->courses,
+    ],
+    [
+        'label' => get_string('affectedcourses', 'tool_coursecompliance'),
+        'value' => count($affectedcourses),
+    ],
+    [
+        'label' => get_string('critical', 'tool_coursecompliance'),
+        'value' => (int)$scan->critical,
+        'class' => (int)$scan->critical > 0 ? 'text-danger' : 'text-success',
+    ],
+    [
+        'label' => get_string('totalproblems', 'tool_coursecompliance'),
+        'value' => $totalproblems,
+    ],
+]);
+
+$severitychart = \tool_coursecompliance\report_charts::severity(
+    (int)$scan->critical,
+    (int)$scan->warnings,
+    (int)$scan->notices
+);
+$kindchart = \tool_coursecompliance\report_charts::problem_kinds($missingcount, $mismatchcount);
+if ($severitychart || $kindchart) {
+    echo html_writer::start_div('row g-3 mb-4');
+    foreach ([$severitychart, $kindchart] as $chart) {
+        if (!$chart) {
+            continue;
+        }
+        echo html_writer::start_div('col-12 col-lg-6');
+        echo html_writer::start_div('card shadow-sm h-100');
+        echo html_writer::start_div('card-body');
+        echo $OUTPUT->render($chart);
+        echo html_writer::end_div();
+        echo html_writer::end_div();
+        echo html_writer::end_div();
+    }
+    echo html_writer::end_div();
+}
+
+echo html_writer::div(
+    html_writer::link(
+        new moodle_url('/admin/tool/coursecompliance/readiness.php', ['scanid' => $scanid]),
+        get_string('openreadiness', 'tool_coursecompliance'),
+        ['class' => 'btn btn-primary']
+    ),
+    'mb-4'
+);
 
 if ($missing) {
     echo $OUTPUT->heading(get_string('whatismissing', 'tool_coursecompliance'), 3);
+    echo html_writer::div(get_string('whatismissinghelp', 'tool_coursecompliance'), 'text-muted mb-2');
     $missingtable = new html_table();
+    $missingtable->attributes['class'] = 'generaltable table-sm';
     $missingtable->head = [
         get_string('missingitem', 'tool_coursecompliance'),
-        get_string('courses', 'tool_coursecompliance'),
+        get_string('count'),
         get_string('affectedcourses', 'tool_coursecompliance'),
     ];
     foreach ($missing as $label => $data) {
@@ -187,10 +201,38 @@ if ($missing) {
         if (count($coursenames) > 5) {
             $coursepreview .= ' … +' . (count($coursenames) - 5);
         }
-        $missingtable->data[] = [s($label), $data['count'], $coursepreview];
+        $missingtable->data[] = [s($label), (int)$data['count'], $coursepreview];
     }
     echo html_writer::table($missingtable);
 }
+
+$allparams = ['scanid' => $scanid];
+$baseurl = new moodle_url('/admin/tool/coursecompliance/report.php', $allparams);
+$filterlinks = [
+    html_writer::link(
+        $baseurl,
+        get_string('all', 'tool_coursecompliance'),
+        ['class' => 'btn btn-sm ' . (($severity === '' && $kind === '') ? 'btn-primary' : 'btn-outline-secondary')]
+    ),
+    html_writer::link(
+        new moodle_url($baseurl, ['severity' => 'critical']),
+        get_string('critical', 'tool_coursecompliance'),
+        ['class' => 'btn btn-sm ' . ($severity === 'critical' ? 'btn-danger' : 'btn-outline-danger')]
+    ),
+    html_writer::link(
+        new moodle_url($baseurl, ['severity' => 'warning']),
+        get_string('warnings', 'tool_coursecompliance'),
+        ['class' => 'btn btn-sm ' . ($severity === 'warning' ? 'btn-warning' : 'btn-outline-warning')]
+    ),
+    html_writer::link(
+        new moodle_url($baseurl, ['kind' => 'missing']),
+        get_string('onlymissing', 'tool_coursecompliance'),
+        ['class' => 'btn btn-sm ' . ($kind === 'missing' ? 'btn-secondary' : 'btn-outline-secondary')]
+    ),
+];
+
+echo $OUTPUT->heading(get_string('detailedproblems', 'tool_coursecompliance'), 3);
+echo html_writer::div(implode(' ', $filterlinks), 'mb-3 d-flex flex-wrap gap-2');
 
 $params = ['scanid' => $scanid];
 $where = 'r.scanid = :scanid';
@@ -227,7 +269,6 @@ if ($kind === 'missing') {
 $total = count($filtered);
 $results = array_slice(array_values($filtered), $page * $perpage, $perpage);
 
-echo $OUTPUT->heading(get_string('detailedproblems', 'tool_coursecompliance'), 3);
 if (!$results) {
     echo html_writer::div(get_string('noproblemsforfilter', 'tool_coursecompliance'), 'alert alert-success');
     echo $OUTPUT->footer();
@@ -235,7 +276,7 @@ if (!$results) {
 }
 
 $table = new html_table();
-$table->attributes['class'] = 'generaltable';
+$table->attributes['class'] = 'generaltable table-sm';
 $table->head = [
     get_string('severity', 'tool_coursecompliance'),
     get_string('course'),
@@ -252,7 +293,7 @@ foreach ($results as $result) {
         \tool_coursecompliance\report_helper::edit_url($result),
         get_string('openinmoodle', 'tool_coursecompliance')
     );
-    if (has_capability('tool/coursecompliance:manageprofiles', context_system::instance())) {
+    if (has_capability('tool/coursecompliance:manageprofiles', $context)) {
         $actions .= '<br>' . html_writer::link(
             new moodle_url('/admin/tool/coursecompliance/exception_add.php', ['resultid' => $result->id]),
             get_string('createexception', 'tool_coursecompliance')
@@ -266,7 +307,7 @@ foreach ($results as $result) {
         'small text-muted mt-1'
     );
     $table->data[] = [
-        get_string('severity_' . $result->severity, 'tool_coursecompliance'),
+        \tool_coursecompliance\ui::severity_badge((string)$result->severity),
         html_writer::link($courseurl, format_string($result->fullname)) .
             html_writer::div(s($result->shortname), 'small text-muted'),
         $problem,
@@ -279,5 +320,10 @@ foreach ($results as $result) {
 }
 echo html_writer::table($table);
 
-echo $OUTPUT->paging_bar($total, $page, $perpage, new moodle_url('/admin/tool/coursecompliance/report.php', $urlparams));
+echo $OUTPUT->paging_bar(
+    $total,
+    $page,
+    $perpage,
+    new moodle_url('/admin/tool/coursecompliance/report.php', $urlparams)
+);
 echo $OUTPUT->footer();

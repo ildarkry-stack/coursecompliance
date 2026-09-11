@@ -51,10 +51,8 @@ if ($data = $form->get_data()) {
 }
 
 echo $OUTPUT->header();
+echo \tool_coursecompliance\ui::primary_navigation('session');
 echo $OUTPUT->heading(get_string('sessionplanning', 'tool_coursecompliance'));
-echo html_writer::div(get_string('sessionplanning_intro', 'tool_coursecompliance'), 'alert alert-info');
-if ($DB->record_exists('config_plugins', ['plugin' => 'local_examdates'])) {
-    echo html_writer::div(get_string('legacyexamdatesdetected', 'tool_coursecompliance'), 'alert alert-secondary');
-}
+echo \tool_coursecompliance\ui::intro(get_string('sessionplanning_intro', 'tool_coursecompliance'));
 $form->display();
 echo $OUTPUT->footer();

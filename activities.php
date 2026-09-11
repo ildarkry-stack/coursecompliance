@@ -129,16 +129,19 @@ function tool_coursecompliance_date_input(int $cmid, string $field, int $timesta
  * @return string Rendered HTML.
  */
 function tool_coursecompliance_activity_date_cell(\stdClass $activity, string $field, string $label, bool $editable): string {
-    if (!array_key_exists($field, $activity->dates)) {
+    $dates = is_array($activity->dates ?? null) ? $activity->dates : [];
+    if (!array_key_exists($field, $dates)) {
         return '—';
     }
     return html_writer::tag('small', s($label), ['class' => 'text-muted d-block']) .
-        tool_coursecompliance_date_input($activity->cmid, $field, (int)$activity->dates[$field], $editable);
+        tool_coursecompliance_date_input($activity->cmid, $field, (int)$dates[$field], $editable);
 }
 
 echo $OUTPUT->header();
+echo \tool_coursecompliance\ui::primary_navigation('operations');
+echo \tool_coursecompliance\ui::operations_navigation('activities');
 echo $OUTPUT->heading(get_string('activityoperations', 'tool_coursecompliance'));
-echo html_writer::div(get_string('activityoperations_intro', 'tool_coursecompliance'), 'alert alert-info');
+echo \tool_coursecompliance\ui::intro(get_string('activityoperations_intro', 'tool_coursecompliance'));
 $form->display();
 
 echo html_writer::div(get_string('activitiesfound', 'tool_coursecompliance', $total), 'mb-3 fw-bold');
@@ -343,11 +346,7 @@ if ($canmanage) {
             'type' => 'submit',
             'value' => get_string('previewchanges', 'tool_coursecompliance'),
             'class' => 'btn btn-primary mt-3',
-        ]) . ' ' . html_writer::link(
-            new moodle_url('/admin/tool/coursecompliance/activity_history.php'),
-            get_string('operationhistory', 'tool_coursecompliance'),
-            ['class' => 'btn btn-secondary mt-3']
-        )
+        ])
     );
     echo html_writer::end_div();
     echo html_writer::end_div();

@@ -52,7 +52,7 @@ $options = [
 ];
 
 if ($operation === 'save_dates') {
-    $posteddatevalues = optional_param_array('dates', [], PARAM_RAW_TRIMMED);
+    $posteddatevalues = optional_param_array('dates', [], PARAM_RAW_TRIMMED) ?? [];
     foreach ($selected as $cmid) {
         foreach (['timeopen', 'timeclose', 'allowsubmissionsfromdate', 'duedate', 'cutoffdate', 'gradingduedate'] as $field) {
             $flatkey = $cmid . '_' . $field;

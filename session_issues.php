@@ -53,6 +53,7 @@ $PAGE->set_title(get_string('sessionissues', 'tool_coursecompliance'));
 $PAGE->set_heading(get_string('sessionissues', 'tool_coursecompliance'));
 
 echo $OUTPUT->header();
+echo \tool_coursecompliance\ui::primary_navigation('session');
 echo $OUTPUT->heading(get_string('sessionissues', 'tool_coursecompliance') . ' #' . $batchid);
 $table = new html_table();
 $table->head = [

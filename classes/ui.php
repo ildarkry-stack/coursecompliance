@@ -1,0 +1,258 @@
+<?php
+// This file is part of Moodle - http://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+
+/**
+ * Shared user-interface helpers.
+ *
+ * @package    tool_coursecompliance
+ * @copyright  2026 MIA Academy
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
+
+namespace tool_coursecompliance;
+
+/**
+ * Shared user-interface helpers.
+ *
+ * @package    tool_coursecompliance
+ * @copyright  2026 MIA Academy
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
+final class ui {
+    /**
+     * Render the primary plugin navigation.
+     *
+     * @param string $active Active navigation key.
+     * @return string HTML.
+     */
+    public static function primary_navigation(string $active): string {
+        $context = \context_system::instance();
+        $items = [
+            'dashboard' => [
+                'label' => get_string('nav_dashboard', 'tool_coursecompliance'),
+                'url' => new \moodle_url('/admin/tool/coursecompliance/index.php'),
+                'capability' => 'tool/coursecompliance:view',
+            ],
+            'audit' => [
+                'label' => get_string('nav_audit', 'tool_coursecompliance'),
+                'url' => new \moodle_url('/admin/tool/coursecompliance/readiness.php'),
+                'capability' => 'tool/coursecompliance:view',
+            ],
+            'standards' => [
+                'label' => get_string('nav_standards', 'tool_coursecompliance'),
+                'url' => new \moodle_url('/admin/tool/coursecompliance/profiles.php'),
+                'capability' => 'tool/coursecompliance:manageprofiles',
+            ],
+            'session' => [
+                'label' => get_string('nav_session', 'tool_coursecompliance'),
+                'url' => new \moodle_url('/admin/tool/coursecompliance/session.php'),
+                'capability' => 'tool/coursecompliance:view',
+            ],
+            'operations' => [
+                'label' => get_string('nav_operations', 'tool_coursecompliance'),
+                'url' => new \moodle_url('/admin/tool/coursecompliance/activities.php'),
+                'capability' => 'tool/coursecompliance:view',
+            ],
+        ];
+
+        if (has_capability('moodle/site:config', $context)) {
+            $items['settings'] = [
+                'label' => get_string('nav_settings', 'tool_coursecompliance'),
+                'url' => new \moodle_url('/admin/settings.php', ['section' => 'tool_coursecompliance_settings']),
+                'capability' => 'moodle/site:config',
+            ];
+        }
+
+        $links = [];
+        foreach ($items as $key => $item) {
+            if (!has_capability($item['capability'], $context)) {
+                continue;
+            }
+            $classes = ['nav-link'];
+            $attrs = [];
+            if ($key === $active) {
+                $classes[] = 'active';
+                $attrs['aria-current'] = 'page';
+            }
+            $attrs['class'] = implode(' ', $classes);
+            $links[] = \html_writer::tag(
+                'li',
+                \html_writer::link($item['url'], $item['label'], $attrs),
+                ['class' => 'nav-item']
+            );
+        }
+
+        return \html_writer::tag(
+            'nav',
+            \html_writer::tag('ul', implode('', $links), ['class' => 'nav nav-tabs flex-wrap mb-4']),
+            ['aria-label' => get_string('pluginnavigation', 'tool_coursecompliance')]
+        );
+    }
+
+    /**
+     * Render secondary navigation for standards pages.
+     *
+     * @param string $active Active key.
+     * @return string HTML.
+     */
+    public static function standards_navigation(string $active): string {
+        $items = [
+            'profiles' => [
+                get_string('standards', 'tool_coursecompliance'),
+                new \moodle_url('/admin/tool/coursecompliance/profiles.php'),
+            ],
+            'exceptions' => [
+                get_string('exceptions', 'tool_coursecompliance'),
+                new \moodle_url('/admin/tool/coursecompliance/exceptions.php'),
+            ],
+        ];
+        return self::secondary_navigation($items, $active, 'standardsnavigation');
+    }
+
+    /**
+     * Render secondary navigation for activity operations pages.
+     *
+     * @param string $active Active key.
+     * @return string HTML.
+     */
+    public static function operations_navigation(string $active): string {
+        $items = [
+            'activities' => [
+                get_string('activityoperations', 'tool_coursecompliance'),
+                new \moodle_url('/admin/tool/coursecompliance/activities.php'),
+            ],
+            'history' => [
+                get_string('operationhistory', 'tool_coursecompliance'),
+                new \moodle_url('/admin/tool/coursecompliance/activity_history.php'),
+            ],
+        ];
+        return self::secondary_navigation($items, $active, 'operationsnavigation');
+    }
+
+    /**
+     * Render a row of metric cards.
+     *
+     * @param array $metrics Metrics.
+     * @return string HTML.
+     */
+    public static function metric_cards(array $metrics): string {
+        $cards = [];
+        foreach ($metrics as $metric) {
+            $valueclass = 'display-6 fw-semibold mb-1';
+            if (!empty($metric['class'])) {
+                $valueclass .= ' ' . $metric['class'];
+            }
+            $body = \html_writer::div((string)$metric['value'], $valueclass);
+            $body .= \html_writer::div(s($metric['label']), 'text-muted fw-semibold');
+            if (!empty($metric['help'])) {
+                $body .= \html_writer::div(s($metric['help']), 'small text-muted mt-1');
+            }
+            $cards[] = \html_writer::div(
+                \html_writer::div($body, 'card-body'),
+                'card h-100 shadow-sm border-0'
+            );
+        }
+
+        if (!$cards) {
+            return '';
+        }
+
+        $columns = [];
+        foreach ($cards as $card) {
+            $columns[] = \html_writer::div($card, 'col-12 col-sm-6 col-xl');
+        }
+        return \html_writer::div(implode('', $columns), 'row g-3 mb-4');
+    }
+
+    /**
+     * Render a severity badge.
+     *
+     * @param string $severity Severity value.
+     * @return string HTML.
+     */
+    public static function severity_badge(string $severity): string {
+        $classes = [
+            'critical' => 'bg-danger',
+            'warning' => 'bg-warning text-dark',
+            'notice' => 'bg-info text-dark',
+        ];
+        $class = $classes[$severity] ?? 'bg-secondary';
+        $label = get_string('severity_' . $severity, 'tool_coursecompliance');
+        return \html_writer::span($label, 'badge ' . $class);
+    }
+
+    /**
+     * Render a status badge for scan/batch statuses.
+     *
+     * @param string $status Status value.
+     * @param string $component String prefix component, status or batchstatus.
+     * @return string HTML.
+     */
+    public static function status_badge(string $status, string $component = 'status'): string {
+        $classes = [
+            'complete' => 'bg-success',
+            'running' => 'bg-primary',
+            'queued' => 'bg-info text-dark',
+            'partial' => 'bg-warning text-dark',
+            'failed' => 'bg-danger',
+            'preview' => 'bg-secondary',
+        ];
+        $identifier = $component . '_' . $status;
+        $label = get_string($identifier, 'tool_coursecompliance');
+        return \html_writer::span($label, 'badge ' . ($classes[$status] ?? 'bg-secondary'));
+    }
+
+    /**
+     * Render a compact section intro.
+     *
+     * @param string $text Introductory text.
+     * @return string HTML.
+     */
+    public static function intro(string $text): string {
+        return \html_writer::div(s($text), 'text-muted mb-4');
+    }
+
+    /**
+     * Render secondary tabs.
+     *
+     * @param array $items Items.
+     * @param string $active Active key.
+     * @param string $labelstring Language identifier for aria label.
+     * @return string HTML.
+     */
+    private static function secondary_navigation(array $items, string $active, string $labelstring): string {
+        $links = [];
+        foreach ($items as $key => [$label, $url]) {
+            $classes = ['nav-link'];
+            $attrs = [];
+            if ($key === $active) {
+                $classes[] = 'active';
+                $attrs['aria-current'] = 'page';
+            }
+            $attrs['class'] = implode(' ', $classes);
+            $links[] = \html_writer::tag(
+                'li',
+                \html_writer::link($url, $label, $attrs),
+                ['class' => 'nav-item']
+            );
+        }
+        return \html_writer::tag(
+            'nav',
+            \html_writer::tag('ul', implode('', $links), ['class' => 'nav nav-pills mb-4']),
+            ['aria-label' => get_string($labelstring, 'tool_coursecompliance')]
+        );
+    }
+}

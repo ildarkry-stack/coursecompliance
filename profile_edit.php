@@ -91,6 +91,8 @@ if ($data = $form->get_data()) {
 }
 
 echo $OUTPUT->header();
+echo \tool_coursecompliance\ui::primary_navigation('standards');
+echo \tool_coursecompliance\ui::standards_navigation('profiles');
 echo $OUTPUT->heading(get_string('editprofile', 'tool_coursecompliance'));
 $form->display();
 echo $OUTPUT->footer();

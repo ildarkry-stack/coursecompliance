@@ -49,7 +49,10 @@ $PAGE->set_title(get_string('operationhistory', 'tool_coursecompliance'));
 $PAGE->set_heading(get_string('operationhistory', 'tool_coursecompliance'));
 
 echo $OUTPUT->header();
+echo \tool_coursecompliance\ui::primary_navigation('operations');
+echo \tool_coursecompliance\ui::operations_navigation('history');
 echo $OUTPUT->heading(get_string('operationhistory', 'tool_coursecompliance'));
+echo \tool_coursecompliance\ui::intro(get_string('operationhistoryintro', 'tool_coursecompliance'));
 
 $table = new html_table();
 $table->head = [
@@ -76,7 +79,7 @@ foreach ($batches as $batch) {
                 '#' . $batch->sourcebatchid
             )
             : '—',
-        get_string('batchstatus_' . $batch->status, 'tool_coursecompliance'),
+        \tool_coursecompliance\ui::status_badge((string)$batch->status, 'batchstatus'),
         $batch->totalchanges,
         $batch->applied,
         $batch->skipped,
@@ -89,11 +92,4 @@ foreach ($batches as $batch) {
 }
 echo html_writer::table($table);
 echo $OUTPUT->paging_bar($total, $page, $perpage, new moodle_url('/admin/tool/coursecompliance/activity_history.php'));
-echo html_writer::div(
-    html_writer::link(
-        new moodle_url('/admin/tool/coursecompliance/activities.php'),
-        get_string('backtoactivities', 'tool_coursecompliance')
-    ),
-    'mt-3'
-);
 echo $OUTPUT->footer();

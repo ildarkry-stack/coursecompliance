@@ -357,5 +357,45 @@ function xmldb_tool_coursecompliance_upgrade(int $oldversion): bool {
         upgrade_plugin_savepoint(true, 2026091101, 'tool', 'coursecompliance');
     }
 
+    if ($oldversion < 2026091102) {
+        // Close malformed queued scans created without a selected profile in earlier releases.
+        $message = get_string('scaninvalidprofile', 'tool_coursecompliance');
+        $now = time();
+        $DB->execute(
+            "UPDATE {tool_coursecompliance_scan}
+                SET status = :status, finishedat = :finishedat, errormessage = :errormessage
+              WHERE profileid = :profileid AND status = :queuedstatus",
+            [
+                'status' => 'failed',
+                'finishedat' => $now,
+                'errormessage' => $message,
+                'profileid' => 0,
+                'queuedstatus' => 'queued',
+            ]
+        );
+
+        upgrade_plugin_savepoint(true, 2026091102, 'tool', 'coursecompliance');
+    }
+
+    if ($oldversion < 2026091103) {
+        // Activity browser normalization fix; no database schema changes are required.
+        upgrade_plugin_savepoint(true, 2026091103, 'tool', 'coursecompliance');
+    }
+
+    if ($oldversion < 2026091104) {
+        // Native Quiz review-options layout; configuration remains JSON-compatible.
+        upgrade_plugin_savepoint(true, 2026091104, 'tool', 'coursecompliance');
+    }
+
+    if ($oldversion < 2026091105) {
+        // Native availability editor for exam/resit Blueprint rules; no schema change required.
+        upgrade_plugin_savepoint(true, 2026091105, 'tool', 'coursecompliance');
+    }
+
+    if ($oldversion < 2026091106) {
+        // Information architecture, navigation and report visualisation update; no schema change required.
+        upgrade_plugin_savepoint(true, 2026091106, 'tool', 'coursecompliance');
+    }
+
     return true;
 }

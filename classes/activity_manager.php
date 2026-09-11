@@ -225,7 +225,7 @@ final class activity_manager {
      * @return string|int
      */
     private function current_value(\stdClass $activity, string $field): string|int {
-        if (array_key_exists($field, $activity->dates)) {
+        if (is_array($activity->dates ?? null) && array_key_exists($field, $activity->dates)) {
             return (int)$activity->dates[$field];
         }
         if ($field === 'name') {

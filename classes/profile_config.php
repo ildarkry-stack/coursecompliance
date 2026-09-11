@@ -200,6 +200,9 @@ final class profile_config {
                 $result[$field][$period] = 0;
             }
         }
+        // These two values are fixed by the standard Moodle Quiz settings form.
+        $result['reviewattempt']['during'] = 1;
+        $result['reviewoverallfeedback']['during'] = 0;
         return $result;
     }
 
