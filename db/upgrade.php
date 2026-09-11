@@ -269,5 +269,88 @@ function xmldb_tool_coursecompliance_upgrade(int $oldversion): bool {
         upgrade_plugin_savepoint(true, 2026090901, 'tool', 'coursecompliance');
     }
 
+    if ($oldversion < 2026091000) {
+        // Blueprint snapshots are stored in profile config JSON; no database schema changes are required.
+        upgrade_plugin_savepoint(true, 2026091000, 'tool', 'coursecompliance');
+    }
+
+    if ($oldversion < 2026091001) {
+        // Runtime form loading and profile-selection UX update; no database changes are required.
+        upgrade_plugin_savepoint(true, 2026091001, 'tool', 'coursecompliance');
+    }
+
+    if ($oldversion < 2026091002) {
+        // Align the built-in credit profile with the institutional final-assessment idnumber "exam".
+        $profiles = $DB->get_records('tool_coursecompliance_profile');
+        foreach ($profiles as $profile) {
+            $config = \tool_coursecompliance\profile_config::decode($profile->configjson);
+            $iscreditpreset = in_array(
+                $profile->name,
+                ['Зачёт — базовый стандарт', 'Credit — base standard'],
+                true
+            );
+            if ($iscreditpreset && ($config['examidnumber'] ?? '') === 'credit') {
+                $config['examidnumber'] = 'exam';
+                $profile->configjson = \tool_coursecompliance\profile_config::encode($config);
+                $profile->timemodified = time();
+                $DB->update_record('tool_coursecompliance_profile', $profile);
+            }
+        }
+
+        upgrade_plugin_savepoint(true, 2026091002, 'tool', 'coursecompliance');
+    }
+
+    if ($oldversion < 2026091003) {
+        // Remove the obsolete built-in Credit profile while preserving its audit history.
+        $examprofile = null;
+        foreach (['Экзамен — базовый стандарт', 'Exam — base standard'] as $examname) {
+            $examprofile = $DB->get_record('tool_coursecompliance_profile', ['name' => $examname]);
+            if ($examprofile) {
+                break;
+            }
+        }
+
+        if (!$examprofile) {
+            $now = time();
+            $examprofile = (object)[
+                'name' => get_string('profilepreset_exam', 'tool_coursecompliance'),
+                'description' => get_string('profilepreset_exam_desc', 'tool_coursecompliance'),
+                'enabled' => 1,
+                'configjson' => \tool_coursecompliance\profile_config::encode(
+                    \tool_coursecompliance\profile_config::preset('exam')
+                ),
+                'timecreated' => $now,
+                'timemodified' => $now,
+            ];
+            $examprofile->id = $DB->insert_record('tool_coursecompliance_profile', $examprofile);
+        }
+
+        foreach (['Зачёт — базовый стандарт', 'Credit — base standard'] as $creditname) {
+            $creditprofiles = $DB->get_records('tool_coursecompliance_profile', ['name' => $creditname]);
+            foreach ($creditprofiles as $creditprofile) {
+                $DB->set_field(
+                    'tool_coursecompliance_scan',
+                    'profileid',
+                    $examprofile->id,
+                    ['profileid' => $creditprofile->id]
+                );
+                $DB->set_field(
+                    'tool_coursecompliance_exception',
+                    'profileid',
+                    $examprofile->id,
+                    ['profileid' => $creditprofile->id]
+                );
+                $DB->delete_records('tool_coursecompliance_profile', ['id' => $creditprofile->id]);
+            }
+        }
+
+        upgrade_plugin_savepoint(true, 2026091003, 'tool', 'coursecompliance');
+    }
+
+    if ($oldversion < 2026091100) {
+        // Blueprint Engine 0.6 stores its expanded rules inside profile config JSON.
+        upgrade_plugin_savepoint(true, 2026091100, 'tool', 'coursecompliance');
+    }
+
     return true;
 }

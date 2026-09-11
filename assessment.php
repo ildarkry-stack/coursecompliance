@@ -77,6 +77,7 @@ $table->head = [
     get_string('notices', 'tool_coursecompliance'),
     get_string('ignored', 'tool_coursecompliance'),
     get_string('status', 'tool_coursecompliance'),
+    get_string('actions'),
 ];
 foreach ($states as $state) {
     $status = (int)$state->critical > 0
@@ -95,6 +96,14 @@ foreach ($states as $state) {
         (int)$state->notices,
         (int)$state->ignored,
         $status,
+        html_writer::link(
+            new moodle_url('/admin/tool/coursecompliance/report.php', [
+                'scanid' => $scanid,
+                'courseid' => $state->courseid,
+                'assessmenttype' => $state->assessmenttype,
+            ]),
+            get_string('viewproblems', 'tool_coursecompliance')
+        ),
     ];
 }
 echo html_writer::table($table);

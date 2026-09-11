@@ -64,6 +64,12 @@ foreach ($profiles as $profile) {
     if (!$targets) {
         $targets[] = get_string('courseonlyprofile', 'tool_coursecompliance');
     }
+    if (!empty($config['blueprint']) && is_array($config['blueprint'])) {
+        $targets[] = get_string('blueprintsourcebrief', 'tool_coursecompliance', (object)[
+            'course' => $config['blueprint']['sourcefullname'] ?? '',
+            'version' => (int)($config['blueprintversion'] ?? 1),
+        ]);
+    }
     $actions = html_writer::link(
         new moodle_url('/admin/tool/coursecompliance/profile_edit.php', ['id' => $profile->id]),
         get_string('edit')
@@ -71,6 +77,14 @@ foreach ($profiles as $profile) {
     $actions .= ' · ' . html_writer::link(
         new moodle_url('/admin/tool/coursecompliance/profile_edit.php', ['copy' => $profile->id]),
         get_string('duplicateprofile', 'tool_coursecompliance')
+    );
+    $actions .= ' · ' . html_writer::link(
+        new moodle_url('/admin/tool/coursecompliance/blueprint.php', ['profileid' => $profile->id]),
+        get_string('blueprint', 'tool_coursecompliance')
+    );
+    $actions .= ' · ' . html_writer::link(
+        new moodle_url('/admin/tool/coursecompliance/blueprint_rules.php', ['profileid' => $profile->id]),
+        get_string('blueprintrules', 'tool_coursecompliance')
     );
     $table->data[] = [
         format_string($profile->name),

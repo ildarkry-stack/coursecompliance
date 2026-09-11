@@ -64,8 +64,21 @@ final class scanner {
         $courseids = array_keys($courses);
 
         $this->exceptions = $this->load_exceptions((int)$profile->id, $courseids);
-        $teachers = $this->load_teacher_counts($courseids);
-        $quizdata = $this->load_quizzes($courseids, $config);
+        $mode = (string)($config['blueprintmode'] ?? 'manual');
+        $manualenabled = $mode !== 'template';
+        $blueprintenabled = $mode !== 'manual';
+        $blueprint = is_array($config['blueprint'] ?? null) ? $config['blueprint'] : [];
+        $visualblueprint = $blueprintenabled
+            && !empty($blueprint)
+            && (int)($blueprint['schema'] ?? 1) >= 2
+            && !empty($config['blueprintrules']['enabled']);
+        $manualassessmentenabled = $manualenabled && !$visualblueprint;
+        $teachers = $manualenabled ? $this->load_teacher_counts($courseids) : [];
+        $quizdata = $manualassessmentenabled ? $this->load_quizzes($courseids, $config) : [];
+        $blueprintstates = [];
+        if ($blueprintenabled && $blueprint) {
+            $blueprintstates = blueprint_manager::load_states($courseids);
+        }
 
         $totals = ['critical' => 0, 'warning' => 0, 'notice' => 0, 'ignored' => 0];
         $assessmentcount = 0;
@@ -75,9 +88,78 @@ final class scanner {
                 'course' => $course,
                 'teachercount' => $teachers[$course->id] ?? 0,
             ];
-            foreach (rule_registry::course_rules() as $rule) {
-                $outcome = $this->evaluate_and_store($rule, $coursecontext, $config, $scanid, (int)$course->id, 'course');
-                $this->increment_outcome($totals, $outcome);
+            if ($manualenabled) {
+                foreach (rule_registry::course_rules() as $rule) {
+                    $outcome = $this->evaluate_and_store(
+                        $rule,
+                        $coursecontext,
+                        $config,
+                        $scanid,
+                        (int)$course->id,
+                        'course'
+                    );
+                    $this->increment_outcome($totals, $outcome);
+                }
+            }
+
+            if ($blueprintstates) {
+                $state = $blueprintstates[(int)$course->id] ?? [];
+                $blueprintlocal = [
+                    'exam' => ['critical' => 0, 'warning' => 0, 'notice' => 0, 'ignored' => 0],
+                    'resit1' => ['critical' => 0, 'warning' => 0, 'notice' => 0, 'ignored' => 0],
+                    'resit2' => ['critical' => 0, 'warning' => 0, 'notice' => 0, 'ignored' => 0],
+                ];
+                foreach (blueprint_manager::compare($course, $state, $blueprint, $config) as $problem) {
+                    $problemtype = (string)($problem['assessmenttype'] ?? 'course');
+                    $outcome = $this->store_direct_violation(
+                        $scanid,
+                        (int)$course->id,
+                        (string)$problem['component'],
+                        (string)$problem['rulecode'],
+                        (string)$problem['severity'],
+                        $problemtype,
+                        (int)$problem['objectid'],
+                        (string)$problem['objectname'],
+                        (string)$problem['message'],
+                        (string)$problem['expected'],
+                        (string)$problem['actual']
+                    );
+                    $this->increment_outcome($totals, $outcome);
+                    if (isset($blueprintlocal[$problemtype])) {
+                        $this->increment_outcome($blueprintlocal[$problemtype], $outcome);
+                    }
+                }
+
+                if ($visualblueprint) {
+                    foreach (['exam', 'resit1', 'resit2'] as $type) {
+                        $assessmentrules = $config['blueprintrules']['assessments'][$type] ?? [];
+                        $idnumber = (string)($config[$type . 'idnumber'] ?? $type);
+                        $matches = $state['activities'][$idnumber] ?? [];
+                        if (empty($assessmentrules['required']) && !$matches) {
+                            continue;
+                        }
+                        $quiz = null;
+                        if (count($matches) === 1 && (string)$matches[0]['modname'] === 'quiz') {
+                            $quiz = (object)[
+                                'id' => (int)$matches[0]['instanceid'],
+                                'name' => (string)$matches[0]['name'],
+                            ];
+                            $assessmentcount++;
+                        }
+                        $this->store_assessment_state(
+                            $scanid,
+                            (int)$course->id,
+                            $type,
+                            $quiz,
+                            $idnumber,
+                            $blueprintlocal[$type]
+                        );
+                    }
+                }
+            }
+
+            if (!$manualassessmentenabled) {
+                continue;
             }
 
             $bytype = $quizdata[$course->id] ?? [];

@@ -23,6 +23,7 @@
  */
 
 require_once(__DIR__ . '/../../../config.php');
+require_once($CFG->libdir . '/formslib.php');
 
 require_login();
 $context = context_system::instance();
@@ -64,9 +65,11 @@ if ($form->is_cancelled()) {
 }
 if ($data = $form->get_data()) {
     require_sesskey();
-    $config = [];
+    $config = $profile
+        ? \tool_coursecompliance\profile_config::decode($profile->configjson)
+        : \tool_coursecompliance\profile_config::defaults();
     foreach (array_keys(\tool_coursecompliance\profile_config::defaults()) as $key) {
-        if (property_exists($data, $key)) {
+        if ($key !== 'blueprint' && property_exists($data, $key)) {
             $config[$key] = $data->{$key};
         }
     }

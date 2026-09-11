@@ -34,10 +34,6 @@ function xmldb_tool_coursecompliance_install(): void {
             'name' => get_string('profilepreset_exam', 'tool_coursecompliance'),
             'description' => get_string('profilepreset_exam_desc', 'tool_coursecompliance'),
         ],
-        'credit' => [
-            'name' => get_string('profilepreset_credit', 'tool_coursecompliance'),
-            'description' => get_string('profilepreset_credit_desc', 'tool_coursecompliance'),
-        ],
         'practice' => [
             'name' => get_string('profilepreset_practice', 'tool_coursecompliance'),
             'description' => get_string('profilepreset_practice_desc', 'tool_coursecompliance'),

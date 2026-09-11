@@ -62,3 +62,32 @@ The scanner stores a per-assessment readiness snapshot for `exam`, `resit1` and 
 Known legitimate deviations can be recorded as profile-specific exceptions with a reason and optional expiry date. Exceptions only affect subsequent scans; previous audit history remains unchanged.
 
 This release remains conservative: the advanced auditor is read-only. Automatic remediation of assessment settings is intentionally deferred until the audit rules have been validated against real Moodle 5.1 course data.
+
+## 0.5 Course Blueprint and detailed reports
+
+Version 0.5 adds a reusable **Course Blueprint** snapshot. An administrator can select a well-configured
+course from the profile list, capture it, and then audit other courses against the stored snapshot without
+reading the live template again on every scan.
+
+The first blueprint comparison covers:
+
+- course format, completion tracking and group mode settings;
+- named section presence/position;
+- required activities identified by stable course-module `idnumber` and their module type;
+- normalized activity access restrictions (cross-course course-module and grade-item IDs are translated to idnumbers);
+- activity completion settings;
+- calculated grade formulas normalized to grade-item idnumbers;
+- course completion criteria.
+
+Profiles can keep the existing manual assessment rules and add the blueprint checks in hybrid mode. Re-importing
+the source course creates a new explicit blueprint version; previous scans are not retroactively changed.
+
+The compliance report is also expanded for administrators. It now includes a dedicated **What is missing**
+summary, affected-course counts, expected versus actual values, the exact problem location, remediation guidance,
+direct edit links into Moodle and filtered links from Assessment Auditor to the relevant course/assessment problems.
+## 0.6 Blueprint rule constructor
+
+Version 0.6 turns the template course into a selective institutional standard. Importing a course stores an immutable snapshot; the **Blueprint checks** page then lets an administrator decide exactly which values are enforced and whether each value comes from the template or is entered manually.
+
+The constructor covers course settings, content counts and required pages, independent `exam` / `resit1` / `resit2` checks, a visual Quiz review-options matrix, access restrictions, activity completion, course-grade formula/max grade and course-completion conditions. The detailed report explains what is missing, what differs, expected/actual values and the recommended place to fix the problem.
+

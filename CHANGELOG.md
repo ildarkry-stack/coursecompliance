@@ -1,3 +1,42 @@
+# Changelog
+
+## 0.6.0-alpha
+
+- Reworked Course Blueprint into an explicit A–D rule constructor instead of comparing every captured property.
+- Added course setting checks for activity dates, upload limit, completion tracking and group mode.
+- Added course-content checks for regular Quiz counts, Page counts, Page-name keyword search, required literature pages with aliases, section names and optional module-type counts.
+- Added independent `exam`, `resit1` and `resit2` rule panels with grade-to-pass, grade, attempts, time limit, grading method, answer shuffling, group mode, visibility, restrictions, completion, dates, password, subnet, browser security and question checks.
+- Added a visual Quiz review-options matrix for all four review periods.
+- Added course-grade maximum and calculated-grade formula checks.
+- Added course completion criteria comparison.
+- Added duplicate activity idnumber detection and richer administrator remediation messages.
+- Blueprint snapshots now include full supported activity inventory, Quiz settings, course grade metadata and stable group/grouping references.
+- Session Readiness is populated from Blueprint assessment checks when the visual Blueprint engine is active.
+- No new database tables are required; existing profiles, scans, exceptions and batch history are preserved.
+
+
+## 0.5.3-alpha
+
+- Removed the built-in Credit profile. New installations now create only Exam and Practice presets.
+- Existing built-in Credit profiles are removed on upgrade; their scans and exceptions are reassigned to the built-in Exam profile to preserve history.
+
+## 0.5.2-alpha
+
+- Changed the built-in Credit profile to use the institutional final-assessment `idnumber` `exam` instead of `credit`.
+- Added an upgrade migration for existing built-in Credit profiles while leaving custom profiles untouched.
+- Added a regression test for the Credit preset.
+
+## 0.5.0-alpha - 2026-09-10
+
+- Added Course Blueprint snapshots imported from a selected template course.
+- Added hybrid profile mode: template-derived rules plus manually configured rules.
+- Added blueprint comparison for course settings, named sections, required activities by idnumber,
+  access restrictions, activity completion, calculated grade formulas, and course completion criteria.
+- Added an administrator-friendly detailed report with a dedicated “What is missing” summary,
+  expected/actual values, exact problem location, direct Moodle edit links, and remediation guidance.
+- Added per-assessment links from Assessment Auditor to the filtered detailed problem report.
+- Blueprint snapshots are immutable until an administrator explicitly imports the source course again.
+
 ## 0.4.4-alpha-ci-fixed - 2026-09-09
 
 - Restored the required `MOODLE_INTERNAL` guard in form classes that include `formslib.php`.

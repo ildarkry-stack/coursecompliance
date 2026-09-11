@@ -44,6 +44,15 @@ final class profile_config_test extends \advanced_testcase {
     }
 
     /**
+     * Exam preset uses the institutional exam idnumber.
+     */
+    public function test_exam_preset_uses_exam_idnumber(): void {
+        $config = profile_config::preset('exam');
+        $this->assertSame('exam', $config['examidnumber']);
+        $this->assertSame(1, $config['examattempts']);
+    }
+
+    /**
      * Practice preset does not require a Quiz exam.
      */
     public function test_practice_preset_disables_quiz_requirement(): void {

@@ -40,11 +40,13 @@ final class scan_form extends \moodleform {
         $mform = $this->_form;
         $categories = \core_course_category::make_categories_list();
         $profiles = $DB->get_records_menu('tool_coursecompliance_profile', ['enabled' => 1], 'name ASC', 'id,name');
+        $profiles = [0 => get_string('notselected', 'tool_coursecompliance')] + $profiles;
         $mform->addElement('select', 'categoryid', get_string('category', 'tool_coursecompliance'), $categories);
         $mform->setType('categoryid', PARAM_INT);
         $mform->addRule('categoryid', null, 'required', null, 'client');
         $mform->addElement('select', 'profileid', get_string('profile', 'tool_coursecompliance'), $profiles);
         $mform->setType('profileid', PARAM_INT);
+        $mform->setDefault('profileid', 0);
         $mform->addRule('profileid', null, 'required', null, 'client');
         $this->add_action_buttons(false, get_string('startscan', 'tool_coursecompliance'));
     }

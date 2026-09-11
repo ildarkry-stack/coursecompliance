@@ -56,6 +56,15 @@ final class profile_form extends \moodleform {
         $mform->setType('description', PARAM_TEXT);
         $mform->addElement('advcheckbox', 'enabled', get_string('enabled', 'tool_coursecompliance'));
 
+        $mform->addElement('header', 'blueprintsettings', get_string('blueprintsettings', 'tool_coursecompliance'));
+        $mform->addElement('select', 'blueprintmode', get_string('blueprintmode', 'tool_coursecompliance'), [
+            'manual' => get_string('blueprintmode_manual', 'tool_coursecompliance'),
+            'template' => get_string('blueprintmode_template', 'tool_coursecompliance'),
+            'hybrid' => get_string('blueprintmode_hybrid', 'tool_coursecompliance'),
+        ]);
+        $mform->setType('blueprintmode', PARAM_ALPHA);
+        $mform->addElement('static', 'blueprintnotice', '', get_string('blueprintnotice', 'tool_coursecompliance'));
+
         $mform->addElement('header', 'targets', get_string('profiletargets', 'tool_coursecompliance'));
         foreach (['exam', 'resit1', 'resit2'] as $type) {
             $mform->addElement('text', $type . 'idnumber', get_string($type . 'idnumber', 'tool_coursecompliance'));
