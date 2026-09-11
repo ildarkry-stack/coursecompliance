@@ -108,12 +108,14 @@ function tool_coursecompliance_format_change_value(\stdClass $change, string $va
     if (str_starts_with((string)$change->fieldname, 'review')) {
         $periods = [];
         $mask = (int)$value;
-        foreach ([
-            0x10000 => get_string('reviewperiod_during', 'tool_coursecompliance'),
-            0x1000 => get_string('reviewperiod_immediately', 'tool_coursecompliance'),
-            0x100 => get_string('reviewperiod_open', 'tool_coursecompliance'),
-            0x10 => get_string('reviewperiod_closed', 'tool_coursecompliance'),
-        ] as $bit => $label) {
+        foreach (
+            [
+                0x10000 => get_string('reviewperiod_during', 'tool_coursecompliance'),
+                0x1000 => get_string('reviewperiod_immediately', 'tool_coursecompliance'),
+                0x100 => get_string('reviewperiod_open', 'tool_coursecompliance'),
+                0x10 => get_string('reviewperiod_closed', 'tool_coursecompliance'),
+            ] as $bit => $label
+        ) {
             if (($mask & $bit) !== 0) {
                 $periods[] = $label;
             }

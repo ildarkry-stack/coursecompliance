@@ -73,15 +73,19 @@ final class autofix_manager {
         }
 
         $rulecode = (string)$result->rulecode;
-        if (in_array($rulecode, [
-            'QUIZ_ATTEMPTS_STANDARD',
-            'QUIZ_TIMELIMIT_STANDARD',
-            'QUIZ_GRADE_STANDARD',
-            'QUIZ_RIGHT_ANSWER_HIDDEN_WHILE_OPEN',
-            'QUIZ_CORRECTNESS_HIDDEN_WHILE_OPEN',
-            'QUIZ_BROWSER_SECURITY_STANDARD',
-            'QUIZ_SHUFFLE_ANSWERS_REQUIRED',
-        ], true)) {
+        if (in_array(
+            $rulecode,
+            [
+                'QUIZ_ATTEMPTS_STANDARD',
+                'QUIZ_TIMELIMIT_STANDARD',
+                'QUIZ_GRADE_STANDARD',
+                'QUIZ_RIGHT_ANSWER_HIDDEN_WHILE_OPEN',
+                'QUIZ_CORRECTNESS_HIDDEN_WHILE_OPEN',
+                'QUIZ_BROWSER_SECURITY_STANDARD',
+                'QUIZ_SHUFFLE_ANSWERS_REQUIRED',
+            ],
+            true
+        )) {
             return self::manual_rule_has_target($rulecode, $config);
         }
 
