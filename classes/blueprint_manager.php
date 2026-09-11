@@ -1354,7 +1354,7 @@ final class blueprint_manager {
     /**
      * Load activity names for Moodle core modules used by the audit.
      *
-     * @param array<string, int[]> $instancesbymod Instance IDs by module.
+     * @param array $instancesbymod Instance IDs by module.
      * @return array<string, array<int, string>>
      */
     private static function load_instance_names(array $instancesbymod): array {
@@ -1487,10 +1487,10 @@ final class blueprint_manager {
      * Normalise availability JSON so cross-course IDs use stable labels.
      *
      * @param string $json Availability JSON.
-     * @param array<int, string> $cmidmap Course-module id to idnumber.
-     * @param array<int, string> $gradeidmap Grade-item id to idnumber.
-     * @param array<int, string> $groupidmap Group id to stable label.
-     * @param array<int, string> $groupingidmap Grouping id to stable label.
+     * @param array $cmidmap Course-module id to idnumber.
+     * @param array $gradeidmap Grade-item id to idnumber.
+     * @param array $groupidmap Group id to stable label.
+     * @param array $groupingidmap Grouping id to stable label.
      * @return string
      */
     private static function normalise_availability(
@@ -1549,7 +1549,7 @@ final class blueprint_manager {
      * Normalise a grade calculation by replacing grade-item IDs with idnumbers.
      *
      * @param string $calculation Raw calculation.
-     * @param array<int, string> $gradeidmap Grade-item map.
+     * @param array $gradeidmap Grade-item map.
      * @return string
      */
     private static function normalise_formula(string $calculation, array $gradeidmap): string {
@@ -1590,7 +1590,7 @@ final class blueprint_manager {
     /**
      * Describe Quiz review options for reports.
      *
-     * @param array<string, int> $values Review masks.
+     * @param array $values Review masks.
      * @return string
      */
     private static function describe_review(array $values): string {

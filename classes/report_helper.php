@@ -42,17 +42,14 @@ final class report_helper {
         if (str_ends_with((string)$result->rulecode, '_REQUIRED')) {
             return true;
         }
-        if (in_array(
-            (string)$result->rulecode,
-            [
-                'BLUEPRINT_ACTIVITY_MISSING',
-                'BLUEPRINT_ASSESSMENT_MISSING',
-                'BLUEPRINT_GRADE_FORMULA_MISSING',
-                'BLUEPRINT_LITERATURE_PAGE_MISSING',
-                'BLUEPRINT_SECTION_MISSING',
-            ],
-            true
-        )) {
+        $missingcodes = [
+            'BLUEPRINT_ACTIVITY_MISSING',
+            'BLUEPRINT_ASSESSMENT_MISSING',
+            'BLUEPRINT_GRADE_FORMULA_MISSING',
+            'BLUEPRINT_LITERATURE_PAGE_MISSING',
+            'BLUEPRINT_SECTION_MISSING',
+        ];
+        if (in_array((string)$result->rulecode, $missingcodes, true)) {
             return true;
         }
         return in_array(
