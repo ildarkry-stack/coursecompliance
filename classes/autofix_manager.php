@@ -73,7 +73,7 @@ final class autofix_manager {
         }
 
         $rulecode = (string)$result->rulecode;
-        if (in_array(
+        $manualrule = in_array(
             $rulecode,
             [
                 'QUIZ_ATTEMPTS_STANDARD',
@@ -85,7 +85,8 @@ final class autofix_manager {
                 'QUIZ_SHUFFLE_ANSWERS_REQUIRED',
             ],
             true
-        )) {
+        );
+        if ($manualrule) {
             return self::manual_rule_has_target($rulecode, $config);
         }
 
