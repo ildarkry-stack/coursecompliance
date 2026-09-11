@@ -36,6 +36,32 @@ namespace tool_coursecompliance;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 final class activity_manager {
+    /** @var string[] Quiz settings that can be changed by the safe batch engine. */
+    private const QUIZ_SETTING_FIELDS = [
+        'attempts',
+        'timelimit',
+        'grade',
+        'shuffleanswers',
+        'browsersecurity',
+        'reviewattempt',
+        'reviewcorrectness',
+        'reviewmaxmarks',
+        'reviewmarks',
+        'reviewspecificfeedback',
+        'reviewgeneralfeedback',
+        'reviewrightanswer',
+        'reviewoverallfeedback',
+    ];
+
+    /**
+     * Return Quiz settings supported by safe batch operations.
+     *
+     * @return string[]
+     */
+    public static function quiz_setting_fields(): array {
+        return self::QUIZ_SETTING_FIELDS;
+    }
+
     /**
      * Apply a queued batch.
      *
@@ -59,6 +85,7 @@ final class activity_manager {
         $applied = 0;
         $skipped = 0;
         $failed = 0;
+        $groupsprocessed = 0;
         $repository = new activity_repository();
 
         foreach (array_chunk(array_map('intval', $cmids), 200) as $cmchunk) {
@@ -119,8 +146,14 @@ final class activity_manager {
                 } catch (\Throwable $e) {
                     $this->mark_group($cmchanges, 'failed', $e->getMessage());
                     $failed += count($cmchanges);
+                } finally {
+                    $groupsprocessed++;
+                    if (($groupsprocessed % 10) === 0) {
+                        $this->update_progress($batchid, $applied, $skipped, $failed);
+                    }
                 }
             }
+            $this->update_progress($batchid, $applied, $skipped, $failed);
         }
 
         $batch = $DB->get_record('tool_coursecompliance_act_batch', ['id' => $batchid], '*', MUST_EXIST);
@@ -146,11 +179,17 @@ final class activity_manager {
         global $CFG, $DB;
 
         $datechanges = [];
+        $quizsettings = [];
         $rename = null;
         $visibility = null;
         foreach ($changes as $change) {
             if (in_array($change->fieldname, activity_repository::date_fields($activity->modname), true)) {
                 $datechanges[$change->fieldname] = (int)$change->newvalue;
+            } else if (
+                $activity->modname === 'quiz'
+                && in_array($change->fieldname, self::QUIZ_SETTING_FIELDS, true)
+            ) {
+                $quizsettings[$change->fieldname] = $this->cast_quiz_setting($change->fieldname, $change->newvalue);
             } else if ($change->fieldname === 'name') {
                 $rename = $change->newvalue;
             } else if ($change->fieldname === 'visibilitystate') {
@@ -158,35 +197,57 @@ final class activity_manager {
             }
         }
 
-        if ($datechanges) {
+        if ($datechanges || $quizsettings) {
             $instance = $DB->get_record($activity->modname, ['id' => $activity->instanceid], '*', MUST_EXIST);
             $oldclose = $activity->modname === 'quiz' ? (int)$instance->timeclose : null;
+            $newgrade = null;
+            if ($activity->modname === 'quiz' && array_key_exists('grade', $quizsettings)) {
+                $newgrade = (float)$quizsettings['grade'];
+                unset($quizsettings['grade']);
+            }
             foreach ($datechanges as $field => $value) {
                 $instance->{$field} = $value;
             }
-            if (property_exists($instance, 'timemodified')) {
-                $instance->timemodified = time();
+            foreach ($quizsettings as $field => $value) {
+                $instance->{$field} = $value;
             }
-            $DB->update_record($activity->modname, $instance);
+            if ($datechanges || $quizsettings) {
+                if (property_exists($instance, 'timemodified')) {
+                    $instance->timemodified = time();
+                }
+                $DB->update_record($activity->modname, $instance);
+            }
 
             $cm = get_coursemodule_from_id($activity->modname, $activity->cmid, $activity->courseid, false, MUST_EXIST);
             if ($activity->modname === 'quiz') {
                 require_once($CFG->dirroot . '/mod/quiz/lib.php');
                 require_once($CFG->dirroot . '/mod/quiz/locallib.php');
-                quiz_update_events($instance);
-                $completionexpected = !empty($cm->completionexpected) ? (int)$cm->completionexpected : null;
-                \core_completion\api::update_completion_date_event(
-                    $cm->id,
-                    'quiz',
-                    $instance,
-                    $completionexpected
-                );
-                quiz_grade_item_update($instance);
-                if ($oldclose !== (int)$instance->timeclose) {
+                if ($newgrade !== null) {
+                    $quizobj = \mod_quiz\quiz_settings::create((int)$instance->id);
+                    $quizobj->get_grade_calculator()->update_quiz_maximum_grade($newgrade);
+                    $instance = $DB->get_record('quiz', ['id' => $instance->id], '*', MUST_EXIST);
+                }
+                if ($datechanges) {
+                    quiz_update_events($instance);
+                    $completionexpected = !empty($cm->completionexpected) ? (int)$cm->completionexpected : null;
+                    \core_completion\api::update_completion_date_event(
+                        $cm->id,
+                        'quiz',
+                        $instance,
+                        $completionexpected
+                    );
+                    if ($oldclose !== (int)$instance->timeclose) {
+                        quiz_update_open_attempts(['quizid' => $instance->id]);
+                    }
+                }
+                if (array_key_exists('timelimit', $quizsettings)) {
                     quiz_update_open_attempts(['quizid' => $instance->id]);
                 }
+                if ($datechanges) {
+                    quiz_grade_item_update($instance);
+                }
                 quiz_delete_previews($instance);
-            } else {
+            } else if ($datechanges) {
                 require_once($CFG->dirroot . '/course/lib.php');
                 course_module_update_calendar_events($activity->modname, $instance, $cm);
             }
@@ -214,6 +275,8 @@ final class activity_manager {
             }
             $cm = get_coursemodule_from_id('', $activity->cmid, $activity->courseid, false, MUST_EXIST);
             \core\event\course_module_updated::create_from_cm($cm)->trigger();
+            \course_modinfo::purge_course_module_cache($activity->courseid, $activity->cmid);
+            rebuild_course_cache($activity->courseid, false, true);
         }
     }
 
@@ -222,9 +285,11 @@ final class activity_manager {
      *
      * @param \stdClass $activity Activity.
      * @param string $field Field name.
-     * @return string|int
+     * @return string|int|float
      */
-    private function current_value(\stdClass $activity, string $field): string|int {
+    private function current_value(\stdClass $activity, string $field): string|int|float {
+        global $DB;
+
         if (is_array($activity->dates ?? null) && array_key_exists($field, $activity->dates)) {
             return (int)$activity->dates[$field];
         }
@@ -234,7 +299,47 @@ final class activity_manager {
         if ($field === 'visibilitystate') {
             return $activity->visibilitystate;
         }
+        if ($activity->modname === 'quiz' && in_array($field, self::QUIZ_SETTING_FIELDS, true)) {
+            return $DB->get_field('quiz', $field, ['id' => $activity->instanceid], MUST_EXIST);
+        }
         throw new \coding_exception('Unsupported activity change field: ' . $field);
+    }
+
+    /**
+     * Cast a stored Quiz setting to the value expected by the database field.
+     *
+     * @param string $field Field name.
+     * @param string $value Stored value.
+     * @return int|float|string
+     */
+    private function cast_quiz_setting(string $field, string $value): int|float|string {
+        if ($field === 'grade') {
+            return (float)$value;
+        }
+        if ($field === 'browsersecurity') {
+            return $value;
+        }
+        return (int)$value;
+    }
+
+    /**
+     * Persist live progress so queued-operation screens reflect the worker state.
+     *
+     * @param int $batchid Batch id.
+     * @param int $applied Applied changes.
+     * @param int $skipped Skipped changes.
+     * @param int $failed Failed changes.
+     */
+    private function update_progress(int $batchid, int $applied, int $skipped, int $failed): void {
+        global $DB;
+
+        $DB->update_record('tool_coursecompliance_act_batch', (object)[
+            'id' => $batchid,
+            'status' => 'running',
+            'applied' => $applied,
+            'skipped' => $skipped,
+            'failed' => $failed,
+        ]);
     }
 
     /**

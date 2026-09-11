@@ -397,5 +397,10 @@ function xmldb_tool_coursecompliance_upgrade(int $oldversion): bool {
         upgrade_plugin_savepoint(true, 2026091106, 'tool', 'coursecompliance');
     }
 
+    if ($oldversion < 2026091110) {
+        // Background operation status, report filters and safe auto-fix use the existing batch schema.
+        upgrade_plugin_savepoint(true, 2026091110, 'tool', 'coursecompliance');
+    }
+
     return true;
 }

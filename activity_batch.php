@@ -90,6 +90,36 @@ function tool_coursecompliance_format_change_value(\stdClass $change, string $va
     if ($change->fieldname === 'visibilitystate') {
         return get_string('visibility_' . $value, 'tool_coursecompliance');
     }
+    if ($change->fieldname === 'timelimit') {
+        return (int)$value > 0 ? format_time((int)$value) : get_string('none', 'tool_coursecompliance');
+    }
+    if ($change->fieldname === 'attempts') {
+        return (int)$value > 0 ? (string)(int)$value : get_string('unlimited', 'tool_coursecompliance');
+    }
+    if ($change->fieldname === 'grade') {
+        return format_float((float)$value, 2);
+    }
+    if ($change->fieldname === 'shuffleanswers') {
+        return get_string((int)$value ? 'enabled' : 'disabled', 'tool_coursecompliance');
+    }
+    if ($change->fieldname === 'browsersecurity') {
+        return trim($value) !== '' ? s($value) : get_string('none', 'tool_coursecompliance');
+    }
+    if (str_starts_with((string)$change->fieldname, 'review')) {
+        $periods = [];
+        $mask = (int)$value;
+        foreach ([
+            0x10000 => get_string('reviewperiod_during', 'tool_coursecompliance'),
+            0x1000 => get_string('reviewperiod_immediately', 'tool_coursecompliance'),
+            0x100 => get_string('reviewperiod_open', 'tool_coursecompliance'),
+            0x10 => get_string('reviewperiod_closed', 'tool_coursecompliance'),
+        ] as $bit => $label) {
+            if (($mask & $bit) !== 0) {
+                $periods[] = $label;
+            }
+        }
+        return $periods ? s(implode(', ', $periods)) : get_string('disabled', 'tool_coursecompliance');
+    }
     return s($value);
 }
 
@@ -113,6 +143,100 @@ function tool_coursecompliance_session_period(array $batchconfig, ?\stdClass $ac
     return '';
 }
 
+/**
+ * Build completed-operation metric cards.
+ *
+ * @param int $batchid Batch id.
+ * @param \stdClass $batch Batch record.
+ * @param array $batchconfig Batch configuration.
+ * @return string HTML.
+ */
+function tool_coursecompliance_batch_result_metrics(int $batchid, \stdClass $batch, array $batchconfig): string {
+    global $DB;
+
+    $coursecount = (int)$DB->count_records_sql(
+        'SELECT COUNT(DISTINCT courseid) FROM {tool_coursecompliance_act_change} WHERE batchid = :batchid',
+        ['batchid' => $batchid]
+    );
+    $elementcounts = ['applied' => 0, 'skipped' => 0, 'failed' => 0];
+    $rows = $DB->get_records_sql(
+        'SELECT status, COUNT(DISTINCT cmid) AS elementcount
+           FROM {tool_coursecompliance_act_change}
+          WHERE batchid = :batchid
+       GROUP BY status',
+        ['batchid' => $batchid]
+    );
+    foreach ($rows as $row) {
+        if (array_key_exists((string)$row->status, $elementcounts)) {
+            $elementcounts[(string)$row->status] = (int)$row->elementcount;
+        }
+    }
+
+    $metrics = [
+        [
+            'label' => get_string('processedcourses', 'tool_coursecompliance'),
+            'value' => $coursecount,
+        ],
+        [
+            'label' => get_string('changedelements', 'tool_coursecompliance'),
+            'value' => $elementcounts['applied'],
+            'class' => $elementcounts['applied'] > 0 ? 'text-success' : '',
+        ],
+        [
+            'label' => get_string('skippedelements', 'tool_coursecompliance'),
+            'value' => $elementcounts['skipped'],
+            'class' => $elementcounts['skipped'] > 0 ? 'text-warning' : '',
+        ],
+        [
+            'label' => get_string('failedelements', 'tool_coursecompliance'),
+            'value' => $elementcounts['failed'],
+            'class' => $elementcounts['failed'] > 0 ? 'text-danger' : 'text-success',
+        ],
+    ];
+
+    if ($batch->action === 'session_schedule') {
+        $issues = (int)$DB->count_records('tool_coursecompliance_session_issue', ['batchid' => $batchid]);
+        $metrics[] = [
+            'label' => get_string('notfoundorambiguous', 'tool_coursecompliance'),
+            'value' => $issues,
+            'class' => $issues > 0 ? 'text-danger' : 'text-success',
+        ];
+
+        $periods = $batchconfig['periods'] ?? [];
+        $targetpercourse = 0;
+        foreach (['exam', 'resit1', 'resit2'] as $period) {
+            foreach (['quiz', 'assign'] as $modname) {
+                if (!empty($periods[$period][$modname . 'idnumber'])) {
+                    $targetpercourse++;
+                }
+            }
+        }
+        if ($targetpercourse > 0) {
+            $category = \core_course_category::get((int)$batch->categoryid, MUST_EXIST, true);
+            $categoryids = [(int)$batch->categoryid];
+            if (!empty($batchconfig['includesubcategories'])) {
+                $categoryids = array_merge($categoryids, $category->get_all_children_ids());
+            }
+            [$catsql, $catparams] = $DB->get_in_or_equal($categoryids, SQL_PARAMS_NAMED, 'metriccat');
+            $catparams['siteid'] = SITEID;
+            $courses = (int)$DB->count_records_select('course', "category $catsql AND id <> :siteid", $catparams);
+            $found = max(0, ($courses * $targetpercourse) - $issues);
+            $changedtargets = (int)$DB->count_records_sql(
+                'SELECT COUNT(DISTINCT cmid) FROM {tool_coursecompliance_act_change} WHERE batchid = :batchid',
+                ['batchid' => $batchid]
+            );
+            $unchanged = max(0, $found - $changedtargets);
+            $metrics[] = [
+                'label' => get_string('unchangedelements', 'tool_coursecompliance'),
+                'value' => $unchanged,
+                'class' => 'text-success',
+            ];
+        }
+    }
+
+    return \tool_coursecompliance\ui::metric_cards($metrics);
+}
+
 echo $OUTPUT->header();
 $primarynav = $batch->action === 'session_schedule' ? 'session' : 'operations';
 echo \tool_coursecompliance\ui::primary_navigation($primarynav);
@@ -121,6 +245,12 @@ if ($primarynav === 'operations') {
 }
 echo $OUTPUT->heading(get_string('operationpreview', 'tool_coursecompliance') . ' #' . $batch->id);
 echo html_writer::div(s($batch->summary), 'alert alert-info');
+if ($batch->status !== 'preview') {
+    echo \tool_coursecompliance\ui::batch_status_panel($batch);
+}
+if (in_array($batch->status, ['complete', 'partial', 'failed'], true)) {
+    echo tool_coursecompliance_batch_result_metrics($batchid, $batch, $batchconfig);
+}
 
 if ($batch->action === 'session_schedule') {
     $statusline = get_string('status', 'tool_coursecompliance') . ': ' .
@@ -220,6 +350,10 @@ if ($batch->status === 'preview' && (int)$batch->totalchanges > 0 && $canmanageb
     );
 } else if ($batch->status === 'failed' && $batch->errormessage) {
     echo html_writer::div(s($batch->errormessage), 'alert alert-danger');
+}
+
+if ($batch->action === 'autofix_scan' && in_array($batch->status, ['complete', 'partial'], true)) {
+    echo html_writer::div(get_string('autofixrescanrequired', 'tool_coursecompliance'), 'alert alert-info mt-3');
 }
 
 if (

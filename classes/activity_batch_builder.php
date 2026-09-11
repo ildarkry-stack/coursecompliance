@@ -223,9 +223,11 @@ final class activity_batch_builder {
      *
      * @param \stdClass $activity Activity.
      * @param string $field Field name.
-     * @return string|int
+     * @return string|int|float
      */
-    private function current_value(\stdClass $activity, string $field): string|int {
+    private function current_value(\stdClass $activity, string $field): string|int|float {
+        global $DB;
+
         if (is_array($activity->dates ?? null) && array_key_exists($field, $activity->dates)) {
             return (int)$activity->dates[$field];
         }
@@ -234,6 +236,9 @@ final class activity_batch_builder {
         }
         if ($field === 'visibilitystate') {
             return $activity->visibilitystate;
+        }
+        if ($activity->modname === 'quiz' && in_array($field, activity_manager::quiz_setting_fields(), true)) {
+            return $DB->get_field('quiz', $field, ['id' => $activity->instanceid], MUST_EXIST);
         }
         throw new \coding_exception('Unsupported activity change field: ' . $field);
     }

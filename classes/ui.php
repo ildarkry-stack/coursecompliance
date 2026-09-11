@@ -216,6 +216,82 @@ final class ui {
     }
 
     /**
+     * Render a background-operation status panel with live counters.
+     *
+     * @param \stdClass $batch Activity batch.
+     * @return string HTML.
+     */
+    public static function batch_status_panel(\stdClass $batch): string {
+        $processed = (int)$batch->applied + (int)$batch->skipped + (int)$batch->failed;
+        $total = max(0, (int)$batch->totalchanges);
+        $percent = $total > 0 ? min(100, (int)round(($processed / $total) * 100)) : 0;
+        if (in_array((string)$batch->status, ['complete', 'partial', 'failed'], true)) {
+            $percent = 100;
+        }
+
+        $body = \html_writer::div(
+            get_string('backgroundoperationstatus', 'tool_coursecompliance') . ': ' .
+                self::status_badge((string)$batch->status, 'batchstatus'),
+            'fw-semibold mb-2'
+        );
+        $body .= \html_writer::div(
+            get_string('batchprogresscount', 'tool_coursecompliance', (object)[
+                'processed' => $processed,
+                'total' => $total,
+            ]),
+            'small text-muted mb-2'
+        );
+        $progressclass = match ((string)$batch->status) {
+            'complete' => 'bg-success',
+            'partial' => 'bg-warning',
+            'failed' => 'bg-danger',
+            default => 'bg-primary',
+        };
+        $body .= \html_writer::div(
+            \html_writer::div('', 'progress-bar ' . $progressclass, [
+                'role' => 'progressbar',
+                'style' => 'width: ' . $percent . '%',
+                'aria-valuenow' => $percent,
+                'aria-valuemin' => 0,
+                'aria-valuemax' => 100,
+            ]),
+            'progress mb-3',
+            ['style' => 'height: 8px;']
+        );
+
+        $metrics = [
+            get_string('applied', 'tool_coursecompliance') . ': ' . (int)$batch->applied,
+            get_string('skipped', 'tool_coursecompliance') . ': ' . (int)$batch->skipped,
+            get_string('failed', 'tool_coursecompliance') . ': ' . (int)$batch->failed,
+        ];
+        $body .= \html_writer::div(implode(' · ', $metrics), 'small');
+        if (!empty($batch->timestarted)) {
+            $body .= \html_writer::div(
+                get_string('batchstartedat', 'tool_coursecompliance', userdate((int)$batch->timestarted)),
+                'small text-muted mt-1'
+            );
+        }
+        if (!empty($batch->timefinished)) {
+            $body .= \html_writer::div(
+                get_string('batchfinishedat', 'tool_coursecompliance', userdate((int)$batch->timefinished)),
+                'small text-muted mt-1'
+            );
+        }
+
+        $class = match ((string)$batch->status) {
+            'complete' => 'border-success',
+            'partial' => 'border-warning',
+            'failed' => 'border-danger',
+            'running' => 'border-primary',
+            default => 'border-info',
+        };
+        return \html_writer::div(
+            \html_writer::div($body, 'card-body'),
+            'card shadow-sm mb-4 ' . $class
+        );
+    }
+
+    /**
      * Render a compact section intro.
      *
      * @param string $text Introductory text.

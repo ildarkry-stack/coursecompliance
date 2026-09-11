@@ -99,3 +99,14 @@ The standalone Assessment Auditor is merged into the Audit and reports page. Exi
 
 Blueprint pages also avoid raw technical values where possible: stored access restrictions and activity completion settings are displayed in human-readable form, while low-frequency technical fields are moved under Moodle's advanced form controls.
 
+
+## 0.8 Background operations, filters and Safe Auto-fix
+
+Version 0.8 makes long-running changes easier to understand and introduces conservative remediation for problems that have one unambiguous target value.
+
+- Queued and running batches show a clear status card, processed-change counters and start/finish timestamps.
+- Completed operations show summary cards for processed courses, changed/skipped/failed activities and, for session scheduling, unresolved targets and targets that already matched the requested dates.
+- The detailed audit report can be filtered by severity, missing vs incorrect settings, auto-fixable problems, issue-free courses, assessment period and course-name search.
+- **Safe Auto-fix** never writes immediately. It first creates the same immutable preview batch used by Activity Operations, then uses conflict detection, background execution, history and safe rollback.
+- Supported automatic corrections include explicit Quiz standards for attempts, time limit, maximum grade, answer shuffling, browser security and review-option visibility. Blueprint mode can also correct explicit values for the same settings plus Quiz visibility.
+- Content-level decisions remain manual: the plugin does not create quizzes, add or remove questions, choose passwords/subnets, invent missing dates, resolve duplicate idnumbers or guess which missing activity should be used.

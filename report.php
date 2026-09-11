@@ -32,6 +32,7 @@ $severity = optional_param('severity', '', PARAM_ALPHA);
 $assessmenttype = optional_param('assessmenttype', '', PARAM_ALPHANUMEXT);
 $courseid = optional_param('courseid', 0, PARAM_INT);
 $kind = optional_param('kind', '', PARAM_ALPHA);
+$search = trim(optional_param('search', '', PARAM_TEXT));
 $page = optional_param('page', 0, PARAM_INT);
 $perpage = 100;
 
@@ -52,6 +53,9 @@ if ($courseid > 0) {
 }
 if ($kind !== '') {
     $urlparams['kind'] = $kind;
+}
+if ($search !== '') {
+    $urlparams['search'] = $search;
 }
 $PAGE->set_context($context);
 $PAGE->set_url(new moodle_url('/admin/tool/coursecompliance/report.php', $urlparams));
@@ -131,6 +135,10 @@ foreach ($allresults as $result) {
 }
 $missingcount = array_sum(array_map(static fn ($item) => $item['count'], $missing));
 $totalproblems = (int)$scan->critical + (int)$scan->warnings + (int)$scan->notices;
+$autofixablecount = count(array_filter(
+    $allresults,
+    static fn ($result) => \tool_coursecompliance\autofix_manager::is_fixable($result, $config)
+));
 
 echo \tool_coursecompliance\ui::metric_cards([
     [
@@ -149,6 +157,11 @@ echo \tool_coursecompliance\ui::metric_cards([
     [
         'label' => get_string('totalproblems', 'tool_coursecompliance'),
         'value' => $totalproblems,
+    ],
+    [
+        'label' => get_string('autofixable', 'tool_coursecompliance'),
+        'value' => $autofixablecount,
+        'class' => $autofixablecount > 0 ? 'text-primary' : 'text-success',
     ],
 ]);
 
@@ -184,6 +197,25 @@ echo html_writer::div(
     'mb-4'
 );
 
+if ($autofixablecount > 0 && has_capability('tool/coursecompliance:manageactivities', $context)) {
+    $autofixurl = new moodle_url('/admin/tool/coursecompliance/autofix_prepare.php');
+    echo html_writer::start_div('card border-primary shadow-sm mb-4');
+    echo html_writer::start_div('card-body');
+    echo html_writer::tag('h3', get_string('safeautofix', 'tool_coursecompliance'), ['class' => 'h5']);
+    echo html_writer::div(get_string('safeautofixintro', 'tool_coursecompliance'), 'text-muted mb-3');
+    echo html_writer::start_tag('form', ['method' => 'post', 'action' => $autofixurl->out(false)]);
+    echo html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'sesskey', 'value' => sesskey()]);
+    echo html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'scanid', 'value' => $scanid]);
+    echo html_writer::empty_tag('input', [
+        'type' => 'submit',
+        'class' => 'btn btn-primary',
+        'value' => get_string('prepareautofix', 'tool_coursecompliance', $autofixablecount),
+    ]);
+    echo html_writer::end_tag('form');
+    echo html_writer::end_div();
+    echo html_writer::end_div();
+}
+
 if ($missing) {
     echo $OUTPUT->heading(get_string('whatismissing', 'tool_coursecompliance'), 3);
     echo html_writer::div(get_string('whatismissinghelp', 'tool_coursecompliance'), 'text-muted mb-2');
@@ -206,8 +238,14 @@ if ($missing) {
     echo html_writer::table($missingtable);
 }
 
-$allparams = ['scanid' => $scanid];
-$baseurl = new moodle_url('/admin/tool/coursecompliance/report.php', $allparams);
+$filterbaseparams = ['scanid' => $scanid];
+if ($assessmenttype !== '') {
+    $filterbaseparams['assessmenttype'] = $assessmenttype;
+}
+if ($search !== '') {
+    $filterbaseparams['search'] = $search;
+}
+$baseurl = new moodle_url('/admin/tool/coursecompliance/report.php', $filterbaseparams);
 $filterlinks = [
     html_writer::link(
         $baseurl,
@@ -225,14 +263,141 @@ $filterlinks = [
         ['class' => 'btn btn-sm ' . ($severity === 'warning' ? 'btn-warning' : 'btn-outline-warning')]
     ),
     html_writer::link(
+        new moodle_url($baseurl, ['severity' => 'notice']),
+        get_string('notices', 'tool_coursecompliance'),
+        ['class' => 'btn btn-sm ' . ($severity === 'notice' ? 'btn-info' : 'btn-outline-info')]
+    ),
+    html_writer::link(
         new moodle_url($baseurl, ['kind' => 'missing']),
         get_string('onlymissing', 'tool_coursecompliance'),
         ['class' => 'btn btn-sm ' . ($kind === 'missing' ? 'btn-secondary' : 'btn-outline-secondary')]
+    ),
+    html_writer::link(
+        new moodle_url($baseurl, ['kind' => 'mismatch']),
+        get_string('onlymismatches', 'tool_coursecompliance'),
+        ['class' => 'btn btn-sm ' . ($kind === 'mismatch' ? 'btn-secondary' : 'btn-outline-secondary')]
+    ),
+    html_writer::link(
+        new moodle_url($baseurl, ['kind' => 'autofix']),
+        get_string('autofixable', 'tool_coursecompliance'),
+        ['class' => 'btn btn-sm ' . ($kind === 'autofix' ? 'btn-primary' : 'btn-outline-primary')]
+    ),
+    html_writer::link(
+        new moodle_url($baseurl, ['kind' => 'ready']),
+        get_string('readycourses', 'tool_coursecompliance'),
+        ['class' => 'btn btn-sm ' . ($kind === 'ready' ? 'btn-success' : 'btn-outline-success')]
     ),
 ];
 
 echo $OUTPUT->heading(get_string('detailedproblems', 'tool_coursecompliance'), 3);
 echo html_writer::div(implode(' ', $filterlinks), 'mb-3 d-flex flex-wrap gap-2');
+
+echo html_writer::start_tag('form', [
+    'method' => 'get',
+    'action' => (new moodle_url('/admin/tool/coursecompliance/report.php'))->out(false),
+    'class' => 'row g-2 align-items-end mb-3',
+]);
+echo html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'scanid', 'value' => $scanid]);
+if ($severity !== '') {
+    echo html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'severity', 'value' => $severity]);
+}
+if ($kind !== '') {
+    echo html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'kind', 'value' => $kind]);
+}
+echo html_writer::start_div('col-12 col-md-6');
+echo html_writer::label(get_string('searchcourse', 'tool_coursecompliance'), 'id_search', false, ['class' => 'form-label']);
+echo html_writer::empty_tag('input', [
+    'type' => 'search',
+    'id' => 'id_search',
+    'name' => 'search',
+    'value' => $search,
+    'class' => 'form-control',
+    'placeholder' => get_string('searchcourseplaceholder', 'tool_coursecompliance'),
+]);
+echo html_writer::end_div();
+echo html_writer::start_div('col-12 col-md-3');
+echo html_writer::label(
+    get_string('assessmenttype', 'tool_coursecompliance'),
+    'id_assessmenttype',
+    false,
+    ['class' => 'form-label']
+);
+echo html_writer::select([
+    '' => get_string('all', 'tool_coursecompliance'),
+    'course' => get_string('courselevel', 'tool_coursecompliance'),
+    'exam' => get_string('period_exam', 'tool_coursecompliance'),
+    'resit1' => get_string('period_resit1', 'tool_coursecompliance'),
+    'resit2' => get_string('period_resit2', 'tool_coursecompliance'),
+], 'assessmenttype', $assessmenttype, false, ['id' => 'id_assessmenttype', 'class' => 'form-select']);
+echo html_writer::end_div();
+echo html_writer::start_div('col-12 col-md-3');
+echo html_writer::empty_tag('input', [
+    'type' => 'submit',
+    'class' => 'btn btn-outline-primary w-100',
+    'value' => get_string('applyfilters', 'tool_coursecompliance'),
+]);
+echo html_writer::end_div();
+echo html_writer::end_tag('form');
+
+if ($kind === 'ready') {
+    $categoryids = array_merge([(int)$scan->categoryid], $category->get_all_children_ids());
+    [$catsql, $catparams] = $DB->get_in_or_equal($categoryids, SQL_PARAMS_NAMED, 'readycat');
+    $readyparams = $catparams + ['siteid' => SITEID];
+    $readywhere = "category $catsql AND id <> :siteid";
+    $affectedids = array_keys($affectedcourses);
+    if ($affectedids) {
+        [$affectedsql, $affectedparams] = $DB->get_in_or_equal($affectedids, SQL_PARAMS_NAMED, 'affected', false);
+        $readywhere .= " AND id $affectedsql";
+        $readyparams += $affectedparams;
+    }
+    if ($search !== '') {
+        $readywhere .= ' AND (' . $DB->sql_like('fullname', ':readyfullname', false, false) .
+            ' OR ' . $DB->sql_like('shortname', ':readyshortname', false, false) . ')';
+        $readylike = '%' . $DB->sql_like_escape($search) . '%';
+        $readyparams['readyfullname'] = $readylike;
+        $readyparams['readyshortname'] = $readylike;
+    }
+    $readytotal = $DB->count_records_select('course', $readywhere, $readyparams);
+    $readycourses = $DB->get_records_select(
+        'course',
+        $readywhere,
+        $readyparams,
+        'fullname ASC',
+        'id,fullname,shortname',
+        $page * $perpage,
+        $perpage
+    );
+    if (!$readycourses) {
+        echo html_writer::div(get_string('noreadycourses', 'tool_coursecompliance'), 'alert alert-info');
+        echo $OUTPUT->footer();
+        exit;
+    }
+    $readytable = new html_table();
+    $readytable->head = [
+        get_string('course'),
+        get_string('courseshortname', 'tool_coursecompliance'),
+        get_string('status', 'tool_coursecompliance'),
+    ];
+    foreach ($readycourses as $readycourse) {
+        $readytable->data[] = [
+            html_writer::link(
+                new moodle_url('/course/view.php', ['id' => $readycourse->id]),
+                format_string($readycourse->fullname)
+            ),
+            s($readycourse->shortname),
+            html_writer::span(get_string('ready', 'tool_coursecompliance'), 'badge bg-success'),
+        ];
+    }
+    echo html_writer::table($readytable);
+    echo $OUTPUT->paging_bar(
+        $readytotal,
+        $page,
+        $perpage,
+        new moodle_url('/admin/tool/coursecompliance/report.php', $urlparams)
+    );
+    echo $OUTPUT->footer();
+    exit;
+}
 
 $params = ['scanid' => $scanid];
 $where = 'r.scanid = :scanid';
@@ -247,6 +412,13 @@ if (in_array($assessmenttype, ['exam', 'resit1', 'resit2', 'course'], true)) {
 if ($courseid > 0) {
     $where .= ' AND r.courseid = :courseid';
     $params['courseid'] = $courseid;
+}
+if ($search !== '') {
+    $where .= ' AND (' . $DB->sql_like('c.fullname', ':coursefullname', false, false) .
+        ' OR ' . $DB->sql_like('c.shortname', ':courseshortname', false, false) . ')';
+    $courselike = '%' . $DB->sql_like_escape($search) . '%';
+    $params['coursefullname'] = $courselike;
+    $params['courseshortname'] = $courselike;
 }
 
 $sql = "SELECT r.*, c.fullname, c.shortname, cm.id AS cmid
@@ -264,6 +436,16 @@ if ($kind === 'missing') {
     $filtered = array_filter(
         $filtered,
         static fn ($result) => \tool_coursecompliance\report_helper::is_missing($result)
+    );
+} else if ($kind === 'mismatch') {
+    $filtered = array_filter(
+        $filtered,
+        static fn ($result) => !\tool_coursecompliance\report_helper::is_missing($result)
+    );
+} else if ($kind === 'autofix') {
+    $filtered = array_filter(
+        $filtered,
+        static fn ($result) => \tool_coursecompliance\autofix_manager::is_fixable($result, $config)
     );
 }
 $total = count($filtered);
@@ -293,6 +475,9 @@ foreach ($results as $result) {
         \tool_coursecompliance\report_helper::edit_url($result),
         get_string('openinmoodle', 'tool_coursecompliance')
     );
+    if (\tool_coursecompliance\autofix_manager::is_fixable($result, $config)) {
+        $actions .= '<br>' . html_writer::span(get_string('autofixavailable', 'tool_coursecompliance'), 'badge bg-primary mt-1');
+    }
     if (has_capability('tool/coursecompliance:manageprofiles', $context)) {
         $actions .= '<br>' . html_writer::link(
             new moodle_url('/admin/tool/coursecompliance/exception_add.php', ['resultid' => $result->id]),

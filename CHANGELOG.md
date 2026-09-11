@@ -159,3 +159,11 @@
 - Kept native Date, User profile, Restriction set and other enabled Moodle availability conditions available.
 - Rebuilt the EN/RU language files from the last intact baseline to repair previously truncated multi-line strings.
 
+
+## 0.8.0-alpha - 2026-09-11
+
+- Added clear background operation states with progress counters for queued/running/completed batches.
+- Added post-operation summary cards for processed courses, changed/skipped/failed activities, and session targets that were already correct or unresolved.
+- Expanded audit report filters: severity, missing vs incorrect settings, auto-fixable issues, ready courses, assessment period, and course search.
+- Added conservative Safe Auto-fix. It prepares a preview batch for unambiguous Quiz setting corrections and uses the same conflict checks, history, background worker and rollback path as other activity operations.
+- Safe Auto-fix never creates quizzes or questions and never guesses passwords, subnets, or missing dates.
