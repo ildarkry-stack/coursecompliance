@@ -166,8 +166,8 @@ final class blueprint_manager {
             $courseid = (int)$item->courseid;
             $idnumber = trim((string)$item->idnumber);
             $gradeidmaps[$courseid][(int)$item->id] = $idnumber;
-            $moduleidnumber = $cmidnumberbyinstance[$courseid][(string)$item->itemmodule]
-                [(int)$item->iteminstance] ?? '';
+            $moduleinstances = $cmidnumberbyinstance[$courseid][(string)$item->itemmodule] ?? [];
+            $moduleidnumber = $moduleinstances[(int)$item->iteminstance] ?? '';
             $availabilitygradeidmaps[$courseid][(int)$item->id] = $moduleidnumber !== ''
                 ? $moduleidnumber
                 : $idnumber;

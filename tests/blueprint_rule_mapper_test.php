@@ -67,5 +67,4 @@ final class blueprint_rule_mapper_test extends \advanced_testcase {
         $this->assertSame(1, $mapped['assessments']['exam']['review_manual']['reviewattempt']['during']);
         $this->assertSame(0, $mapped['assessments']['exam']['review_manual']['reviewoverallfeedback']['during']);
     }
-
 }

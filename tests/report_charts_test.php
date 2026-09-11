@@ -30,6 +30,7 @@ namespace tool_coursecompliance;
  * @package    tool_coursecompliance
  * @copyright  2026 MIA Academy
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ * @covers     \tool_coursecompliance\report_charts
  */
 final class report_charts_test extends \advanced_testcase {
     /**
