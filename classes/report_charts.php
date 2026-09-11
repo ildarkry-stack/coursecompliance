@@ -52,10 +52,12 @@ final class report_charts {
             get_string('warnings', 'tool_coursecompliance'),
             get_string('notices', 'tool_coursecompliance'),
         ]);
-        $chart->add_series(new \core\chart_series(
+        $series = new \core\chart_series(
             get_string('problems', 'tool_coursecompliance'),
             [$critical, $warnings, $notices]
-        ));
+        );
+        $series->set_colors(['#dc3545', '#ffc107', '#0d6efd']);
+        $chart->add_series($series);
         return $chart;
     }
 
@@ -77,10 +79,12 @@ final class report_charts {
             get_string('missingitems', 'tool_coursecompliance'),
             get_string('configurationmismatches', 'tool_coursecompliance'),
         ]);
-        $chart->add_series(new \core\chart_series(
+        $series = new \core\chart_series(
             get_string('problems', 'tool_coursecompliance'),
             [$missing, $mismatch]
-        ));
+        );
+        $series->set_colors(['#dc3545', '#fd7e14']);
+        $chart->add_series($series);
         return $chart;
     }
 
@@ -114,10 +118,21 @@ final class report_charts {
         $chart->set_stacked(true);
         $chart->set_title(get_string('chart_readiness_title', 'tool_coursecompliance'));
         $chart->set_labels($labels);
-        $chart->add_series(new \core\chart_series(get_string('ready', 'tool_coursecompliance'), $ready));
-        $chart->add_series(new \core\chart_series(get_string('warnings', 'tool_coursecompliance'), $warnings));
-        $chart->add_series(new \core\chart_series(get_string('critical', 'tool_coursecompliance'), $critical));
-        $chart->add_series(new \core\chart_series(get_string('missing', 'tool_coursecompliance'), $missing));
+        $readyseries = new \core\chart_series(get_string('ready', 'tool_coursecompliance'), $ready);
+        $readyseries->set_color('#198754');
+        $chart->add_series($readyseries);
+
+        $warningseries = new \core\chart_series(get_string('warnings', 'tool_coursecompliance'), $warnings);
+        $warningseries->set_color('#ffc107');
+        $chart->add_series($warningseries);
+
+        $criticalseries = new \core\chart_series(get_string('critical', 'tool_coursecompliance'), $critical);
+        $criticalseries->set_color('#dc3545');
+        $chart->add_series($criticalseries);
+
+        $missingseries = new \core\chart_series(get_string('missing', 'tool_coursecompliance'), $missing);
+        $missingseries->set_color('#6c757d');
+        $chart->add_series($missingseries);
         return $chart;
     }
 
@@ -142,8 +157,13 @@ final class report_charts {
         $chart = new \core\chart_line();
         $chart->set_title(get_string('chart_scantrend_title', 'tool_coursecompliance'));
         $chart->set_labels($labels);
-        $chart->add_series(new \core\chart_series(get_string('critical', 'tool_coursecompliance'), $critical));
-        $chart->add_series(new \core\chart_series(get_string('warnings', 'tool_coursecompliance'), $warnings));
+        $criticalseries = new \core\chart_series(get_string('critical', 'tool_coursecompliance'), $critical);
+        $criticalseries->set_color('#dc3545');
+        $chart->add_series($criticalseries);
+
+        $warningseries = new \core\chart_series(get_string('warnings', 'tool_coursecompliance'), $warnings);
+        $warningseries->set_color('#ffc107');
+        $chart->add_series($warningseries);
         return $chart;
     }
 }

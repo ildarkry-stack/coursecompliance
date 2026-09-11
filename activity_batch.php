@@ -48,21 +48,23 @@ $PAGE->set_title(get_string('operationpreview', 'tool_coursecompliance'));
 $PAGE->set_heading(get_string('operationpreview', 'tool_coursecompliance'));
 
 $totalchanges = $DB->count_records('tool_coursecompliance_act_change', ['batchid' => $batchid]);
-$changes = $DB->get_records(
-    'tool_coursecompliance_act_change',
-    ['batchid' => $batchid],
-    'courseid ASC, cmid ASC, id ASC',
-    '*',
-    $page * $perpage,
-    $perpage
-);
-$courseids = array_values(array_unique(array_map(static fn ($c) => (int)$c->courseid, $changes)));
-$courses = $courseids ? $DB->get_records_list('course', 'id', $courseids, '', 'id,fullname') : [];
-$cmids = array_values(array_unique(array_map(static fn ($c) => (int)$c->cmid, $changes)));
-$activities = $cmids ? (new \tool_coursecompliance\activity_repository())->get_by_cmids($cmids) : [];
-$sessionissues = $batch->action === 'session_schedule'
-    ? $DB->count_records('tool_coursecompliance_session_issue', ['batchid' => $batchid])
-    : 0;
+$changes = [];
+$courses = [];
+$activities = [];
+if ($batch->action !== 'session_schedule') {
+    $changes = $DB->get_records(
+        'tool_coursecompliance_act_change',
+        ['batchid' => $batchid],
+        'courseid ASC, cmid ASC, id ASC',
+        '*',
+        $page * $perpage,
+        $perpage
+    );
+    $courseids = array_values(array_unique(array_map(static fn ($c) => (int)$c->courseid, $changes)));
+    $courses = $courseids ? $DB->get_records_list('course', 'id', $courseids, '', 'id,fullname') : [];
+    $cmids = array_values(array_unique(array_map(static fn ($c) => (int)$c->cmid, $changes)));
+    $activities = $cmids ? (new \tool_coursecompliance\activity_repository())->get_by_cmids($cmids) : [];
+}
 $batchconfig = json_decode((string)$batch->filterjson, true) ?: [];
 
 /**
@@ -120,91 +122,82 @@ if ($primarynav === 'operations') {
 echo $OUTPUT->heading(get_string('operationpreview', 'tool_coursecompliance') . ' #' . $batch->id);
 echo html_writer::div(s($batch->summary), 'alert alert-info');
 
-$summary = new html_table();
-$summary->data = [
-    [get_string('status', 'tool_coursecompliance'), get_string('batchstatus_' . $batch->status, 'tool_coursecompliance')],
-    [get_string('operation', 'tool_coursecompliance'), get_string('operation_' . $batch->action, 'tool_coursecompliance')],
-    [get_string('changes', 'tool_coursecompliance'), $batch->totalchanges],
-    [get_string('applied', 'tool_coursecompliance'), $batch->applied],
-    [get_string('skipped', 'tool_coursecompliance'), $batch->skipped],
-    [get_string('failed', 'tool_coursecompliance'), $batch->failed],
-];
 if ($batch->action === 'session_schedule') {
-    $summary->data[] = [
-        get_string('sessionissues', 'tool_coursecompliance'),
-        $sessionissues
-            ? html_writer::link(
-                new moodle_url('/admin/tool/coursecompliance/session_issues.php', ['batchid' => $batchid]),
-                (string)$sessionissues
-            )
-            : '0',
+    $statusline = get_string('status', 'tool_coursecompliance') . ': ' .
+        \tool_coursecompliance\ui::status_badge((string)$batch->status, 'batchstatus');
+    $statusline .= ' · ' . get_string('changes', 'tool_coursecompliance') . ': ' . (int)$batch->totalchanges;
+    if (in_array($batch->status, ['complete', 'partial', 'failed'], true)) {
+        $statusline .= ' · ' . get_string('applied', 'tool_coursecompliance') . ': ' . (int)$batch->applied;
+        $statusline .= ' · ' . get_string('skipped', 'tool_coursecompliance') . ': ' . (int)$batch->skipped;
+        $statusline .= ' · ' . get_string('failed', 'tool_coursecompliance') . ': ' . (int)$batch->failed;
+    }
+    echo html_writer::div($statusline, 'mb-3');
+    echo \tool_coursecompliance\session_preview_report::render($batch, $batchconfig, $page, $perpage);
+} else {
+    $summary = new html_table();
+    $summary->data = [
+        [get_string('status', 'tool_coursecompliance'), get_string('batchstatus_' . $batch->status, 'tool_coursecompliance')],
+        [get_string('operation', 'tool_coursecompliance'), get_string('operation_' . $batch->action, 'tool_coursecompliance')],
+        [get_string('changes', 'tool_coursecompliance'), $batch->totalchanges],
+        [get_string('applied', 'tool_coursecompliance'), $batch->applied],
+        [get_string('skipped', 'tool_coursecompliance'), $batch->skipped],
+        [get_string('failed', 'tool_coursecompliance'), $batch->failed],
     ];
-}
-if (!empty($batch->sourcebatchid)) {
-    $summary->data[] = [
-        get_string('sourcebatch', 'tool_coursecompliance'),
-        html_writer::link(
-            new moodle_url('/admin/tool/coursecompliance/activity_batch.php', ['batchid' => $batch->sourcebatchid]),
-            '#' . $batch->sourcebatchid
-        ),
-    ];
-}
-echo html_writer::table($summary);
-
-if ($batch->action === 'session_schedule' && $sessionissues) {
-    echo html_writer::div(
-        get_string('sessionissuesnotice', 'tool_coursecompliance', $sessionissues) . ' ' .
-        html_writer::link(
-            new moodle_url('/admin/tool/coursecompliance/session_issues.php', ['batchid' => $batchid]),
-            get_string('viewsessionissues', 'tool_coursecompliance')
-        ),
-        'alert alert-warning'
-    );
-}
-
-if ($totalchanges) {
-    $table = new html_table();
-    $table->head = [
-        get_string('course'),
-        get_string('activity', 'tool_coursecompliance'),
-        get_string('field', 'tool_coursecompliance'),
-        get_string('before', 'tool_coursecompliance'),
-        get_string('after', 'tool_coursecompliance'),
-        get_string('status', 'tool_coursecompliance'),
-        get_string('message', 'tool_coursecompliance'),
-    ];
-    foreach ($changes as $change) {
-        $course = $courses[$change->courseid] ?? null;
-        $activity = $activities[$change->cmid] ?? null;
-        $courseurl = new moodle_url('/course/view.php', ['id' => $change->courseid]);
-        $activitylabel = $activity
-            ? format_string($activity->activityname) . html_writer::tag(
-                'small',
-                get_string('modulename', $activity->modname) .
-                    ($activity->idnumber ? ' · ' . s($activity->idnumber) : '') .
-                    (($period = tool_coursecompliance_session_period($batchconfig, $activity)) ? ' · ' . s($period) : ''),
-                ['class' => 'text-muted d-block']
-            )
-            : s($change->modname) . ' #' . $change->cmid;
-        $table->data[] = [
-            $course ? html_writer::link($courseurl, format_string($course->fullname)) : (string)$change->courseid,
-            $activitylabel,
-            get_string('field_' . $change->fieldname, 'tool_coursecompliance'),
-            tool_coursecompliance_format_change_value($change, $change->oldvalue),
-            tool_coursecompliance_format_change_value($change, $change->newvalue),
-            get_string('changestatus_' . $change->status, 'tool_coursecompliance'),
-            s($change->message),
+    if (!empty($batch->sourcebatchid)) {
+        $summary->data[] = [
+            get_string('sourcebatch', 'tool_coursecompliance'),
+            html_writer::link(
+                new moodle_url('/admin/tool/coursecompliance/activity_batch.php', ['batchid' => $batch->sourcebatchid]),
+                '#' . $batch->sourcebatchid
+            ),
         ];
     }
-    echo html_writer::table($table);
-    echo $OUTPUT->paging_bar(
-        $totalchanges,
-        $page,
-        $perpage,
-        new moodle_url('/admin/tool/coursecompliance/activity_batch.php', ['batchid' => $batchid, 'perpage' => $perpage])
-    );
-} else {
-    echo $OUTPUT->notification(get_string('batchhasnochanges', 'tool_coursecompliance'), 'info');
+    echo html_writer::table($summary);
+
+    if ($totalchanges) {
+        $table = new html_table();
+        $table->head = [
+            get_string('course'),
+            get_string('activity', 'tool_coursecompliance'),
+            get_string('field', 'tool_coursecompliance'),
+            get_string('before', 'tool_coursecompliance'),
+            get_string('after', 'tool_coursecompliance'),
+            get_string('status', 'tool_coursecompliance'),
+            get_string('message', 'tool_coursecompliance'),
+        ];
+        foreach ($changes as $change) {
+            $course = $courses[$change->courseid] ?? null;
+            $activity = $activities[$change->cmid] ?? null;
+            $courseurl = new moodle_url('/course/view.php', ['id' => $change->courseid]);
+            $activitylabel = $activity
+                ? format_string($activity->activityname) . html_writer::tag(
+                    'small',
+                    get_string('modulename', $activity->modname) .
+                        ($activity->idnumber ? ' · ' . s($activity->idnumber) : '') .
+                        (($period = tool_coursecompliance_session_period($batchconfig, $activity)) ? ' · ' . s($period) : ''),
+                    ['class' => 'text-muted d-block']
+                )
+                : s($change->modname) . ' #' . $change->cmid;
+            $table->data[] = [
+                $course ? html_writer::link($courseurl, format_string($course->fullname)) : (string)$change->courseid,
+                $activitylabel,
+                get_string('field_' . $change->fieldname, 'tool_coursecompliance'),
+                tool_coursecompliance_format_change_value($change, $change->oldvalue),
+                tool_coursecompliance_format_change_value($change, $change->newvalue),
+                get_string('changestatus_' . $change->status, 'tool_coursecompliance'),
+                s($change->message),
+            ];
+        }
+        echo html_writer::table($table);
+        echo $OUTPUT->paging_bar(
+            $totalchanges,
+            $page,
+            $perpage,
+            new moodle_url('/admin/tool/coursecompliance/activity_batch.php', ['batchid' => $batchid, 'perpage' => $perpage])
+        );
+    } else {
+        echo $OUTPUT->notification(get_string('batchhasnochanges', 'tool_coursecompliance'), 'info');
+    }
 }
 
 if ($batch->status === 'preview' && (int)$batch->totalchanges > 0 && $canmanagebatch) {

@@ -40,6 +40,19 @@ final class report_charts_test extends \advanced_testcase {
         $this->assertNull(report_charts::severity(0, 0, 0));
     }
 
+
+    /**
+     * Severity chart should use semantic colours in severity order.
+     */
+    public function test_severity_chart_uses_semantic_colours(): void {
+        $chart = report_charts::severity(3, 2, 1);
+        $this->assertInstanceOf(\core\chart_pie::class, $chart);
+
+        $series = $chart->get_series();
+        $this->assertCount(1, $series);
+        $this->assertSame(['#dc3545', '#ffc107', '#0d6efd'], $series[0]->get_colors());
+    }
+
     /**
      * Readiness chart should contain one label per populated assessment period.
      */
@@ -54,5 +67,11 @@ final class report_charts_test extends \advanced_testcase {
         $this->assertInstanceOf(\core\chart_bar::class, $chart);
         $this->assertCount(2, $chart->get_labels());
         $this->assertCount(4, $chart->get_series());
+
+        $series = $chart->get_series();
+        $this->assertSame('#198754', $series[0]->get_color());
+        $this->assertSame('#ffc107', $series[1]->get_color());
+        $this->assertSame('#dc3545', $series[2]->get_color());
+        $this->assertSame('#6c757d', $series[3]->get_color());
     }
 }

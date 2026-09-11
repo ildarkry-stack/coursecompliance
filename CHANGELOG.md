@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.7.2-alpha
+
+- Replaced automatic chart colours with a consistent semantic palette across reports.
+- Ready is green, warnings are amber, critical issues are red, missing items are grey, and informational notices are blue.
+- Missing requirements and configuration mismatches now use red and orange respectively in the problem-kind chart.
+
+## 0.7.1-alpha
+
+- Reworked Session planning date-change preview and result pages into a course-by-period report inspired by the exam-date workflow.
+- Each course now appears once with dedicated Exam, Resit 1 and Resit 2 columns.
+- Old date windows are shown above the new date windows with clear visual emphasis.
+- Missing, duplicate and inaccessible targets are shown inline in the relevant period cell.
+- Added compact preview/operation statistics with target counts and direct access to skipped/error details.
+- Quiz and Assignment targets can be displayed together without falling back to one-row-per-field technical output.
+
 ## 0.7.0-alpha
 
 - Moved all user-facing pages into a dedicated **Course quality control** subsection under Site administration → Courses.
