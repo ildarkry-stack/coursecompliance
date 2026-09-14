@@ -47,74 +47,105 @@ foreach ($profiles as $profile) {
 echo $OUTPUT->header();
 echo \tool_coursecompliance\ui::primary_navigation('standards');
 echo \tool_coursecompliance\ui::standards_navigation('profiles');
-echo $OUTPUT->heading(get_string('standards', 'tool_coursecompliance'));
-echo \tool_coursecompliance\ui::intro(get_string('standardsintro', 'tool_coursecompliance'));
+$addbutton = html_writer::link(
+    new moodle_url('/admin/tool/coursecompliance/profile_edit.php'),
+    get_string('addstandard', 'tool_coursecompliance'),
+    ['class' => 'btn btn-primary']
+);
+echo \tool_coursecompliance\ui::page_heading(
+    get_string('standards', 'tool_coursecompliance'),
+    get_string('standardsintro', 'tool_coursecompliance'),
+    $addbutton
+);
 
 echo \tool_coursecompliance\ui::metric_cards([
     [
         'label' => get_string('standards_total', 'tool_coursecompliance'),
         'value' => count($profiles),
+        'tone' => 'info',
     ],
     [
         'label' => get_string('standards_enabled', 'tool_coursecompliance'),
         'value' => $enabled,
+        'tone' => 'success',
     ],
     [
         'label' => get_string('standards_withblueprint', 'tool_coursecompliance'),
         'value' => $withblueprint,
+        'tone' => $withblueprint > 0 ? 'info' : 'secondary',
     ],
 ]);
 
-echo html_writer::div(
-    html_writer::link(
-        new moodle_url('/admin/tool/coursecompliance/profile_edit.php'),
-        get_string('addstandard', 'tool_coursecompliance'),
-        ['class' => 'btn btn-primary']
-    ),
-    'mb-3'
-);
+if (!$profiles) {
+    echo \tool_coursecompliance\ui::panel(
+        get_string('standards', 'tool_coursecompliance'),
+        html_writer::div(get_string('nostandardsyet', 'tool_coursecompliance'), 'cc-empty-state')
+    );
+    echo $OUTPUT->footer();
+    exit;
+}
 
-$table = new html_table();
-$table->attributes['class'] = 'generaltable align-middle';
-$table->head = [
-    get_string('profilename', 'tool_coursecompliance'),
-    get_string('status', 'tool_coursecompliance'),
-    get_string('profiletargets', 'tool_coursecompliance'),
-    get_string('blueprint', 'tool_coursecompliance'),
-    get_string('actions'),
-];
+$cards = [];
 foreach ($profiles as $profile) {
     $config = \tool_coursecompliance\profile_config::decode($profile->configjson);
-    $targets = [];
+    $targetchips = [];
     foreach (['exam', 'resit1', 'resit2'] as $type) {
         $requiredkey = $type === 'exam' ? 'requireexam' : 'require' . $type;
         if (!empty($config[$requiredkey])) {
-            $targets[] = get_string('period_' . $type, 'tool_coursecompliance') .
-                ': ' . s($config[$type . 'idnumber']);
+            $targetchips[] = html_writer::span(
+                get_string('period_' . $type, 'tool_coursecompliance') .
+                    ' · ' . s((string)$config[$type . 'idnumber']),
+                'cc-chip'
+            );
         }
     }
-    if (!$targets) {
-        $targets[] = get_string('courseonlyprofile', 'tool_coursecompliance');
+    if (!$targetchips) {
+        $targetchips[] = html_writer::span(get_string('courseonlyprofile', 'tool_coursecompliance'), 'cc-chip');
     }
 
+    $status = $profile->enabled
+        ? html_writer::span(get_string('enabled', 'tool_coursecompliance'), 'badge bg-success')
+        : html_writer::span(get_string('disabled', 'tool_coursecompliance'), 'badge bg-secondary');
+
+    $body = html_writer::start_div('d-flex justify-content-between align-items-start gap-3');
+    $body .= html_writer::div(
+        html_writer::tag('h3', format_string($profile->name), ['class' => 'h5 mb-1']) .
+        (!empty($profile->description)
+            ? html_writer::div(format_text($profile->description, FORMAT_PLAIN), 'text-muted small')
+            : ''),
+        'flex-grow-1'
+    );
+    $body .= $status;
+    $body .= html_writer::end_div();
+
+    $body .= html_writer::div(implode('', $targetchips), 'mt-3');
+
     if (!empty($config['blueprint']) && is_array($config['blueprint'])) {
-        $blueprint = get_string('blueprintsourcebrief', 'tool_coursecompliance', (object)[
+        $sourceinfo = (object)[
             'course' => $config['blueprint']['sourcefullname'] ?? '',
             'version' => (int)($config['blueprintversion'] ?? 1),
-        ]);
+        ];
+        $body .= html_writer::div(
+            html_writer::tag('strong', get_string('blueprint', 'tool_coursecompliance') . ': ') .
+                s(get_string('blueprintsourcebrief', 'tool_coursecompliance', $sourceinfo)),
+            'small text-muted mt-3'
+        );
     } else {
-        $blueprint = html_writer::span(get_string('notconfigured', 'tool_coursecompliance'), 'text-muted');
+        $body .= html_writer::div(
+            get_string('blueprintnotconfiguredshort', 'tool_coursecompliance'),
+            'small text-muted mt-3'
+        );
     }
 
     $actions = [];
     $actions[] = html_writer::link(
-        new moodle_url('/admin/tool/coursecompliance/blueprint.php', ['profileid' => $profile->id]),
-        get_string('blueprint', 'tool_coursecompliance'),
+        new moodle_url('/admin/tool/coursecompliance/blueprint_rules.php', ['profileid' => $profile->id]),
+        get_string('configurestandard', 'tool_coursecompliance'),
         ['class' => 'btn btn-sm btn-primary']
     );
     $actions[] = html_writer::link(
-        new moodle_url('/admin/tool/coursecompliance/blueprint_rules.php', ['profileid' => $profile->id]),
-        get_string('configureblueprintrules', 'tool_coursecompliance'),
+        new moodle_url('/admin/tool/coursecompliance/blueprint.php', ['profileid' => $profile->id]),
+        get_string('templatecourse', 'tool_coursecompliance'),
         ['class' => 'btn btn-sm btn-outline-primary']
     );
     $actions[] = html_writer::link(
@@ -127,21 +158,13 @@ foreach ($profiles as $profile) {
         get_string('duplicateprofile', 'tool_coursecompliance'),
         ['class' => 'btn btn-sm btn-outline-secondary']
     );
+    $body .= html_writer::div(implode(' ', $actions), 'cc-profile-actions d-flex flex-wrap gap-2');
 
-    $status = $profile->enabled
-        ? html_writer::span(get_string('enabled', 'tool_coursecompliance'), 'badge bg-success')
-        : html_writer::span(get_string('disabled', 'tool_coursecompliance'), 'badge bg-secondary');
-
-    $table->data[] = [
-        html_writer::tag('strong', format_string($profile->name)) .
-            (!empty($profile->description)
-                ? html_writer::div(format_text($profile->description, FORMAT_PLAIN), 'small text-muted mt-1')
-                : ''),
-        $status,
-        implode('<br>', $targets),
-        $blueprint,
-        html_writer::div(implode(' ', $actions), 'd-flex flex-wrap gap-1'),
-    ];
+    $cards[] = html_writer::div(
+        html_writer::div($body, 'cc-profile-card'),
+        'col-12 col-xl-6'
+    );
 }
-echo html_writer::table($table);
+
+echo html_writer::div(implode('', $cards), 'row g-3');
 echo $OUTPUT->footer();

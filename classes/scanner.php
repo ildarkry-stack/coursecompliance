@@ -42,8 +42,9 @@ final class scanner {
      * Run a stored compliance scan.
      *
      * @param int $scanid Scan record id.
+     * @param int $courselimit Maximum number of courses to inspect, 0 for all.
      */
-    public function run(int $scanid): void {
+    public function run(int $scanid, int $courselimit = 0): void {
         global $DB;
 
         $scan = $DB->get_record('tool_coursecompliance_scan', ['id' => $scanid], '*', MUST_EXIST);
@@ -66,7 +67,18 @@ final class scanner {
         $categoryids = array_merge([$category->id], $category->get_all_children_ids());
         [$insql, $params] = $DB->get_in_or_equal($categoryids, SQL_PARAMS_NAMED, 'cat');
         $params['siteid'] = SITEID;
-        $courses = $DB->get_records_select('course', "category $insql AND id <> :siteid", $params, 'id ASC');
+        if ($courselimit <= 0 && property_exists($scan, 'courselimit')) {
+            $courselimit = (int)$scan->courselimit;
+        }
+        $courses = $DB->get_records_select(
+            'course',
+            "category $insql AND id <> :siteid",
+            $params,
+            'fullname ASC, id ASC',
+            '*',
+            0,
+            max(0, $courselimit)
+        );
         $courseids = array_keys($courses);
 
         $this->exceptions = $this->load_exceptions((int)$profile->id, $courseids);
@@ -80,7 +92,9 @@ final class scanner {
             && !empty($config['blueprintrules']['enabled']);
         $manualassessmentenabled = $manualenabled && !$visualblueprint;
         $teachers = $manualenabled ? $this->load_teacher_counts($courseids) : [];
-        $quizdata = $manualassessmentenabled ? $this->load_quizzes($courseids, $config) : [];
+        $quizdata = ($manualassessmentenabled || $visualblueprint)
+            ? $this->load_quizzes($courseids, $config)
+            : [];
         $blueprintstates = [];
         if ($blueprintenabled && $blueprint) {
             $blueprintstates = blueprint_manager::load_states($courseids);
@@ -145,12 +159,29 @@ final class scanner {
                             continue;
                         }
                         $quiz = null;
-                        if (count($matches) === 1 && (string)$matches[0]['modname'] === 'quiz') {
-                            $quiz = (object)[
-                                'id' => (int)$matches[0]['instanceid'],
-                                'name' => (string)$matches[0]['name'],
-                            ];
+                        $data = $quizdata[(int)$course->id][$type] ?? null;
+                        if (count($matches) === 1 && (string)$matches[0]['modname'] === 'quiz' && $data) {
+                            $quiz = $data['quiz'];
                             $assessmentcount++;
+                            $integritycontext = $this->build_integrity_context(
+                                $course,
+                                $type,
+                                $data,
+                                $config,
+                                true
+                            );
+                            foreach (rule_registry::quiz_integrity_rules() as $rule) {
+                                $outcome = $this->evaluate_and_store(
+                                    $rule,
+                                    $integritycontext,
+                                    $config,
+                                    $scanid,
+                                    (int)$course->id,
+                                    $type
+                                );
+                                $this->increment_outcome($totals, $outcome);
+                                $this->increment_outcome($blueprintlocal[$type], $outcome);
+                            }
                         }
                         $this->store_assessment_state(
                             $scanid,
@@ -208,12 +239,8 @@ final class scanner {
 
                 $assessmentcount++;
                 $quiz = $data['quiz'];
-                $quizcontext = [
-                    'course' => $course,
-                    'quiz' => $quiz,
-                    'assessmenttype' => $type,
-                    'questioncount' => $data['questioncount'],
-                    'zeromarkcount' => $data['zeromarkcount'],
+                $quizcontext = $this->build_integrity_context($course, $type, $data, $config, false);
+                $quizcontext += [
                     'gradepass' => $data['gradepass'],
                     'gradeitemexists' => $data['gradeitemexists'],
                     'gradeitemmax' => $data['gradeitemmax'],
@@ -223,7 +250,7 @@ final class scanner {
                     'maxoverridetimeclose' => $data['maxoverridetimeclose'],
                     'duplicatecount' => $data['duplicatecount'],
                 ];
-                foreach (rule_registry::quiz_rules() as $rule) {
+                foreach (array_merge(rule_registry::quiz_rules(), rule_registry::quiz_integrity_rules()) as $rule) {
                     $outcome = $this->evaluate_and_store(
                         $rule,
                         $quizcontext,
@@ -533,6 +560,64 @@ final class scanner {
     }
 
     /**
+     * Build a common context for Quiz question-bank integrity rules.
+     *
+     * @param \stdClass $course Course record.
+     * @param string $type Assessment type.
+     * @param array $data Loaded Quiz data.
+     * @param array $config Profile configuration.
+     * @param bool $visualblueprint Whether visual Blueprint rules are active.
+     * @return array<string, mixed>
+     */
+    private function build_integrity_context(
+        \stdClass $course,
+        string $type,
+        array $data,
+        array $config,
+        bool $visualblueprint
+    ): array {
+        $rules = $visualblueprint
+            ? ($config['blueprintrules']['assessments'][$type] ?? [])
+            : [];
+        $integrity = is_array($data['integrity'] ?? null) ? $data['integrity'] : [];
+        return [
+            'course' => $course,
+            'quiz' => $data['quiz'],
+            'assessmenttype' => $type,
+            'visualblueprint' => $visualblueprint,
+            'questioncount' => (int)($data['questioncount'] ?? 0),
+            'zeromarkcount' => (int)($data['zeromarkcount'] ?? 0),
+            'structureerror' => (string)($integrity['structureerror'] ?? ''),
+            'slotmarksum' => (float)($integrity['slotmarksum'] ?? 0),
+            'bankquestioncount' => (int)($integrity['bankquestioncount'] ?? 0),
+            'bankcategorycount' => (int)($integrity['bankcategorycount'] ?? 0),
+            'bankcategories' => $integrity['bankcategories'] ?? [],
+            'draftquestioncount' => (int)($integrity['draftquestioncount'] ?? 0),
+            'brokenquestioncount' => (int)($integrity['brokenquestioncount'] ?? 0),
+            'nocorrectanswercount' => (int)($integrity['nocorrectanswercount'] ?? 0),
+            'correctansweruncheckedcount' => (int)($integrity['correctansweruncheckedcount'] ?? 0),
+            'emptyrandompoolcount' => (int)($integrity['emptyrandompoolcount'] ?? 0),
+            'insufficientrandompoolcount' => (int)($integrity['insufficientrandompoolcount'] ?? 0),
+            'deepchecktruncated' => !empty($integrity['deepchecktruncated']),
+            'checkquestionintegrity' => $visualblueprint
+                ? !empty($rules['question_integrity'])
+                : !empty($config['checkquestionintegrity']),
+            'requirequestionready' => $visualblueprint
+                ? !empty($rules['question_ready_only'])
+                : !empty($config['requirequestionready']),
+            'requirecorrectanswers' => $visualblueprint
+                ? !empty($rules['question_correct_answer'])
+                : !empty($config['requirecorrectanswers']),
+            'requiremarksmatch' => $visualblueprint
+                ? !empty($rules['marks_match_grade'])
+                : !empty($config['requiremarksmatch']),
+            'requiresinglebankcategory' => $visualblueprint
+                ? !empty($rules['single_bank_category'])
+                : !empty($config['requiresinglebankcategory']),
+        ];
+    }
+
+    /**
      * Load configured exam/resit quizzes with assessment summary data.
      *
      * @param int[] $courseids Course ids.
@@ -557,7 +642,7 @@ final class scanner {
         [$courseinsql, $courseparams] = $DB->get_in_or_equal($courseids, SQL_PARAMS_NAMED, 'qcourse');
         [$idinsql, $idparams] = $DB->get_in_or_equal($idnumbers, SQL_PARAMS_NAMED, 'idnum');
         $params = $courseparams + $idparams;
-        $sql = "SELECT q.*, cm.idnumber AS cmidnumber,
+        $sql = "SELECT q.*, cm.id AS cmid, cm.idnumber AS cmidnumber,
                        COALESCE(qs.questioncount, 0) AS questioncount,
                        COALESCE(qs.zeromarkcount, 0) AS zeromarkcount,
                        gi.id AS gradeitemid,
@@ -611,6 +696,7 @@ final class scanner {
                     'maxattempts' => 0,
                     'maxtimeclose' => 0,
                 ];
+                $integrity = quiz_integrity_inspector::inspect($quiz);
                 $out[$courseid][$type] = [
                     'quiz' => $quiz,
                     'questioncount' => (int)$quiz->questioncount,
@@ -623,6 +709,7 @@ final class scanner {
                     'maxoverrideattempts' => $override['maxattempts'],
                     'maxoverridetimeclose' => $override['maxtimeclose'],
                     'duplicatecount' => count($items),
+                    'integrity' => $integrity,
                 ];
             }
         }

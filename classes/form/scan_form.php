@@ -48,6 +48,23 @@ final class scan_form extends \moodleform {
         $mform->setType('profileid', PARAM_INT);
         $mform->setDefault('profileid', 0);
         $mform->addRule('profileid', null, 'required', null, 'client');
+        $mform->addElement(
+            'select',
+            'courselimit',
+            get_string('courselimit', 'tool_coursecompliance'),
+            [
+                1 => '1',
+                5 => '5',
+                10 => '10',
+                20 => '20',
+                50 => '50',
+                100 => '100',
+                0 => get_string('allcourses', 'tool_coursecompliance'),
+            ]
+        );
+        $mform->setType('courselimit', PARAM_INT);
+        $mform->setDefault('courselimit', 20);
+        $mform->addHelpButton('courselimit', 'courselimit', 'tool_coursecompliance');
         $this->add_action_buttons(false, get_string('startscan', 'tool_coursecompliance'));
     }
 

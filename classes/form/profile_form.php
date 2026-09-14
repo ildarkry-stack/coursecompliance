@@ -100,6 +100,39 @@ final class profile_form extends \moodleform {
         $mform->setType('maxquestions', PARAM_INT);
         $mform->addElement('advcheckbox', 'requireshuffleanswers', get_string('requireshuffleanswers', 'tool_coursecompliance'));
 
+        $mform->addElement('header', 'questionbankchecks', get_string('questionbankintegrity', 'tool_coursecompliance'));
+        $mform->addElement(
+            'static',
+            'questionbankintegrityhelptext',
+            '',
+            get_string('questionbankintegrityhelp', 'tool_coursecompliance')
+        );
+        $mform->addElement(
+            'advcheckbox',
+            'checkquestionintegrity',
+            get_string('questionintegrityenabled', 'tool_coursecompliance')
+        );
+        $mform->addElement(
+            'advcheckbox',
+            'requirequestionready',
+            get_string('questionreadyonly', 'tool_coursecompliance')
+        );
+        $mform->addElement(
+            'advcheckbox',
+            'requirecorrectanswers',
+            get_string('questioncorrectanswerrequired', 'tool_coursecompliance')
+        );
+        $mform->addElement(
+            'advcheckbox',
+            'requiremarksmatch',
+            get_string('questionmarksmatchgrade', 'tool_coursecompliance')
+        );
+        $mform->addElement(
+            'advcheckbox',
+            'requiresinglebankcategory',
+            get_string('questionsinglebankcategory', 'tool_coursecompliance')
+        );
+
         $mform->addElement('header', 'reviewchecks', get_string('reviewchecks', 'tool_coursecompliance'));
         $mform->addElement('advcheckbox', 'hideanswerswhileopen', get_string('hideanswerswhileopen', 'tool_coursecompliance'));
         $mform->addElement(

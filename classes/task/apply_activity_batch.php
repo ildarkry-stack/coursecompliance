@@ -85,9 +85,11 @@ final class apply_activity_batch extends \core\task\adhoc_task {
             return;
         }
 
+        $courselimit = (int)($filter['courselimit'] ?? 0);
         $scanid = $DB->insert_record('tool_coursecompliance_scan', (object)[
             'profileid' => $profileid,
             'categoryid' => (int)$batch->categoryid,
+            'courselimit' => $courselimit,
             'userid' => (int)$batch->userid,
             'status' => 'queued',
             'courses' => 0,
@@ -103,7 +105,10 @@ final class apply_activity_batch extends \core\task\adhoc_task {
         ]);
 
         $task = new run_scan();
-        $task->set_custom_data(['scanid' => $scanid]);
+        $task->set_custom_data([
+            'scanid' => $scanid,
+            'courselimit' => $courselimit,
+        ]);
         \core\task\manager::queue_adhoc_task($task);
 
         $filter['rescanid'] = $scanid;

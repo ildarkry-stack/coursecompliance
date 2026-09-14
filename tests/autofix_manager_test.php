@@ -51,6 +51,24 @@ final class autofix_manager_test extends \advanced_testcase {
     }
 
     /**
+     * Grade-to-pass warnings are fixable only when the profile has an explicit target.
+     */
+    public function test_gradepass_rule_requires_explicit_target(): void {
+        $result = (object)[
+            'component' => 'quiz',
+            'objectid' => 10,
+            'rulecode' => 'QUIZ_GRADE_TO_PASS_MIN',
+            'assessmenttype' => 'exam',
+        ];
+        $config = profile_config::defaults();
+        $config['mingradepass'] = 60.0;
+        $this->assertTrue(autofix_manager::is_fixable($result, $config));
+
+        $config['mingradepass'] = 0;
+        $this->assertFalse(autofix_manager::is_fixable($result, $config));
+    }
+
+    /**
      * Hiding the right answer preserves unrelated review periods.
      */
     public function test_review_fix_clears_only_open_periods(): void {

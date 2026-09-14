@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.11.0-alpha (2026-09-14)
+
+- Added deep Quiz integrity checks using Moodle question-bank APIs.
+- Detects empty quizzes, broken question references, empty/insufficient random pools, draft questions, missing correct responses for automatically graded questions, and mark-distribution mismatches.
+- Reports question-bank category spread for exam/resit quizzes.
+- Correct-answer checks that require attempt/variant state are reported as partial instead of falsely flagging valid questions as broken.
+- Added per-standard controls for question-bank integrity checks.
+- Added safe auto-fix for explicit grade-to-pass standards; existing safe warning fixes for attempts, time limits, Quiz grade, review visibility, browser security and answer shuffling remain available.
+- Added selectable audit size: 1, 5, 10, 20, 50, 100 or all courses.
+
+## 0.10.0-alpha
+
+- Refreshed the plugin visual system across administration pages with consistent navigation, cards, forms, tables and spacing.
+- Reworked Course standards into cleaner profile cards and removed letter/number prefixes from standard-rule sections.
+- Added a dashboard course-readiness report showing ready courses versus courses requiring attention.
+- Added semantic green/red readiness charting and a readiness percentage for the latest completed audit.
+- Simplified Blueprint wording and page hierarchy for faster administration.
+
 ## 0.9.3-alpha
 
 - Replaced the unreliable server-rendered course banner placement with a navigation-triggered AMD status panel.

@@ -39,6 +39,7 @@ final class rule_registry_test extends \advanced_testcase {
     public function test_registry_contains_course_and_quiz_rules(): void {
         $this->assertGreaterThanOrEqual(4, count(rule_registry::course_rules()));
         $this->assertGreaterThanOrEqual(20, count(rule_registry::quiz_rules()));
+        $this->assertGreaterThanOrEqual(10, count(rule_registry::quiz_integrity_rules()));
     }
 
     /**
@@ -71,6 +72,31 @@ final class rule_registry_test extends \advanced_testcase {
         $context = $this->quiz_context($this->quiz_record());
         $context['zeromarkcount'] = 2;
         $rule = $this->find_rule('QUIZ_ZERO_MARK_QUESTIONS', rule_registry::quiz_rules());
+        $this->assertNotNull($rule->evaluate($context, []));
+    }
+
+    /**
+     * Automatically graded questions without a valid correct response are detected.
+     */
+    public function test_missing_correct_answer_is_detected(): void {
+        $context = $this->quiz_context($this->quiz_record());
+        $context['requirecorrectanswers'] = true;
+        $context['nocorrectanswercount'] = 2;
+        $rule = $this->find_rule(
+            'QUIZ_QUESTION_CORRECT_ANSWER_REQUIRED',
+            rule_registry::quiz_integrity_rules()
+        );
+        $this->assertNotNull($rule->evaluate($context, []));
+    }
+
+    /**
+     * A direct mismatch between question marks and the Quiz maximum grade is detected when required.
+     */
+    public function test_mark_distribution_mismatch_is_detected(): void {
+        $context = $this->quiz_context($this->quiz_record());
+        $context['requiremarksmatch'] = true;
+        $context['slotmarksum'] = 40.0;
+        $rule = $this->find_rule('QUIZ_MARK_DISTRIBUTION_MATCH', rule_registry::quiz_integrity_rules());
         $this->assertNotNull($rule->evaluate($context, []));
     }
 

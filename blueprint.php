@@ -61,15 +61,15 @@ if ($importcourseid > 0) {
 echo $OUTPUT->header();
 echo \tool_coursecompliance\ui::primary_navigation('standards');
 echo \tool_coursecompliance\ui::standards_navigation('profiles');
-echo $OUTPUT->heading(get_string('blueprintforprofile', 'tool_coursecompliance', format_string($profile->name)));
-echo \tool_coursecompliance\ui::intro(get_string('blueprintintro', 'tool_coursecompliance'));
-echo html_writer::div(
-    html_writer::link(
-        new moodle_url('/admin/tool/coursecompliance/blueprint_rules.php', ['profileid' => $profileid]),
-        get_string('configureblueprintrules', 'tool_coursecompliance'),
-        ['class' => 'btn btn-primary']
-    ),
-    'mb-3'
+$configurebutton = html_writer::link(
+    new moodle_url('/admin/tool/coursecompliance/blueprint_rules.php', ['profileid' => $profileid]),
+    get_string('configurestandard', 'tool_coursecompliance'),
+    ['class' => 'btn btn-primary']
+);
+echo \tool_coursecompliance\ui::page_heading(
+    get_string('blueprintforprofile', 'tool_coursecompliance', format_string($profile->name)),
+    get_string('blueprintintro', 'tool_coursecompliance'),
+    $configurebutton
 );
 
 $blueprint = $config['blueprint'] ?? [];

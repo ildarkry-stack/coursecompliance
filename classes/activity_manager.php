@@ -183,6 +183,7 @@ final class activity_manager {
         $rename = null;
         $visibility = null;
         $availability = null;
+        $gradepass = null;
         foreach ($changes as $change) {
             if (in_array($change->fieldname, activity_repository::date_fields($activity->modname), true)) {
                 $datechanges[$change->fieldname] = (int)$change->newvalue;
@@ -197,6 +198,8 @@ final class activity_manager {
                 $visibility = $change->newvalue;
             } else if ($change->fieldname === 'availability') {
                 $availability = (string)$change->newvalue;
+            } else if ($activity->modname === 'quiz' && $change->fieldname === 'gradepass') {
+                $gradepass = (float)$change->newvalue;
             }
         }
 
@@ -259,6 +262,24 @@ final class activity_manager {
             rebuild_course_cache($activity->courseid, false, true);
         }
 
+        if ($gradepass !== null) {
+            require_once($CFG->libdir . '/gradelib.php');
+            $gradeitem = \grade_item::fetch([
+                'courseid' => (int)$activity->courseid,
+                'itemtype' => 'mod',
+                'itemmodule' => 'quiz',
+                'iteminstance' => (int)$activity->instanceid,
+                'itemnumber' => 0,
+            ]);
+            if (!$gradeitem) {
+                throw new \moodle_exception('gradeitemmissing', 'tool_coursecompliance');
+            }
+            $gradeitem->gradepass = $gradepass;
+            if (!$gradeitem->update('tool_coursecompliance')) {
+                throw new \moodle_exception('gradepassupdatefailed', 'tool_coursecompliance');
+            }
+        }
+
         if ($rename !== null) {
             require_once($CFG->dirroot . '/course/lib.php');
             set_coursemodule_name($activity->cmid, $rename);
@@ -317,6 +338,19 @@ final class activity_manager {
         }
         if ($field === 'availability') {
             return (string)($activity->availability ?? '');
+        }
+        if ($activity->modname === 'quiz' && $field === 'gradepass') {
+            return (float)$DB->get_field(
+                'grade_items',
+                'gradepass',
+                [
+                    'courseid' => (int)$activity->courseid,
+                    'itemmodule' => 'quiz',
+                    'iteminstance' => (int)$activity->instanceid,
+                    'itemnumber' => 0,
+                ],
+                MUST_EXIST
+            );
         }
         if ($activity->modname === 'quiz' && in_array($field, self::QUIZ_SETTING_FIELDS, true)) {
             return $DB->get_field('quiz', $field, ['id' => $activity->instanceid], MUST_EXIST);

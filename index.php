@@ -48,12 +48,16 @@ if ($data = $form->get_data()) {
     $scanid = $DB->insert_record('tool_coursecompliance_scan', (object)[
         'profileid' => $profileid,
         'categoryid' => $data->categoryid,
+        'courselimit' => (int)$data->courselimit,
         'userid' => $USER->id,
         'status' => 'queued',
         'timecreated' => time(),
     ]);
     $task = new \tool_coursecompliance\task\run_scan();
-    $task->set_custom_data(['scanid' => $scanid]);
+    $task->set_custom_data([
+        'scanid' => $scanid,
+        'courselimit' => (int)$data->courselimit,
+    ]);
     $task->set_userid($USER->id);
     \core\task\manager::queue_adhoc_task($task);
     redirect(
@@ -69,10 +73,22 @@ $latestsql = "SELECT s.*, p.name AS profilename, cc.name AS categoryname
             ORDER BY s.timecreated DESC";
 $scans = $DB->get_records_sql($latestsql, [], 0, 20);
 $latestcomplete = null;
-foreach ($scans as $candidate) {
-    if ($candidate->status === 'complete') {
-        $latestcomplete = $candidate;
-        break;
+$fullscansql = "SELECT s.*, p.name AS profilename, cc.name AS categoryname
+                  FROM {tool_coursecompliance_scan} s
+             LEFT JOIN {tool_coursecompliance_profile} p ON p.id = s.profileid
+             LEFT JOIN {course_categories} cc ON cc.id = s.categoryid
+                 WHERE s.status = :status AND s.courselimit = 0
+              ORDER BY s.timecreated DESC";
+$fullscans = $DB->get_records_sql($fullscansql, ['status' => 'complete'], 0, 1);
+if ($fullscans) {
+    $latestcomplete = reset($fullscans);
+}
+if (!$latestcomplete) {
+    foreach ($scans as $candidate) {
+        if ($candidate->status === 'complete') {
+            $latestcomplete = $candidate;
+            break;
+        }
     }
 }
 
@@ -95,58 +111,142 @@ $queuedcount = $DB->count_records_select(
 
 $enabledprofiles = $DB->count_records('tool_coursecompliance_profile', ['enabled' => 1]);
 
+$readycourses = 0;
+$notreadycourses = 0;
+$readinesspercent = 0;
+if ($latestcomplete) {
+    $notreadycourses = (int)$DB->count_records_sql(
+        "SELECT COUNT(DISTINCT courseid)
+           FROM {tool_coursecompliance_result}
+          WHERE scanid = :scanid",
+        ['scanid' => (int)$latestcomplete->id]
+    );
+    $notreadycourses = min((int)$latestcomplete->courses, $notreadycourses);
+    $readycourses = max(0, (int)$latestcomplete->courses - $notreadycourses);
+    if ((int)$latestcomplete->courses > 0) {
+        $readinesspercent = (int)round(($readycourses / (int)$latestcomplete->courses) * 100);
+    }
+}
 
 echo $OUTPUT->header();
 echo \tool_coursecompliance\ui::primary_navigation('dashboard');
-echo $OUTPUT->heading(get_string('dashboard', 'tool_coursecompliance'));
-echo \tool_coursecompliance\ui::intro(get_string('dashboardintro', 'tool_coursecompliance'));
+echo \tool_coursecompliance\ui::page_heading(
+    get_string('dashboard', 'tool_coursecompliance'),
+    get_string('dashboardintro', 'tool_coursecompliance')
+);
 
 $metrics = [
     [
         'label' => get_string('enabledstandards', 'tool_coursecompliance'),
         'value' => $enabledprofiles,
+        'tone' => 'info',
     ],
     [
         'label' => get_string('backgroundqueue', 'tool_coursecompliance'),
         'value' => $queuedcount,
+        'tone' => $queuedcount > 0 ? 'warning' : 'secondary',
     ],
 ];
 if ($latestcomplete) {
     $metrics[] = [
-        'label' => get_string('latestscancourses', 'tool_coursecompliance'),
-        'value' => (int)$latestcomplete->courses,
+        'label' => get_string('readycourses', 'tool_coursecompliance'),
+        'value' => $readycourses,
+        'help' => get_string('latestscancourseshelp', 'tool_coursecompliance', (int)$latestcomplete->courses),
+        'tone' => 'success',
+        'url' => new moodle_url('/admin/tool/coursecompliance/report.php', [
+            'scanid' => (int)$latestcomplete->id,
+            'kind' => 'ready',
+        ]),
     ];
     $metrics[] = [
-        'label' => get_string('latestscanproblems', 'tool_coursecompliance'),
-        'value' => (int)$latestcomplete->critical + (int)$latestcomplete->warnings + (int)$latestcomplete->notices,
+        'label' => get_string('notreadycourses', 'tool_coursecompliance'),
+        'value' => $notreadycourses,
+        'help' => get_string('latestscanproblemshelp', 'tool_coursecompliance',
+            (int)$latestcomplete->critical + (int)$latestcomplete->warnings + (int)$latestcomplete->notices),
+        'tone' => $notreadycourses > 0 ? 'danger' : 'success',
+        'url' => new moodle_url('/admin/tool/coursecompliance/report.php', [
+            'scanid' => (int)$latestcomplete->id,
+        ]),
+    ];
+    $metrics[] = [
+        'label' => get_string('coursereadinesspercent', 'tool_coursecompliance'),
+        'value' => $readinesspercent . '%',
+        'tone' => $readinesspercent === 100 ? 'success' : ($readinesspercent >= 80 ? 'warning' : 'danger'),
     ];
 }
 echo \tool_coursecompliance\ui::metric_cards($metrics);
 
-$trendchart = \tool_coursecompliance\report_charts::scan_trend($trend);
-if ($trendchart) {
-    echo html_writer::start_div('card shadow-sm mb-4');
-    echo html_writer::start_div('card-body');
-    echo $OUTPUT->render($trendchart);
+if ($latestcomplete) {
+    $readinesschart = \tool_coursecompliance\report_charts::course_readiness($readycourses, $notreadycourses);
+    $trendchart = \tool_coursecompliance\report_charts::scan_trend($trend);
+
+    echo html_writer::start_div('row g-3 mb-4');
+    echo html_writer::start_div('col-12 col-xl-5');
+    $readinessbody = '';
+    if ($readinesschart) {
+        $readinessbody .= $OUTPUT->render($readinesschart);
+    }
+    $readinessbody .= html_writer::div(
+        html_writer::span('', 'cc-readiness-dot bg-success') .
+        html_writer::span(get_string('readycourses', 'tool_coursecompliance'), 'flex-grow-1') .
+        html_writer::tag('strong', (string)$readycourses),
+        'cc-readiness-stat'
+    );
+    $readinessbody .= html_writer::div(
+        html_writer::span('', 'cc-readiness-dot bg-danger') .
+        html_writer::span(get_string('notreadycourses', 'tool_coursecompliance'), 'flex-grow-1') .
+        html_writer::tag('strong', (string)$notreadycourses),
+        'cc-readiness-stat'
+    );
+    $readinesslabel = get_string(
+        'latestscanlabel',
+        'tool_coursecompliance',
+        userdate((int)$latestcomplete->timecreated)
+    );
+    if (!empty($latestcomplete->courselimit)) {
+        $readinesslabel .= ' · ' . get_string(
+            'scanlimitedto',
+            'tool_coursecompliance',
+            (int)$latestcomplete->courselimit
+        );
+    }
+    $readinessbody .= html_writer::div($readinesslabel, 'small text-muted mt-2');
+    echo \tool_coursecompliance\ui::panel(
+        get_string('coursereadinessreport', 'tool_coursecompliance'),
+        $readinessbody,
+        get_string('coursereadinessreporthelp', 'tool_coursecompliance')
+    );
+    echo html_writer::end_div();
+
+    echo html_writer::start_div('col-12 col-xl-7');
+    if ($trendchart) {
+        echo \tool_coursecompliance\ui::panel(
+            get_string('chart_scantrend_title', 'tool_coursecompliance'),
+            $OUTPUT->render($trendchart),
+            get_string('scantrendhelp', 'tool_coursecompliance')
+        );
+    } else {
+        echo \tool_coursecompliance\ui::panel(
+            get_string('chart_scantrend_title', 'tool_coursecompliance'),
+            html_writer::div(get_string('scantrendnotenoughdata', 'tool_coursecompliance'), 'cc-empty-state')
+        );
+    }
     echo html_writer::end_div();
     echo html_writer::end_div();
 }
 
-echo html_writer::start_div('card shadow-sm mb-4');
-echo html_writer::div(
-    html_writer::tag('h3', get_string('startnewscan', 'tool_coursecompliance'), ['class' => 'h5 mb-0']),
-    'card-header'
-);
-echo html_writer::start_div('card-body');
+ob_start();
 echo html_writer::div(get_string('startnewscanhelp', 'tool_coursecompliance'), 'text-muted mb-3');
 $form->display();
-echo html_writer::end_div();
-echo html_writer::end_div();
+$scanformhtml = ob_get_clean();
+echo \tool_coursecompliance\ui::panel(
+    get_string('startnewscan', 'tool_coursecompliance'),
+    $scanformhtml
+);
 
 if ($scans) {
-    echo $OUTPUT->heading(get_string('recentscans', 'tool_coursecompliance'), 3);
     $table = new html_table();
-    $table->attributes['class'] = 'generaltable table-sm';
+    $table->attributes['class'] = 'generaltable table-sm align-middle';
     $table->head = [
         get_string('date'),
         get_string('profile', 'tool_coursecompliance'),
@@ -169,12 +269,19 @@ if ($scans) {
             (int)$scan->warnings,
             html_writer::link(
                 new moodle_url('/admin/tool/coursecompliance/report.php', ['scanid' => $scan->id]),
-                get_string('viewreport', 'tool_coursecompliance')
+                get_string('viewreport', 'tool_coursecompliance'),
+                ['class' => 'btn btn-sm btn-outline-primary']
             ),
         ];
     }
-    echo html_writer::table($table);
+    echo \tool_coursecompliance\ui::panel(
+        get_string('recentscans', 'tool_coursecompliance'),
+        html_writer::table($table)
+    );
 } else {
-    echo $OUTPUT->notification(get_string('noscansyet', 'tool_coursecompliance'), 'info');
+    echo \tool_coursecompliance\ui::panel(
+        get_string('recentscans', 'tool_coursecompliance'),
+        html_writer::div(get_string('noscansyet', 'tool_coursecompliance'), 'cc-empty-state')
+    );
 }
 echo $OUTPUT->footer();

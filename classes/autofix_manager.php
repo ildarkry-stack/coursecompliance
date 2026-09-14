@@ -79,6 +79,8 @@ final class autofix_manager {
                 'QUIZ_ATTEMPTS_STANDARD',
                 'QUIZ_TIMELIMIT_STANDARD',
                 'QUIZ_GRADE_STANDARD',
+                'QUIZ_GRADE_TO_PASS_REQUIRED',
+                'QUIZ_GRADE_TO_PASS_MIN',
                 'QUIZ_RIGHT_ANSWER_HIDDEN_WHILE_OPEN',
                 'QUIZ_CORRECTNESS_HIDDEN_WHILE_OPEN',
                 'QUIZ_BROWSER_SECURITY_STANDARD',
@@ -154,6 +156,17 @@ final class autofix_manager {
                 } else {
                     require_capability('moodle/course:manageactivities', $context);
                 }
+                if ($field === 'gradepass') {
+                    $gradeitem = $DB->get_record('grade_items', [
+                        'courseid' => $courseid,
+                        'itemmodule' => 'quiz',
+                        'iteminstance' => $quizid,
+                        'itemnumber' => 0,
+                    ]);
+                    if (!$gradeitem || !empty($gradeitem->locked)) {
+                        continue;
+                    }
+                }
                 $oldvalue = $this->current_value($quiz, $cm, $field);
                 if ((string)$oldvalue === (string)$newvalue) {
                     continue;
@@ -194,6 +207,7 @@ final class autofix_manager {
             'filterjson' => json_encode([
                 'scanid' => $scanid,
                 'profileid' => (int)$scan->profileid,
+                'courselimit' => (int)($scan->courselimit ?? 0),
             ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
             'summary' => get_string('batchsummary_autofix', 'tool_coursecompliance', (object)[
                 'scanid' => $scanid,
@@ -235,6 +249,9 @@ final class autofix_manager {
         if ($rulecode === 'QUIZ_GRADE_STANDARD') {
             return ['grade' => (float)($config['examgrade'] ?? 0)];
         }
+        if (in_array($rulecode, ['QUIZ_GRADE_TO_PASS_REQUIRED', 'QUIZ_GRADE_TO_PASS_MIN'], true)) {
+            return ['gradepass' => (float)($config['mingradepass'] ?? 0)];
+        }
         if ($rulecode === 'QUIZ_RIGHT_ANSWER_HIDDEN_WHILE_OPEN') {
             $mask = self::REVIEW_IMMEDIATELY | self::REVIEW_OPEN;
             return ['reviewrightanswer' => ((int)$quiz->reviewrightanswer & ~$mask)];
@@ -265,6 +282,8 @@ final class autofix_manager {
             'QUIZ_ATTEMPTS_STANDARD' => (int)($config['examattempts'] ?? 0) > 0,
             'QUIZ_TIMELIMIT_STANDARD' => (int)($config['examtimelimit'] ?? 0) > 0,
             'QUIZ_GRADE_STANDARD' => (float)($config['examgrade'] ?? 0) > 0,
+            'QUIZ_GRADE_TO_PASS_REQUIRED', 'QUIZ_GRADE_TO_PASS_MIN' =>
+                (float)($config['mingradepass'] ?? 0) > 0,
             'QUIZ_RIGHT_ANSWER_HIDDEN_WHILE_OPEN' => !empty($config['hideanswerswhileopen']),
             'QUIZ_CORRECTNESS_HIDDEN_WHILE_OPEN' => !empty($config['hidecorrectnesswhileopen']),
             'QUIZ_BROWSER_SECURITY_STANDARD' => trim((string)($config['expectedbrowsersecurity'] ?? '')) !== '',
@@ -284,6 +303,7 @@ final class autofix_manager {
         $rulecode = (string)$result->rulecode;
         $supported = [
             'BLUEPRINT_ASSESSMENT_GRADE',
+            'BLUEPRINT_ASSESSMENT_GRADEPASS',
             'BLUEPRINT_ASSESSMENT_ATTEMPTS',
             'BLUEPRINT_ASSESSMENT_TIMELIMIT',
             'BLUEPRINT_ASSESSMENT_SHUFFLEANSWERS',
@@ -350,7 +370,7 @@ final class autofix_manager {
             return false;
         }
         return match ($field) {
-            'grade' => (float)$expected > 0,
+            'grade', 'gradepass' => (float)$expected > 0,
             'attempts', 'timelimit' => is_numeric($expected) && (int)$expected >= 0,
             'shuffleanswers' => in_array((int)$expected, [0, 1], true),
             'browsersecurity' => is_scalar($expected),
@@ -439,6 +459,7 @@ final class autofix_manager {
     private static function blueprint_field(string $rulecode): string {
         return match ($rulecode) {
             'BLUEPRINT_ASSESSMENT_GRADE' => 'grade',
+            'BLUEPRINT_ASSESSMENT_GRADEPASS' => 'gradepass',
             'BLUEPRINT_ASSESSMENT_ATTEMPTS' => 'attempts',
             'BLUEPRINT_ASSESSMENT_TIMELIMIT' => 'timelimit',
             'BLUEPRINT_ASSESSMENT_SHUFFLEANSWERS' => 'shuffleanswers',
@@ -482,6 +503,8 @@ final class autofix_manager {
      * @return int|float|string
      */
     private function current_value(\stdClass $quiz, \stdClass $cm, string $field): int|float|string {
+        global $DB;
+
         if ($field === 'availability') {
             return (string)($cm->availability ?? '');
         }
@@ -490,6 +513,19 @@ final class autofix_manager {
                 return 'hide';
             }
             return !empty($cm->visibleoncoursepage) ? 'show' : 'stealth';
+        }
+        if ($field === 'gradepass') {
+            return (float)$DB->get_field(
+                'grade_items',
+                'gradepass',
+                [
+                    'courseid' => (int)$cm->course,
+                    'itemmodule' => 'quiz',
+                    'iteminstance' => (int)$quiz->id,
+                    'itemnumber' => 0,
+                ],
+                MUST_EXIST
+            );
         }
         if (!property_exists($quiz, $field)) {
             throw new \coding_exception('Unsupported autofix field: ' . $field);

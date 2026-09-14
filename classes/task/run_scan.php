@@ -35,6 +35,7 @@ final class run_scan extends \core\task\adhoc_task {
         global $DB;
         $data = $this->get_custom_data();
         $scanid = (int)($data->scanid ?? 0);
+        $courselimit = (int)($data->courselimit ?? 0);
         $scan = $DB->get_record('tool_coursecompliance_scan', ['id' => $scanid]);
         if (!$scan) {
             mtrace('Course compliance scan record ' . $scanid . ' no longer exists; task skipped.');
@@ -53,7 +54,7 @@ final class run_scan extends \core\task\adhoc_task {
         }
 
         try {
-            (new \tool_coursecompliance\scanner())->run($scanid);
+            (new \tool_coursecompliance\scanner())->run($scanid, $courselimit);
         } catch (\Throwable $e) {
             if ($scan = $DB->get_record('tool_coursecompliance_scan', ['id' => $scanid])) {
                 $scan->status = 'failed';

@@ -137,6 +137,33 @@ final class report_charts {
     }
 
     /**
+     * Create a course readiness doughnut chart for the latest audit.
+     *
+     * @param int $ready Ready course count.
+     * @param int $notready Courses requiring attention.
+     * @return \core\chart_pie|null Chart or null when there is no data.
+     */
+    public static function course_readiness(int $ready, int $notready): ?\core\chart_pie {
+        if (($ready + $notready) === 0) {
+            return null;
+        }
+        $chart = new \core\chart_pie();
+        $chart->set_doughnut(true);
+        $chart->set_title(get_string('chart_course_readiness_title', 'tool_coursecompliance'));
+        $chart->set_labels([
+            get_string('readycourses', 'tool_coursecompliance'),
+            get_string('notreadycourses', 'tool_coursecompliance'),
+        ]);
+        $series = new \core\chart_series(
+            get_string('courses', 'tool_coursecompliance'),
+            [$ready, $notready]
+        );
+        $series->set_colors(['#198754', '#dc3545']);
+        $chart->add_series($series);
+        return $chart;
+    }
+
+    /**
      * Create a recent scan trend chart.
      *
      * @param array $scans Completed scans ordered oldest to newest.

@@ -40,7 +40,6 @@ final class report_charts_test extends \advanced_testcase {
         $this->assertNull(report_charts::severity(0, 0, 0));
     }
 
-
     /**
      * Severity chart should use semantic colours in severity order.
      */
@@ -51,6 +50,18 @@ final class report_charts_test extends \advanced_testcase {
         $series = $chart->get_series();
         $this->assertCount(1, $series);
         $this->assertSame(['#dc3545', '#ffc107', '#0d6efd'], $series[0]->get_colors());
+    }
+
+    /**
+     * Course readiness chart should use green for ready and red for courses requiring attention.
+     */
+    public function test_course_readiness_chart_uses_semantic_colours(): void {
+        $chart = report_charts::course_readiness(8, 2);
+        $this->assertInstanceOf(\core\chart_pie::class, $chart);
+
+        $series = $chart->get_series();
+        $this->assertCount(1, $series);
+        $this->assertSame(['#198754', '#dc3545'], $series[0]->get_colors());
     }
 
     /**

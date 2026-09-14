@@ -1,0 +1,226 @@
+/* Course Compliance visual system. */
+body[id^="page-admin-tool-coursecompliance"] {
+    --cc-border: #e3e8ef;
+    --cc-surface: #fff;
+    --cc-surface-soft: #f7f9fc;
+    --cc-text-muted: #667085;
+    --cc-radius: 14px;
+}
+
+body[id^="page-admin-tool-coursecompliance"] #region-main {
+    background: transparent;
+}
+
+body[id^="page-admin-tool-coursecompliance"] .cc-primary-nav,
+body[id^="page-admin-tool-coursecompliance"] .cc-secondary-nav {
+    gap: .4rem;
+    padding: .35rem;
+    background: var(--cc-surface-soft);
+    border: 1px solid var(--cc-border);
+    border-radius: 12px;
+}
+
+body[id^="page-admin-tool-coursecompliance"] .cc-primary-nav .nav-link,
+body[id^="page-admin-tool-coursecompliance"] .cc-secondary-nav .nav-link {
+    border-radius: 9px;
+    padding: .58rem .9rem;
+    font-weight: 500;
+}
+
+body[id^="page-admin-tool-coursecompliance"] .cc-primary-nav .nav-link.active,
+body[id^="page-admin-tool-coursecompliance"] .cc-secondary-nav .nav-link.active {
+    box-shadow: 0 2px 8px rgba(13, 110, 253, .16);
+}
+
+body[id^="page-admin-tool-coursecompliance"] .cc-page-heading {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+    margin-bottom: 1.25rem;
+}
+
+body[id^="page-admin-tool-coursecompliance"] .cc-page-heading h2 {
+    margin: 0;
+}
+
+body[id^="page-admin-tool-coursecompliance"] .cc-page-intro {
+    max-width: 920px;
+    color: var(--cc-text-muted);
+    margin-top: .35rem;
+}
+
+body[id^="page-admin-tool-coursecompliance"] .cc-metric-card {
+    border: 1px solid var(--cc-border) !important;
+    border-radius: var(--cc-radius);
+    box-shadow: 0 4px 18px rgba(16, 24, 40, .05) !important;
+    overflow: hidden;
+}
+
+body[id^="page-admin-tool-coursecompliance"] .cc-metric-card::before {
+    content: "";
+    display: block;
+    height: 4px;
+    background: #0d6efd;
+}
+
+body[id^="page-admin-tool-coursecompliance"] .cc-metric-card.cc-tone-success::before { background: #198754; }
+body[id^="page-admin-tool-coursecompliance"] .cc-metric-card.cc-tone-danger::before { background: #dc3545; }
+body[id^="page-admin-tool-coursecompliance"] .cc-metric-card.cc-tone-warning::before { background: #ffc107; }
+body[id^="page-admin-tool-coursecompliance"] .cc-metric-card.cc-tone-info::before { background: #0dcaf0; }
+body[id^="page-admin-tool-coursecompliance"] .cc-metric-card.cc-tone-secondary::before { background: #6c757d; }
+
+body[id^="page-admin-tool-coursecompliance"] .cc-panel {
+    background: var(--cc-surface);
+    border: 1px solid var(--cc-border);
+    border-radius: var(--cc-radius);
+    box-shadow: 0 4px 18px rgba(16, 24, 40, .045);
+    margin-bottom: 1.5rem;
+    overflow: hidden;
+}
+
+body[id^="page-admin-tool-coursecompliance"] .cc-panel-header {
+    padding: 1rem 1.15rem;
+    background: var(--cc-surface-soft);
+    border-bottom: 1px solid var(--cc-border);
+}
+
+body[id^="page-admin-tool-coursecompliance"] .cc-panel-body {
+    padding: 1.15rem;
+}
+
+body[id^="page-admin-tool-coursecompliance"] .cc-profile-card {
+    height: 100%;
+    border: 1px solid var(--cc-border);
+    border-radius: var(--cc-radius);
+    background: #fff;
+    box-shadow: 0 4px 18px rgba(16, 24, 40, .045);
+    padding: 1.15rem;
+}
+
+body[id^="page-admin-tool-coursecompliance"] .cc-profile-card .cc-profile-actions {
+    border-top: 1px solid var(--cc-border);
+    margin-top: 1rem;
+    padding-top: 1rem;
+}
+
+body[id^="page-admin-tool-coursecompliance"] .cc-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: .25rem;
+    padding: .28rem .55rem;
+    border-radius: 999px;
+    background: #eef4ff;
+    color: #1849a9;
+    font-size: .82rem;
+    font-weight: 600;
+    margin: 0 .3rem .3rem 0;
+}
+
+body[id^="page-admin-tool-coursecompliance"] .generaltable {
+    border: 1px solid var(--cc-border);
+    border-radius: 12px;
+    overflow: hidden;
+    background: #fff;
+}
+
+body[id^="page-admin-tool-coursecompliance"] .generaltable thead th {
+    background: var(--cc-surface-soft);
+    border-bottom: 1px solid var(--cc-border);
+    font-weight: 650;
+}
+
+body[id^="page-admin-tool-coursecompliance"] .generaltable tbody tr:hover {
+    background: #fbfcfe;
+}
+
+body[id^="page-admin-tool-coursecompliance"] .mform fieldset {
+    border: 1px solid var(--cc-border);
+    border-radius: var(--cc-radius);
+    background: #fff;
+    margin: 0 0 1rem;
+    overflow: hidden;
+    box-shadow: 0 3px 14px rgba(16, 24, 40, .035);
+}
+
+body[id^="page-admin-tool-coursecompliance"] .mform fieldset > legend,
+body[id^="page-admin-tool-coursecompliance"] .mform fieldset .ftoggler {
+    width: 100%;
+    background: var(--cc-surface-soft);
+    border-bottom: 1px solid var(--cc-border);
+    padding: .8rem 1rem;
+    margin: 0;
+    font-weight: 650;
+}
+
+body[id^="page-admin-tool-coursecompliance"] .mform fieldset .fcontainer {
+    padding: 1rem 1.1rem .65rem;
+}
+
+body[id^="page-admin-tool-coursecompliance"] .mform .fitem {
+    padding-top: .18rem;
+    padding-bottom: .18rem;
+}
+
+body[id^="page-admin-tool-coursecompliance"] .mform .form-control,
+body[id^="page-admin-tool-coursecompliance"] .mform .form-select {
+    border-radius: 9px;
+}
+
+body[id^="page-admin-tool-coursecompliance"] .alert {
+    border-radius: 12px;
+}
+
+body[id^="page-admin-tool-coursecompliance"] .cc-readiness-stat {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: .75rem;
+    padding: .8rem .9rem;
+    border-radius: 10px;
+    background: var(--cc-surface-soft);
+    margin-bottom: .55rem;
+}
+
+body[id^="page-admin-tool-coursecompliance"] .cc-readiness-dot {
+    width: .75rem;
+    height: .75rem;
+    border-radius: 50%;
+    flex: 0 0 auto;
+}
+
+body[id^="page-admin-tool-coursecompliance"] .cc-empty-state {
+    text-align: center;
+    padding: 2rem 1rem;
+    color: var(--cc-text-muted);
+}
+
+@media (max-width: 767.98px) {
+    body[id^="page-admin-tool-coursecompliance"] .cc-page-heading {
+        display: block;
+    }
+
+    body[id^="page-admin-tool-coursecompliance"] .cc-page-heading .btn {
+        margin-top: .75rem;
+    }
+
+    body[id^="page-admin-tool-coursecompliance"] .generaltable {
+        font-size: .92rem;
+    }
+}
+
+body[id^="page-admin-tool-coursecompliance"] .card {
+    border-color: var(--cc-border);
+    border-radius: var(--cc-radius);
+    box-shadow: 0 4px 18px rgba(16, 24, 40, .04);
+}
+
+body[id^="page-admin-tool-coursecompliance"] .card-header {
+    background: var(--cc-surface-soft);
+    border-bottom-color: var(--cc-border);
+}
+
+body[id^="page-admin-tool-coursecompliance"] .cc-form-group-title {
+    margin: 1.6rem 0 .8rem;
+    padding: 0 .15rem;
+}

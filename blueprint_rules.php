@@ -64,8 +64,20 @@ if ($data = $form->get_data()) {
 echo $OUTPUT->header();
 echo \tool_coursecompliance\ui::primary_navigation('standards');
 echo \tool_coursecompliance\ui::standards_navigation('profiles');
-echo $OUTPUT->heading(get_string('blueprintrulesforprofile', 'tool_coursecompliance', format_string($profile->name)));
-echo \tool_coursecompliance\ui::intro(get_string('blueprintrulesintro', 'tool_coursecompliance'));
+$backactions = html_writer::link(
+    new moodle_url('/admin/tool/coursecompliance/profiles.php'),
+    get_string('back'),
+    ['class' => 'btn btn-outline-secondary']
+) . ' ' . html_writer::link(
+    new moodle_url('/admin/tool/coursecompliance/blueprint.php', ['profileid' => $profileid]),
+    get_string('templatecourse', 'tool_coursecompliance'),
+    ['class' => 'btn btn-outline-primary']
+);
+echo \tool_coursecompliance\ui::page_heading(
+    get_string('blueprintrulesforprofile', 'tool_coursecompliance', format_string($profile->name)),
+    get_string('blueprintrulesintro', 'tool_coursecompliance'),
+    $backactions
+);
 
 if (empty($config['blueprint'])) {
     echo html_writer::div(get_string('blueprintrulesnotemplate', 'tool_coursecompliance'), 'alert alert-warning');
@@ -78,9 +90,18 @@ if (empty($config['blueprint'])) {
         'course' => $blueprint['sourcefullname'] ?? '',
         'version' => (int)($config['blueprintversion'] ?? 1),
     ];
-    echo html_writer::div(
+    $sourcebody = html_writer::div(
+        html_writer::tag('strong', get_string('templatecourse', 'tool_coursecompliance') . ': ') .
+            s((string)($blueprint['sourcefullname'] ?? '')),
+        'mb-1'
+    );
+    $sourcebody .= html_writer::div(
         get_string('blueprintsourcebrief', 'tool_coursecompliance', $sourceinfo),
-        'alert alert-secondary'
+        'small text-muted'
+    );
+    echo \tool_coursecompliance\ui::panel(
+        get_string('currentblueprint', 'tool_coursecompliance'),
+        $sourcebody
     );
 }
 

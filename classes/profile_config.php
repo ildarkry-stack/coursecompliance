@@ -63,6 +63,11 @@ final class profile_config {
             'warnoverrides' => true,
             'maxoverrideattempts' => 0,
             'maxoverrideextension' => 0,
+            'checkquestionintegrity' => true,
+            'requirequestionready' => true,
+            'requirecorrectanswers' => true,
+            'requiremarksmatch' => true,
+            'requiresinglebankcategory' => true,
             'blueprintmode' => 'manual',
             'templatecourseid' => 0,
             'blueprintversion' => 0,
@@ -117,6 +122,11 @@ final class profile_config {
             'questions_min' => 0,
             'questions_max' => 0,
             'zero_mark_forbidden' => false,
+            'question_integrity' => true,
+            'question_ready_only' => true,
+            'question_correct_answer' => true,
+            'marks_match_grade' => true,
+            'single_bank_category' => true,
         ];
 
         return [

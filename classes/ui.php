@@ -97,7 +97,7 @@ final class ui {
 
         return \html_writer::tag(
             'nav',
-            \html_writer::tag('ul', implode('', $links), ['class' => 'nav nav-tabs flex-wrap mb-4']),
+            \html_writer::tag('ul', implode('', $links), ['class' => 'nav nav-pills flex-wrap cc-primary-nav mb-4']),
             ['aria-label' => get_string('pluginnavigation', 'tool_coursecompliance')]
         );
     }
@@ -160,10 +160,18 @@ final class ui {
             if (!empty($metric['help'])) {
                 $body .= \html_writer::div(s($metric['help']), 'small text-muted mt-1');
             }
-            $cards[] = \html_writer::div(
+            $card = \html_writer::div(
                 \html_writer::div($body, 'card-body'),
-                'card h-100 shadow-sm border-0'
+                'card h-100 cc-metric-card ' . (!empty($metric['tone']) ? 'cc-tone-' . $metric['tone'] : '')
             );
+            if (!empty($metric['url'])) {
+                $card = \html_writer::link(
+                    $metric['url'],
+                    $card,
+                    ['class' => 'text-reset text-decoration-none d-block h-100']
+                );
+            }
+            $cards[] = $card;
         }
 
         if (!$cards) {
@@ -292,13 +300,52 @@ final class ui {
     }
 
     /**
+     * Render a consistent page heading with optional action.
+     *
+     * @param string $title Page title.
+     * @param string $intro Supporting text.
+     * @param string $actionhtml Optional action HTML.
+     * @return string HTML.
+     */
+    public static function page_heading(string $title, string $intro = '', string $actionhtml = ''): string {
+        $copy = \html_writer::tag('h2', $title, ['class' => 'h2']);
+        if ($intro !== '') {
+            $copy .= \html_writer::div(s($intro), 'cc-page-intro');
+        }
+        $content = \html_writer::div($copy);
+        if ($actionhtml !== '') {
+            $content .= \html_writer::div($actionhtml, 'cc-page-heading-action');
+        }
+        return \html_writer::div($content, 'cc-page-heading');
+    }
+
+    /**
+     * Render a standard content panel.
+     *
+     * @param string $title Panel title.
+     * @param string $body Panel body.
+     * @param string $subtitle Optional subtitle.
+     * @return string HTML.
+     */
+    public static function panel(string $title, string $body, string $subtitle = ''): string {
+        $header = \html_writer::tag('h3', $title, ['class' => 'h5 mb-0']);
+        if ($subtitle !== '') {
+            $header .= \html_writer::div(s($subtitle), 'small text-muted mt-1');
+        }
+        return \html_writer::div(
+            \html_writer::div($header, 'cc-panel-header') . \html_writer::div($body, 'cc-panel-body'),
+            'cc-panel'
+        );
+    }
+
+    /**
      * Render a compact section intro.
      *
      * @param string $text Introductory text.
      * @return string HTML.
      */
     public static function intro(string $text): string {
-        return \html_writer::div(s($text), 'text-muted mb-4');
+        return \html_writer::div(s($text), 'cc-page-intro mb-4');
     }
 
     /**
@@ -327,7 +374,7 @@ final class ui {
         }
         return \html_writer::tag(
             'nav',
-            \html_writer::tag('ul', implode('', $links), ['class' => 'nav nav-pills mb-4']),
+            \html_writer::tag('ul', implode('', $links), ['class' => 'nav nav-pills flex-wrap cc-secondary-nav mb-4']),
             ['aria-label' => get_string($labelstring, 'tool_coursecompliance')]
         );
     }

@@ -64,6 +64,20 @@ final class blueprint_rules_form extends \moodleform {
 
         $this->add_course_settings();
         $this->add_content_settings();
+        $mform->addElement(
+            'html',
+            \html_writer::div(
+                \html_writer::tag(
+                    'h3',
+                    get_string('assessmentstandardsgroup', 'tool_coursecompliance'),
+                    ['class' => 'h4 mb-1']
+                ) . \html_writer::div(
+                    get_string('assessmentstandardsgrouphelp', 'tool_coursecompliance'),
+                    'text-muted small'
+                ),
+                'cc-form-group-title'
+            )
+        );
         foreach (['exam', 'resit1', 'resit2'] as $type) {
             $this->add_assessment_settings($type);
         }
@@ -298,6 +312,30 @@ final class blueprint_rules_form extends \moodleform {
             $prefix . 'zero_mark_forbidden',
             get_string('zeromarkforbidden', 'tool_coursecompliance')
         );
+        $mform->addElement(
+            'html',
+            \html_writer::div(
+                \html_writer::tag('strong', get_string('questionbankintegrity', 'tool_coursecompliance')) .
+                \html_writer::div(
+                    get_string('questionbankintegrityhelp', 'tool_coursecompliance'),
+                    'small text-muted mt-1'
+                ),
+                'mt-3 mb-2'
+            )
+        );
+        foreach ([
+            'question_integrity' => 'questionintegrityenabled',
+            'question_ready_only' => 'questionreadyonly',
+            'question_correct_answer' => 'questioncorrectanswerrequired',
+            'marks_match_grade' => 'questionmarksmatchgrade',
+            'single_bank_category' => 'questionsinglebankcategory',
+        ] as $field => $stringkey) {
+            $mform->addElement(
+                'advcheckbox',
+                $prefix . $field,
+                get_string($stringkey, 'tool_coursecompliance')
+            );
+        }
         $mform->setAdvanced($prefix . 'dates_source');
         $mform->setAdvanced($prefix . 'questions_min');
         $mform->setAdvanced($prefix . 'questions_max');

@@ -108,7 +108,7 @@ final class provider implements
             'tool_coursecompliance_scan',
             ['userid' => $userid],
             'timecreated ASC',
-            'id, profileid, categoryid, status, courses, assessments, critical, warnings, notices, ' .
+            'id, profileid, categoryid, courselimit, status, courses, assessments, critical, warnings, notices, ' .
                 'startedat, finishedat, timecreated'
         );
         $audits = [];

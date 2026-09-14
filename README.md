@@ -1,5 +1,10 @@
 # Course Compliance Center (`tool_coursecompliance`)
 
+
+## 0.10 interface refresh
+
+The administration UI uses a consistent visual system across dashboard, standards, reports, session planning and activity operations. The dashboard includes course readiness (ready vs. needs attention), while the standards editor uses semantic sections instead of letter/number prefixes.
+
 Administrative quality-control, assessment readiness and safe bulk-operations toolkit for **Moodle 5.1** and large installations.
 
 ## 0.3.0-alpha
@@ -114,3 +119,13 @@ Version 0.8 makes long-running changes easier to understand and introduces conse
 ### Administrator course indicator
 
 Site administrators see a compliance warning on the course home page when the latest applicable completed audit contains critical issues, warnings, or notices. A matching course-navigation item links directly to the problems for that course. Other users do not see the indicator.
+
+
+## Quiz integrity and question bank audit
+
+Version 0.11 adds read-only validation through Moodle question-bank APIs. For exam, resit1 and resit2 it can detect empty tests, unresolved/broken question references, empty random-question pools, insufficient random pools, draft question versions, automatically graded questions without a resolvable correct response, and mismatches between the sum of question marks and the Quiz maximum grade.
+
+The audit also records the question-bank category spread for each target. When an automatically graded question type needs attempt or variant state before its correct response can be evaluated, CourseCompliance reports the deep check as partial rather than treating the question as broken.
+
+Audit launches can be limited to 1, 5, 10, 20, 50 or 100 courses for staged testing, or run against all courses for a complete readiness result.
+

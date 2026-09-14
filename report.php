@@ -63,7 +63,6 @@ $PAGE->set_pagelayout('admin');
 $PAGE->set_title(get_string('detailedreport', 'tool_coursecompliance'));
 $PAGE->set_heading(get_string('detailedreport', 'tool_coursecompliance'));
 
-
 echo $OUTPUT->header();
 echo \tool_coursecompliance\ui::primary_navigation('audit');
 $profilename = $profile ? format_string($profile->name) : get_string('missingprofile', 'tool_coursecompliance');
@@ -72,6 +71,12 @@ echo html_writer::div(
     format_string($category->name) . ' · ' . $profilename . ' · ' . userdate((int)$scan->timecreated),
     'text-muted mb-3'
 );
+if (!empty($scan->courselimit)) {
+    echo html_writer::div(
+        get_string('scanlimitedto', 'tool_coursecompliance', (int)$scan->courselimit),
+        'alert alert-info py-2'
+    );
+}
 
 if (!empty($config['blueprint']) && is_array($config['blueprint'])) {
     $source = (object)[
