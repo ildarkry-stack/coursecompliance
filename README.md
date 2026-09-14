@@ -1,5 +1,13 @@
 # Course Compliance Center (`tool_coursecompliance`)
 
+## 0.13 Question bank problem analysis
+
+Version 0.13 focuses on moving from aggregate Quiz warnings to actionable question-level diagnostics. The **Question bank quality** page shows the exact questions behind current audit findings, including their question id, type, bank category, version status and the reason the check failed. Aggregate report rows link directly to these details.
+
+The audit distinguishes real content problems from checks that Moodle cannot safely complete without attempt/variant state. It records broken question definitions, questions without a resolvable full-credit response, non-Ready versions, zero-mark Quiz slots, duplicate content in the dedicated bank category, unused Ready questions and empty/insufficient random pools. Administrators can jump to the native Moodle question editor, question bank or Quiz structure.
+
+CourseCompliance intentionally keeps question content **read-only**: it does not invent or rewrite correct answers. This makes the question-bank workflow diagnostic and safe while still reducing the time needed to find the exact item that must be corrected.
+
 
 ## 0.12 operational quality workflow
 

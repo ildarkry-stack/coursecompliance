@@ -220,6 +220,7 @@ if (!$filtered) {
 
 $canfix = has_capability('tool/coursecompliance:manageactivities', $context);
 $canexcept = has_capability('tool/coursecompliance:manageprofiles', $context);
+$questiondetailcounts = \tool_coursecompliance\question_issue_repository::counts_for_results($filtered);
 $action = new moodle_url('/admin/tool/coursecompliance/autofix_selected.php');
 $filteredfixable = count(array_filter($filtered, static fn ($result): bool => !empty($result->isfixable)));
 $body = '';
@@ -282,6 +283,14 @@ foreach ($filtered as $result) {
         get_string('courseissues', 'tool_coursecompliance'),
         ['class' => 'btn btn-sm btn-outline-secondary me-1']
     );
+    $questiondetailcount = $questiondetailcounts[(int)$result->id] ?? 0;
+    if ($questiondetailcount > 0) {
+        $actions .= html_writer::link(
+            \tool_coursecompliance\question_issue_repository::url_for_result($result),
+            get_string('showproblemquestions', 'tool_coursecompliance', $questiondetailcount),
+            ['class' => 'btn btn-sm btn-outline-danger me-1']
+        );
+    }
     if ($canexcept) {
         $actions .= html_writer::link(
             new moodle_url('/admin/tool/coursecompliance/exception_add.php', ['resultid' => (int)$result->id]),

@@ -63,6 +63,7 @@ final class scanner {
         $DB->delete_records('tool_coursecompliance_result', ['scanid' => $scanid]);
         $DB->delete_records('tool_coursecompliance_assessment', ['scanid' => $scanid]);
         $DB->delete_records('tool_coursecompliance_course', ['scanid' => $scanid]);
+        $DB->delete_records('tool_coursecompliance_qissue', ['scanid' => $scanid]);
 
         $category = core_course_category::get($scan->categoryid, MUST_EXIST, true);
         $categoryids = array_merge([$category->id], $category->get_all_children_ids());
@@ -191,6 +192,13 @@ final class scanner {
                                 $config,
                                 true
                             );
+                            $this->store_question_issues(
+                                $scanid,
+                                (int)$course->id,
+                                $type,
+                                $quiz,
+                                $data['integrity'] ?? []
+                            );
                             foreach (rule_registry::quiz_integrity_rules() as $rule) {
                                 $outcome = $this->evaluate_and_store(
                                     $rule,
@@ -289,6 +297,13 @@ final class scanner {
                     'maxoverridetimeclose' => $data['maxoverridetimeclose'],
                     'duplicatecount' => $data['duplicatecount'],
                 ];
+                $this->store_question_issues(
+                    $scanid,
+                    (int)$course->id,
+                    $type,
+                    $quiz,
+                    $data['integrity'] ?? []
+                );
                 foreach (array_merge(rule_registry::quiz_rules(), rule_registry::quiz_integrity_rules()) as $rule) {
                     $outcome = $this->evaluate_and_store(
                         $rule,
@@ -470,6 +485,52 @@ final class scanner {
     private function increment_outcome(array &$counters, ?string $outcome): void {
         if ($outcome !== null && array_key_exists($outcome, $counters)) {
             $counters[$outcome]++;
+        }
+    }
+
+    /**
+     * Store detailed question-bank issues collected for one Quiz.
+     *
+     * @param int $scanid Scan id.
+     * @param int $courseid Course id.
+     * @param string $type Assessment type.
+     * @param \stdClass $quiz Quiz record.
+     * @param array<string, mixed> $integrity Inspector output.
+     */
+    private function store_question_issues(
+        int $scanid,
+        int $courseid,
+        string $type,
+        \stdClass $quiz,
+        array $integrity
+    ): void {
+        global $DB;
+
+        $issues = is_array($integrity['issues'] ?? null) ? $integrity['issues'] : [];
+        foreach ($issues as $issue) {
+            if (!is_array($issue) || empty($issue['issuecode'])) {
+                continue;
+            }
+            $details = is_array($issue['details'] ?? null) ? $issue['details'] : [];
+            $DB->insert_record('tool_coursecompliance_qissue', (object)[
+                'scanid' => $scanid,
+                'courseid' => $courseid,
+                'assessmenttype' => $type,
+                'quizid' => (int)$quiz->id,
+                'cmid' => (int)($quiz->cmid ?? 0),
+                'questionid' => (int)($issue['questionid'] ?? 0),
+                'qbankentryid' => (int)($issue['qbankentryid'] ?? 0),
+                'categoryid' => (int)($issue['categoryid'] ?? 0),
+                'slotnumber' => (int)($issue['slotnumber'] ?? 0),
+                'issuecode' => (string)$issue['issuecode'],
+                'severity' => (string)($issue['severity'] ?? 'notice'),
+                'qtype' => (string)($issue['qtype'] ?? ''),
+                'questionstatus' => (string)($issue['questionstatus'] ?? ''),
+                'questionname' => (string)($issue['questionname'] ?? ''),
+                'categoryname' => (string)($issue['categoryname'] ?? ''),
+                'details' => json_encode($details, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+                'timecreated' => time(),
+            ]);
         }
     }
 

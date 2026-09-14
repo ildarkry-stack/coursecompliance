@@ -490,5 +490,38 @@ function xmldb_tool_coursecompliance_upgrade(int $oldversion): bool {
         upgrade_plugin_savepoint(true, 2026091406, 'tool', 'coursecompliance');
     }
 
+    if ($oldversion < 2026091407) {
+        $table = new xmldb_table('tool_coursecompliance_qissue');
+        if (!$dbman->table_exists($table)) {
+            $table->add_field('id', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, XMLDB_SEQUENCE);
+            $table->add_field('scanid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL);
+            $table->add_field('courseid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL);
+            $table->add_field('assessmenttype', XMLDB_TYPE_CHAR, '16', null, XMLDB_NOTNULL);
+            $table->add_field('quizid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0');
+            $table->add_field('cmid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0');
+            $table->add_field('questionid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0');
+            $table->add_field('qbankentryid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0');
+            $table->add_field('categoryid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0');
+            $table->add_field('slotnumber', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0');
+            $table->add_field('issuecode', XMLDB_TYPE_CHAR, '64', null, XMLDB_NOTNULL);
+            $table->add_field('severity', XMLDB_TYPE_CHAR, '16', null, XMLDB_NOTNULL);
+            $table->add_field('qtype', XMLDB_TYPE_CHAR, '64');
+            $table->add_field('questionstatus', XMLDB_TYPE_CHAR, '32');
+            $table->add_field('questionname', XMLDB_TYPE_CHAR, '255');
+            $table->add_field('categoryname', XMLDB_TYPE_CHAR, '255');
+            $table->add_field('details', XMLDB_TYPE_TEXT);
+            $table->add_field('timecreated', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0');
+            $table->add_key('primary', XMLDB_KEY_PRIMARY, ['id']);
+            $table->add_key('scan_fk', XMLDB_KEY_FOREIGN, ['scanid'], 'tool_coursecompliance_scan', ['id']);
+            $table->add_index('scan_course_idx', XMLDB_INDEX_NOTUNIQUE, ['scanid', 'courseid']);
+            $table->add_index('scan_issue_idx', XMLDB_INDEX_NOTUNIQUE, ['scanid', 'issuecode']);
+            $table->add_index('question_idx', XMLDB_INDEX_NOTUNIQUE, ['questionid']);
+            $table->add_index('quiz_idx', XMLDB_INDEX_NOTUNIQUE, ['quizid']);
+            $dbman->create_table($table);
+        }
+
+        upgrade_plugin_savepoint(true, 2026091407, 'tool', 'coursecompliance');
+    }
+
     return true;
 }

@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='UTF-8'?>
-<XMLDB xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" PATH="admin/tool/coursecompliance/db" VERSION="2026091406" COMMENT="XMLDB file for tool_coursecompliance" xsi:noNamespaceSchemaLocation="../../../lib/xmldb/xmldb.xsd">
+<XMLDB xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" PATH="admin/tool/coursecompliance/db" VERSION="2026091407" COMMENT="XMLDB file for tool_coursecompliance" xsi:noNamespaceSchemaLocation="../../../lib/xmldb/xmldb.xsd">
   <TABLES>
     <TABLE NAME="tool_coursecompliance_profile" COMMENT="Compliance profiles">
       <FIELDS>
@@ -219,6 +219,38 @@
         <INDEX NAME="profile_course_idx" UNIQUE="false" FIELDS="profileid, courseid" />
         <INDEX NAME="rule_idx" UNIQUE="false" FIELDS="rulecode" />
         <INDEX NAME="enabled_idx" UNIQUE="false" FIELDS="enabled" />
+      </INDEXES>
+    </TABLE>
+    <TABLE NAME="tool_coursecompliance_qissue" COMMENT="Detailed question-bank issues found by scans">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true" />
+        <FIELD NAME="scanid" TYPE="int" LENGTH="10" NOTNULL="true" />
+        <FIELD NAME="courseid" TYPE="int" LENGTH="10" NOTNULL="true" />
+        <FIELD NAME="assessmenttype" TYPE="char" LENGTH="16" NOTNULL="true" />
+        <FIELD NAME="quizid" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" />
+        <FIELD NAME="cmid" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" />
+        <FIELD NAME="questionid" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" />
+        <FIELD NAME="qbankentryid" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" />
+        <FIELD NAME="categoryid" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" />
+        <FIELD NAME="slotnumber" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" />
+        <FIELD NAME="issuecode" TYPE="char" LENGTH="64" NOTNULL="true" />
+        <FIELD NAME="severity" TYPE="char" LENGTH="16" NOTNULL="true" />
+        <FIELD NAME="qtype" TYPE="char" LENGTH="64" NOTNULL="false" />
+        <FIELD NAME="questionstatus" TYPE="char" LENGTH="32" NOTNULL="false" />
+        <FIELD NAME="questionname" TYPE="char" LENGTH="255" NOTNULL="false" />
+        <FIELD NAME="categoryname" TYPE="char" LENGTH="255" NOTNULL="false" />
+        <FIELD NAME="details" TYPE="text" NOTNULL="false" />
+        <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" />
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id" />
+        <KEY NAME="scan_fk" TYPE="foreign" FIELDS="scanid" REFTABLE="tool_coursecompliance_scan" REFFIELDS="id" />
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="scan_course_idx" UNIQUE="false" FIELDS="scanid, courseid" />
+        <INDEX NAME="scan_issue_idx" UNIQUE="false" FIELDS="scanid, issuecode" />
+        <INDEX NAME="question_idx" UNIQUE="false" FIELDS="questionid" />
+        <INDEX NAME="quiz_idx" UNIQUE="false" FIELDS="quizid" />
       </INDEXES>
     </TABLE>
   </TABLES>

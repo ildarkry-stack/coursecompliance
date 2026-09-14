@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.13.0-alpha (2026-09-14)
+
+- Added persistent **per-question diagnostics** for Quiz/question-bank audit findings. Aggregate errors such as “41 questions without a valid correct answer” can now be expanded to the exact questions involved.
+- Added a dedicated **Question bank quality** workspace with filters by severity, exam/resit period, issue type, question type and free-text search.
+- Detailed rows store the question id, type, version status, bank category, Quiz slot and structured diagnostic details when available.
+- Added direct actions to open the native Moodle question editor, the course question bank and the Quiz structure.
+- Correct-answer diagnostics now distinguish an empty correct response, a response that does not receive full credit, and question types whose correct response cannot be fully validated without attempt/variant state.
+- Added question-level details for broken questions, non-Ready versions, zero-mark slots, duplicate bank content, unused Ready questions and random-pool failures.
+- Action Center, course-problem reports and detailed scan reports now expose a “Show questions” action when question-level evidence exists.
+- Question content remains read-only to CourseCompliance: the plugin never rewrites question wording or correct answers automatically.
+- Added a new detailed-question issue table and retention/privacy cleanup support. Existing scans remain valid; run a fresh audit to populate question-level diagnostics.
+
 ## 0.12.0-alpha (2026-09-14)
 
 - Added an **Action Center** that consolidates current critical issues, warnings, newly introduced problems and Safe AutoFix candidates across standards and course categories.

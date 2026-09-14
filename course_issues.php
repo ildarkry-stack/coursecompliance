@@ -107,6 +107,7 @@ $sql = "SELECT r.*, p.name AS profilename
                r.assessmenttype,
                r.rulecode";
 $results = $DB->get_records_sql($sql, $params);
+$questiondetailcounts = \tool_coursecompliance\question_issue_repository::counts_for_results(array_values($results));
 
 $table = new html_table();
 $table->attributes['class'] = 'generaltable table-sm';
@@ -118,6 +119,7 @@ $table->head = [
     get_string('assessment', 'tool_coursecompliance'),
     get_string('expected', 'tool_coursecompliance'),
     get_string('actual', 'tool_coursecompliance'),
+    get_string('actions'),
 ];
 $stringmanager = get_string_manager();
 foreach ($results as $result) {
@@ -127,6 +129,15 @@ foreach ($results as $result) {
     $period = in_array($result->assessmenttype, ['exam', 'resit1', 'resit2'], true)
         ? get_string('period_' . $result->assessmenttype, 'tool_coursecompliance')
         : get_string('course');
+    $actions = '';
+    $questiondetailcount = $questiondetailcounts[(int)$result->id] ?? 0;
+    if ($questiondetailcount > 0) {
+        $actions = html_writer::link(
+            \tool_coursecompliance\question_issue_repository::url_for_result($result),
+            get_string('showproblemquestions', 'tool_coursecompliance', $questiondetailcount),
+            ['class' => 'btn btn-sm btn-outline-danger']
+        );
+    }
     $table->data[] = [
         format_string($result->profilename),
         $period,
@@ -135,6 +146,7 @@ foreach ($results as $result) {
         $result->objectname ? format_string($result->objectname) : '—',
         $result->expected !== null && $result->expected !== '' ? s($result->expected) : '—',
         $result->actual !== null && $result->actual !== '' ? s($result->actual) : '—',
+        $actions,
     ];
 }
 echo html_writer::table($table);

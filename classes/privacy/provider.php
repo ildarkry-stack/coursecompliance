@@ -188,6 +188,8 @@ final class provider implements
             [$insql, $params] = $DB->get_in_or_equal($scanids, SQL_PARAMS_NAMED, 'scan');
             $DB->delete_records_select('tool_coursecompliance_result', "scanid $insql", $params);
             $DB->delete_records_select('tool_coursecompliance_assessment', "scanid $insql", $params);
+            $DB->delete_records_select('tool_coursecompliance_course', "scanid $insql", $params);
+            $DB->delete_records_select('tool_coursecompliance_qissue', "scanid $insql", $params);
             $DB->delete_records_select('tool_coursecompliance_scan', "id $insql", $params);
         }
 
@@ -214,6 +216,8 @@ final class provider implements
 
         $DB->delete_records('tool_coursecompliance_result');
         $DB->delete_records('tool_coursecompliance_assessment');
+        $DB->delete_records('tool_coursecompliance_course');
+        $DB->delete_records('tool_coursecompliance_qissue');
         $DB->delete_records('tool_coursecompliance_scan');
         $DB->delete_records('tool_coursecompliance_exception');
         $DB->delete_records('tool_coursecompliance_act_change');

@@ -52,6 +52,13 @@ $ADMIN->add('tool_coursecompliance_root', new admin_externalpage(
 ));
 
 $ADMIN->add('tool_coursecompliance_root', new admin_externalpage(
+    'tool_coursecompliance_questions',
+    get_string('nav_questions', 'tool_coursecompliance'),
+    new moodle_url('/admin/tool/coursecompliance/question_bank.php'),
+    'tool/coursecompliance:view'
+));
+
+$ADMIN->add('tool_coursecompliance_root', new admin_externalpage(
     'tool_coursecompliance_profiles',
     get_string('nav_standards', 'tool_coursecompliance'),
     new moodle_url('/admin/tool/coursecompliance/profiles.php'),

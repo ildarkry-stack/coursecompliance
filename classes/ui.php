@@ -56,6 +56,11 @@ final class ui {
                 'url' => new \moodle_url('/admin/tool/coursecompliance/readiness.php'),
                 'capability' => 'tool/coursecompliance:view',
             ],
+            'questions' => [
+                'label' => get_string('nav_questions', 'tool_coursecompliance'),
+                'url' => new \moodle_url('/admin/tool/coursecompliance/question_bank.php'),
+                'capability' => 'tool/coursecompliance:view',
+            ],
             'standards' => [
                 'label' => get_string('nav_standards', 'tool_coursecompliance'),
                 'url' => new \moodle_url('/admin/tool/coursecompliance/profiles.php'),
@@ -146,6 +151,10 @@ final class ui {
             'presession' => [
                 get_string('nav_presession', 'tool_coursecompliance'),
                 new \moodle_url('/admin/tool/coursecompliance/presession.php'),
+            ],
+            'questions' => [
+                get_string('nav_questions', 'tool_coursecompliance'),
+                new \moodle_url('/admin/tool/coursecompliance/question_bank.php'),
             ],
         ];
         return self::secondary_navigation($items, $active, 'auditnavigation');

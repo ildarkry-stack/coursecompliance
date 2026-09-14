@@ -455,6 +455,7 @@ if ($kind === 'missing') {
 }
 $total = count($filtered);
 $results = array_slice(array_values($filtered), $page * $perpage, $perpage);
+$questiondetailcounts = \tool_coursecompliance\question_issue_repository::counts_for_results($results);
 
 if (!$results) {
     echo html_writer::div(get_string('noproblemsforfilter', 'tool_coursecompliance'), 'alert alert-success');
@@ -482,6 +483,14 @@ foreach ($results as $result) {
     );
     if (\tool_coursecompliance\autofix_manager::is_fixable($result, $config)) {
         $actions .= '<br>' . html_writer::span(get_string('autofixavailable', 'tool_coursecompliance'), 'badge bg-primary mt-1');
+    }
+    $questiondetailcount = $questiondetailcounts[(int)$result->id] ?? 0;
+    if ($questiondetailcount > 0) {
+        $actions .= '<br>' . html_writer::link(
+            \tool_coursecompliance\question_issue_repository::url_for_result($result),
+            get_string('showproblemquestions', 'tool_coursecompliance', $questiondetailcount),
+            ['class' => 'd-inline-block mt-1']
+        );
     }
     if (has_capability('tool/coursecompliance:manageprofiles', $context)) {
         $actions .= '<br>' . html_writer::link(
