@@ -364,7 +364,7 @@ final class quiz_integrity_inspector {
      * @param string $severity Severity.
      * @param \stdClass|null $metadata Question metadata when available.
      * @param int $slotnumber Quiz slot number.
-     * @param array<string, mixed> $details Additional structured details.
+     * @param array $details Additional structured details.
      * @return array<string, mixed>
      */
     private static function issue(

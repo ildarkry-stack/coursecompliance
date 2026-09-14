@@ -90,7 +90,7 @@ final class question_issue_repository {
     /**
      * Count detailed issue rows for many aggregate results in one query.
      *
-     * @param array<int, \stdClass> $results Aggregate results.
+     * @param array $results Aggregate results.
      * @return array<int, int> Counts keyed by result id.
      */
     public static function counts_for_results(array $results): array {
@@ -354,7 +354,7 @@ final class question_issue_repository {
     /**
      * Format correct-answer validation details.
      *
-     * @param array<string, mixed> $details Details.
+     * @param array $details Details.
      * @return string
      */
     private static function correct_answer_detail(array $details): string {

@@ -495,7 +495,7 @@ final class scanner {
      * @param int $courseid Course id.
      * @param string $type Assessment type.
      * @param \stdClass $quiz Quiz record.
-     * @param array<string, mixed> $integrity Inspector output.
+     * @param array $integrity Inspector output.
      */
     private function store_question_issues(
         int $scanid,
