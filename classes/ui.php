@@ -46,6 +46,11 @@ final class ui {
                 'url' => new \moodle_url('/admin/tool/coursecompliance/index.php'),
                 'capability' => 'tool/coursecompliance:view',
             ],
+            'actions' => [
+                'label' => get_string('nav_actions', 'tool_coursecompliance'),
+                'url' => new \moodle_url('/admin/tool/coursecompliance/action_center.php'),
+                'capability' => 'tool/coursecompliance:view',
+            ],
             'audit' => [
                 'label' => get_string('nav_audit', 'tool_coursecompliance'),
                 'url' => new \moodle_url('/admin/tool/coursecompliance/readiness.php'),
@@ -120,6 +125,30 @@ final class ui {
             ],
         ];
         return self::secondary_navigation($items, $active, 'standardsnavigation');
+    }
+
+    /**
+     * Render secondary navigation for audit and quality-control pages.
+     *
+     * @param string $active Active key.
+     * @return string HTML.
+     */
+    public static function audit_navigation(string $active): string {
+        $items = [
+            'readiness' => [
+                get_string('nav_readiness', 'tool_coursecompliance'),
+                new \moodle_url('/admin/tool/coursecompliance/readiness.php'),
+            ],
+            'matrix' => [
+                get_string('nav_matrix', 'tool_coursecompliance'),
+                new \moodle_url('/admin/tool/coursecompliance/matrix.php'),
+            ],
+            'presession' => [
+                get_string('nav_presession', 'tool_coursecompliance'),
+                new \moodle_url('/admin/tool/coursecompliance/presession.php'),
+            ],
+        ];
+        return self::secondary_navigation($items, $active, 'auditnavigation');
     }
 
     /**
@@ -200,6 +229,19 @@ final class ui {
         $class = $classes[$severity] ?? 'bg-secondary';
         $label = get_string('severity_' . $severity, 'tool_coursecompliance');
         return \html_writer::span($label, 'badge ' . $class);
+    }
+
+    /**
+     * Render a compact readiness-state badge.
+     *
+     * @param string $status ready, notice, warning or critical.
+     * @return string HTML.
+     */
+    public static function readiness_badge(string $status): string {
+        if ($status === 'ready') {
+            return \html_writer::span(get_string('ready', 'tool_coursecompliance'), 'badge bg-success');
+        }
+        return self::severity_badge($status);
     }
 
     /**

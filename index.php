@@ -77,15 +77,17 @@ $fullscansql = "SELECT s.*, p.name AS profilename, cc.name AS categoryname
                   FROM {tool_coursecompliance_scan} s
              LEFT JOIN {tool_coursecompliance_profile} p ON p.id = s.profileid
              LEFT JOIN {course_categories} cc ON cc.id = s.categoryid
-                 WHERE s.status = :status AND s.courselimit = 0
+                 WHERE s.status = :status
+                   AND s.courselimit = 0
+                   AND s.scantype = :scantype
               ORDER BY s.timecreated DESC";
-$fullscans = $DB->get_records_sql($fullscansql, ['status' => 'complete'], 0, 1);
+$fullscans = $DB->get_records_sql($fullscansql, ['status' => 'complete', 'scantype' => 'audit'], 0, 1);
 if ($fullscans) {
     $latestcomplete = reset($fullscans);
 }
 if (!$latestcomplete) {
     foreach ($scans as $candidate) {
-        if ($candidate->status === 'complete') {
+        if ($candidate->status === 'complete' && (string)($candidate->scantype ?? 'audit') === 'audit') {
             $latestcomplete = $candidate;
             break;
         }
@@ -94,8 +96,8 @@ if (!$latestcomplete) {
 
 $trend = array_values($DB->get_records_select(
     'tool_coursecompliance_scan',
-    "status = :status",
-    ['status' => 'complete'],
+    "status = :status AND scantype = :scantype AND courselimit = 0",
+    ['status' => 'complete', 'scantype' => 'audit'],
     'timecreated DESC',
     'id,timecreated,critical,warnings',
     0,
@@ -114,18 +116,38 @@ $enabledprofiles = $DB->count_records('tool_coursecompliance_profile', ['enabled
 $readycourses = 0;
 $notreadycourses = 0;
 $readinesspercent = 0;
+$latestdelta = null;
 if ($latestcomplete) {
-    $notreadycourses = (int)$DB->count_records_sql(
-        "SELECT COUNT(DISTINCT courseid)
-           FROM {tool_coursecompliance_result}
-          WHERE scanid = :scanid",
-        ['scanid' => (int)$latestcomplete->id]
-    );
-    $notreadycourses = min((int)$latestcomplete->courses, $notreadycourses);
-    $readycourses = max(0, (int)$latestcomplete->courses - $notreadycourses);
-    if ((int)$latestcomplete->courses > 0) {
-        $readinesspercent = (int)round(($readycourses / (int)$latestcomplete->courses) * 100);
+    $snapshotcount = $DB->count_records('tool_coursecompliance_course', ['scanid' => (int)$latestcomplete->id]);
+    if ($snapshotcount > 0) {
+        $coursestates = \tool_coursecompliance\scan_analysis::composite_course_snapshots((int)$latestcomplete->id);
+        $totalcourses = count($coursestates);
+        foreach ($coursestates as $coursestate) {
+            if ((string)$coursestate->status === 'ready') {
+                $readycourses++;
+            } else {
+                $notreadycourses++;
+            }
+        }
+        if ($totalcourses > 0) {
+            $readinesspercent = (int)round(($readycourses / $totalcourses) * 100);
+        }
+        $latestcomplete->courses = $totalcourses;
+    } else {
+        // Compatibility with scans created before per-course readiness snapshots existed.
+        $notreadycourses = (int)$DB->count_records_sql(
+            "SELECT COUNT(DISTINCT courseid)
+               FROM {tool_coursecompliance_result}
+              WHERE scanid = :scanid",
+            ['scanid' => (int)$latestcomplete->id]
+        );
+        $notreadycourses = min((int)$latestcomplete->courses, $notreadycourses);
+        $readycourses = max(0, (int)$latestcomplete->courses - $notreadycourses);
+        if ((int)$latestcomplete->courses > 0) {
+            $readinesspercent = (int)round(($readycourses / (int)$latestcomplete->courses) * 100);
+        }
     }
+    $latestdelta = \tool_coursecompliance\scan_analysis::delta((int)$latestcomplete->id);
 }
 
 echo $OUTPUT->header();
@@ -236,6 +258,79 @@ if ($latestcomplete) {
     }
     echo html_writer::end_div();
     echo html_writer::end_div();
+}
+
+if ($latestcomplete && $latestdelta) {
+    echo $OUTPUT->heading(get_string('attentiontoday', 'tool_coursecompliance'), 3);
+    echo \tool_coursecompliance\ui::metric_cards([
+        [
+            'label' => get_string('newissues', 'tool_coursecompliance'),
+            'value' => (int)$latestdelta['newcount'],
+            'tone' => !empty($latestdelta['newcount']) ? 'danger' : 'success',
+            'url' => new moodle_url('/admin/tool/coursecompliance/action_center.php', ['kind' => 'new']),
+        ],
+        [
+            'label' => get_string('resolvedissues', 'tool_coursecompliance'),
+            'value' => (int)$latestdelta['resolvedcount'],
+            'tone' => 'success',
+        ],
+        [
+            'label' => get_string('becameready', 'tool_coursecompliance'),
+            'value' => (int)$latestdelta['becameready'],
+            'tone' => 'success',
+        ],
+        [
+            'label' => get_string('lostreadiness', 'tool_coursecompliance'),
+            'value' => (int)$latestdelta['lostready'],
+            'tone' => !empty($latestdelta['lostready']) ? 'danger' : 'success',
+            'url' => new moodle_url('/admin/tool/coursecompliance/matrix.php', ['scanid' => (int)$latestcomplete->id]),
+        ],
+    ]);
+
+    $newissues = array_values($latestdelta['new']);
+    usort($newissues, static function ($left, $right): int {
+        $weights = ['critical' => 0, 'warning' => 1, 'notice' => 2];
+        return ($weights[$left->severity] ?? 3) <=> ($weights[$right->severity] ?? 3);
+    });
+    $newissues = array_slice($newissues, 0, 8);
+    if ($newissues) {
+        $courseids = array_values(array_unique(array_map(
+            static fn ($result): int => (int)$result->courseid,
+            $newissues
+        )));
+        $coursesbyid = $DB->get_records_list('course', 'id', $courseids, '', 'id,fullname');
+        $table = new html_table();
+        $table->attributes['class'] = 'generaltable table-sm align-middle';
+        $table->head = [
+            get_string('severity', 'tool_coursecompliance'),
+            get_string('course'),
+            get_string('problem', 'tool_coursecompliance'),
+            get_string('actions'),
+        ];
+        foreach ($newissues as $issue) {
+            $course = $coursesbyid[(int)$issue->courseid] ?? null;
+            $table->data[] = [
+                \tool_coursecompliance\ui::severity_badge((string)$issue->severity),
+                $course ? format_string($course->fullname) : '#' . (int)$issue->courseid,
+                s((string)$issue->message),
+                html_writer::link(
+                    new moodle_url('/admin/tool/coursecompliance/course_issues.php', ['courseid' => (int)$issue->courseid]),
+                    get_string('viewproblems', 'tool_coursecompliance'),
+                    ['class' => 'btn btn-sm btn-outline-primary']
+                ),
+            ];
+        }
+        echo \tool_coursecompliance\ui::panel(
+            get_string('newcriticalchanges', 'tool_coursecompliance'),
+            html_writer::table($table),
+            get_string('attentiontodayhelp', 'tool_coursecompliance')
+        );
+    } else {
+        echo \tool_coursecompliance\ui::panel(
+            get_string('attentiontoday', 'tool_coursecompliance'),
+            html_writer::div(get_string('nonewissues', 'tool_coursecompliance'), 'cc-empty-state text-success')
+        );
+    }
 }
 
 ob_start();

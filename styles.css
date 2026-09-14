@@ -224,3 +224,31 @@ body[id^="page-admin-tool-coursecompliance"] .cc-form-group-title {
     margin: 1.6rem 0 .8rem;
     padding: 0 .15rem;
 }
+
+/* 0.12 operational views. */
+.path-admin-tool-coursecompliance .cc-action-table td,
+.path-admin-tool-coursecompliance .cc-readiness-matrix td {
+    vertical-align: middle;
+}
+
+.path-admin-tool-coursecompliance .cc-readiness-matrix th:first-child,
+.path-admin-tool-coursecompliance .cc-readiness-matrix td:first-child {
+    min-width: 18rem;
+}
+
+.path-admin-tool-coursecompliance .cc-readiness-matrix .badge {
+    min-width: 6.5rem;
+    padding: .45rem .6rem;
+}
+
+.path-admin-tool-coursecompliance .cc-action-table td:nth-child(4) {
+    min-width: 22rem;
+}
+
+.path-admin-tool-coursecompliance .cc-panel .table-responsive {
+    margin-bottom: 0;
+}
+
+.path-admin-tool-coursecompliance .cc-panel .generaltable:last-child {
+    margin-bottom: 0;
+}

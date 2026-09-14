@@ -1,6 +1,24 @@
 # Course Compliance Center (`tool_coursecompliance`)
 
 
+## 0.12 operational quality workflow
+
+Version 0.12 turns the audit into an operational workflow rather than a static report.
+
+- **Action Center** shows the current critical issues, warnings, new issues and Safe AutoFix candidates across the latest applicable standards.
+- **Targeted recheck** automatically scans only courses changed by Safe AutoFix and overlays those results on the last full audit, so readiness can turn green without rescanning an entire faculty.
+- **Readiness matrix** shows each course against Course settings, Exam, Resit 1, Resit 2, Question bank, Access restrictions, Gradebook and Completion.
+- **Pre-session check** produces a practical Ready / Not ready list with blockers for required exam and resit activities.
+- **Course history** records readiness score changes alongside batch-operation history.
+- **Weighted readiness** penalises critical problems more heavily than warnings and notices; a percentage never hides the presence of a critical issue.
+- **Delta reporting** highlights new and resolved issues plus courses that became ready or lost readiness.
+- **Question-bank quality** additionally detects duplicate question content and questions left unused in the dedicated bank category, while retaining empty Quiz, random-pool, draft, broken-reference and correct-answer diagnostics.
+- **Assessment consistency** can compare resits with the exam for question count, maximum grade and source question-bank categories.
+- **Gradebook and completion integrity** detect missing/orphaned/duplicate Quiz grade items, hidden Quiz grade items and broken or absent completion criteria.
+
+Safe AutoFix remains deliberately conservative. It can repair only settings for which the configured standard gives one unambiguous target value. It does not invent questions, select between duplicate activities, rewrite educational content or guess which bank category should be used.
+
+
 ## 0.10 interface refresh
 
 The administration UI uses a consistent visual system across dashboard, standards, reports, session planning and activity operations. The dashboard includes course readiness (ready vs. needs attention), while the standards editor uses semantic sections instead of letter/number prefixes.

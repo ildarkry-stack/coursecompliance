@@ -66,12 +66,23 @@ final class course_indicator {
         $latestsql = "SELECT s.profileid, MAX(s.id) AS scanid
                        FROM {tool_coursecompliance_scan} s
                        JOIN {tool_coursecompliance_profile} p ON p.id = s.profileid
-                       JOIN {tool_coursecompliance_assessment} a ON a.scanid = s.id
-                      WHERE a.courseid = :courseid
+                       JOIN {tool_coursecompliance_course} cs ON cs.scanid = s.id
+                      WHERE cs.courseid = :courseid
                             AND s.status = :scanstatus
                             AND p.enabled = :profileenabled
                    GROUP BY s.profileid";
         $latestrows = $DB->get_records_sql($latestsql, $params);
+        if (!$latestrows) {
+            $fallbacksql = "SELECT s.profileid, MAX(s.id) AS scanid
+                              FROM {tool_coursecompliance_scan} s
+                              JOIN {tool_coursecompliance_profile} p ON p.id = s.profileid
+                              JOIN {tool_coursecompliance_assessment} a ON a.scanid = s.id
+                             WHERE a.courseid = :courseid
+                               AND s.status = :scanstatus
+                               AND p.enabled = :profileenabled
+                          GROUP BY s.profileid";
+            $latestrows = $DB->get_records_sql($fallbacksql, $params);
+        }
         $scanids = array_values(array_filter(array_map(
             static fn(\stdClass $row): int => (int)$row->scanid,
             $latestrows

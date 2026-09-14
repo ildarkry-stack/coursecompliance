@@ -184,6 +184,7 @@ final class activity_manager {
         $visibility = null;
         $availability = null;
         $gradepass = null;
+        $gradeitemmax = null;
         foreach ($changes as $change) {
             if (in_array($change->fieldname, activity_repository::date_fields($activity->modname), true)) {
                 $datechanges[$change->fieldname] = (int)$change->newvalue;
@@ -200,6 +201,8 @@ final class activity_manager {
                 $availability = (string)$change->newvalue;
             } else if ($activity->modname === 'quiz' && $change->fieldname === 'gradepass') {
                 $gradepass = (float)$change->newvalue;
+            } else if ($activity->modname === 'quiz' && $change->fieldname === 'gradeitemmax') {
+                $gradeitemmax = (float)$change->newvalue;
             }
         }
 
@@ -260,6 +263,12 @@ final class activity_manager {
             \core\event\course_module_updated::create_from_cm($cm)->trigger();
             \course_modinfo::purge_course_module_cache($activity->courseid, $activity->cmid);
             rebuild_course_cache($activity->courseid, false, true);
+        }
+
+        if ($gradeitemmax !== null) {
+            require_once($CFG->dirroot . '/mod/quiz/lib.php');
+            $instance = $DB->get_record('quiz', ['id' => $activity->instanceid], '*', MUST_EXIST);
+            quiz_grade_item_update($instance);
         }
 
         if ($gradepass !== null) {
@@ -339,10 +348,11 @@ final class activity_manager {
         if ($field === 'availability') {
             return (string)($activity->availability ?? '');
         }
-        if ($activity->modname === 'quiz' && $field === 'gradepass') {
+        if ($activity->modname === 'quiz' && in_array($field, ['gradepass', 'gradeitemmax'], true)) {
+            $column = $field === 'gradepass' ? 'gradepass' : 'grademax';
             return (float)$DB->get_field(
                 'grade_items',
-                'gradepass',
+                $column,
                 [
                     'courseid' => (int)$activity->courseid,
                     'itemmodule' => 'quiz',

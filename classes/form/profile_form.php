@@ -132,6 +132,11 @@ final class profile_form extends \moodleform {
             'requiresinglebankcategory',
             get_string('questionsinglebankcategory', 'tool_coursecompliance')
         );
+        $mform->addElement(
+            'advcheckbox',
+            'compareassessmentstructure',
+            get_string('compareassessmentstructure', 'tool_coursecompliance')
+        );
 
         $mform->addElement('header', 'reviewchecks', get_string('reviewchecks', 'tool_coursecompliance'));
         $mform->addElement('advcheckbox', 'hideanswerswhileopen', get_string('hideanswerswhileopen', 'tool_coursecompliance'));

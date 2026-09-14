@@ -99,6 +99,70 @@ final class rule_registry {
                     return new violation(get_string('v_course_teacher', 'tool_coursecompliance'), '>= 1', '0');
                 }
             ),
+            new callback_rule(
+                'GRADEBOOK_ORPHAN_QUIZ_ITEMS',
+                'gradebook',
+                'critical',
+                static function (array $ctx): ?violation {
+                    if (empty($ctx['orphanquizgradeitems'])) {
+                        return null;
+                    }
+                    return new violation(
+                        get_string('v_gradebook_orphan_quiz_items', 'tool_coursecompliance'),
+                        '0',
+                        (string)$ctx['orphanquizgradeitems']
+                    );
+                }
+            ),
+            new callback_rule(
+                'GRADEBOOK_DUPLICATE_QUIZ_ITEMS',
+                'gradebook',
+                'warning',
+                static function (array $ctx): ?violation {
+                    if (empty($ctx['duplicatequizgradeitems'])) {
+                        return null;
+                    }
+                    return new violation(
+                        get_string('v_gradebook_duplicate_quiz_items', 'tool_coursecompliance'),
+                        '0',
+                        (string)$ctx['duplicatequizgradeitems']
+                    );
+                }
+            ),
+            new callback_rule(
+                'COURSE_COMPLETION_CRITERIA_REQUIRED',
+                'completion',
+                'warning',
+                static function (array $ctx, array $config): ?violation {
+                    if (
+                        empty($config['requirecompletion'])
+                        || empty($ctx['course']->enablecompletion)
+                        || !empty($ctx['completioncriteriacount'])
+                    ) {
+                        return null;
+                    }
+                    return new violation(
+                        get_string('v_course_completion_criteria_required', 'tool_coursecompliance'),
+                        '>= 1',
+                        '0'
+                    );
+                }
+            ),
+            new callback_rule(
+                'COURSE_COMPLETION_BROKEN_CRITERIA',
+                'completion',
+                'critical',
+                static function (array $ctx): ?violation {
+                    if (empty($ctx['brokencompletioncriteria'])) {
+                        return null;
+                    }
+                    return new violation(
+                        get_string('v_course_completion_broken_criteria', 'tool_coursecompliance'),
+                        '0',
+                        (string)$ctx['brokencompletioncriteria']
+                    );
+                }
+            ),
         ];
     }
 
@@ -247,23 +311,39 @@ final class rule_registry {
                 }
             ),
             new callback_rule(
+                'QUIZ_GRADEITEM_REQUIRED',
+                'gradebook',
+                'critical',
+                static function (array $ctx): ?violation {
+                    if (!empty($ctx['gradeitemexists'])) {
+                        return null;
+                    }
+                    return self::quiz_violation(
+                        $ctx['quiz'],
+                        'v_quiz_gradeitem_missing',
+                        get_string('present', 'tool_coursecompliance'),
+                        get_string('missing', 'tool_coursecompliance')
+                    );
+                }
+            ),
+            new callback_rule(
                 'QUIZ_GRADEBOOK_MAX_MATCH',
                 'quiz',
-                'critical',
+                'warning',
                 static function (array $ctx): ?violation {
                     $quiz = $ctx['quiz'];
                     if (empty($ctx['gradeitemexists'])) {
-                        return self::quiz_violation(
-                            $quiz,
-                            'v_quiz_gradeitem_missing',
-                            get_string('present', 'tool_coursecompliance'),
-                            get_string('missing', 'tool_coursecompliance')
-                        );
+                        return null;
                     }
                     if (abs((float)$ctx['gradeitemmax'] - (float)$quiz->grade) < 0.00001) {
                         return null;
                     }
-                    return self::quiz_violation($quiz, 'v_quiz_gradebook_max', (string)$quiz->grade, (string)$ctx['gradeitemmax']);
+                    return self::quiz_violation(
+                        $quiz,
+                        'v_quiz_gradebook_max',
+                        (string)$quiz->grade,
+                        (string)$ctx['gradeitemmax']
+                    );
                 }
             ),
             new callback_rule(
@@ -517,6 +597,22 @@ final class rule_registry {
                         'v_quiz_shuffleanswers',
                         get_string('enabled', 'tool_coursecompliance'),
                         get_string('disabled', 'tool_coursecompliance')
+                    );
+                }
+            ),
+            new callback_rule(
+                'QUIZ_GRADEITEM_HIDDEN',
+                'gradebook',
+                'warning',
+                static function (array $ctx): ?violation {
+                    if (empty($ctx['gradeitemexists']) || empty($ctx['gradeitemhidden'])) {
+                        return null;
+                    }
+                    return self::quiz_violation(
+                        $ctx['quiz'],
+                        'v_quiz_gradeitem_hidden',
+                        get_string('visible'),
+                        get_string('hidden')
                     );
                 }
             ),
@@ -795,6 +891,38 @@ final class rule_registry {
                         'v_quiz_multiple_bank_categories',
                         '1',
                         implode(', ', array_slice($categories, 0, 8))
+                    );
+                }
+            ),
+            new callback_rule(
+                'QUIZ_BANK_DUPLICATE_CONTENT',
+                'quiz',
+                'warning',
+                static function (array $ctx): ?violation {
+                    if (empty($ctx['checkquestionintegrity']) || empty($ctx['duplicatecontentcount'])) {
+                        return null;
+                    }
+                    return self::quiz_violation(
+                        $ctx['quiz'],
+                        'v_quiz_bank_duplicate_content',
+                        '0',
+                        (string)$ctx['duplicatecontentcount']
+                    );
+                }
+            ),
+            new callback_rule(
+                'QUIZ_BANK_UNUSED_QUESTIONS',
+                'quiz',
+                'notice',
+                static function (array $ctx): ?violation {
+                    if (empty($ctx['checkquestionintegrity']) || empty($ctx['unusedbankquestioncount'])) {
+                        return null;
+                    }
+                    return self::quiz_violation(
+                        $ctx['quiz'],
+                        'v_quiz_bank_unused_questions',
+                        '0',
+                        (string)$ctx['unusedbankquestioncount']
                     );
                 }
             ),

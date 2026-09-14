@@ -52,6 +52,9 @@ final class quiz_integrity_inspector {
             'bankquestioncount' => 0,
             'bankcategorycount' => 0,
             'bankcategories' => [],
+            'categoryquestioncount' => 0,
+            'unusedbankquestioncount' => 0,
+            'duplicatecontentcount' => 0,
             'draftquestioncount' => 0,
             'brokenquestioncount' => 0,
             'nocorrectanswercount' => 0,
@@ -135,6 +138,58 @@ final class quiz_integrity_inspector {
                     $categoryrecords
                 ));
                 $result['bankcategorycount'] = count($categoryrecords);
+
+                $categoryids = array_values(array_map(
+                    static fn ($category): int => (int)$category->id,
+                    $categoryrecords
+                ));
+                if ($categoryids) {
+                    [$categorysql, $categoryparams] = $DB->get_in_or_equal(
+                        $categoryids,
+                        SQL_PARAMS_NAMED,
+                        'integritycat'
+                    );
+                    $bankquestions = $DB->get_records_sql(
+                        "SELECT q.id, q.name, q.questiontext, q.qtype, qv.status
+                           FROM {question} q
+                           JOIN {question_versions} qv ON qv.questionid = q.id
+                           JOIN {question_bank_entries} qbe ON qbe.id = qv.questionbankentryid
+                          WHERE qbe.questioncategoryid $categorysql
+                            AND qv.version = (
+                                SELECT MAX(qv2.version)
+                                  FROM {question_versions} qv2
+                                 WHERE qv2.questionbankentryid = qv.questionbankentryid
+                            )",
+                        $categoryparams
+                    );
+                    $readyids = [];
+                    $contenthashes = [];
+                    foreach ($bankquestions as $bankquestion) {
+                        if ((string)$bankquestion->status !== 'ready') {
+                            continue;
+                        }
+                        $readyids[] = (int)$bankquestion->id;
+                        $normalizedtext = trim(strip_tags((string)$bankquestion->questiontext));
+                        $hash = sha1(
+                            (string)$bankquestion->qtype . '|' .
+                            trim((string)$bankquestion->name) . '|' .
+                            preg_replace('/\s+/u', ' ', $normalizedtext)
+                        );
+                        $contenthashes[$hash] = ($contenthashes[$hash] ?? 0) + 1;
+                    }
+                    $result['categoryquestioncount'] = count($readyids);
+                    $usedlookup = array_fill_keys($questionids, true);
+                    foreach ($readyids as $readyid) {
+                        if (!isset($usedlookup[$readyid])) {
+                            $result['unusedbankquestioncount']++;
+                        }
+                    }
+                    foreach ($contenthashes as $count) {
+                        if ($count > 1) {
+                            $result['duplicatecontentcount'] += $count - 1;
+                        }
+                    }
+                }
             }
 
             $deepids = $questionids;

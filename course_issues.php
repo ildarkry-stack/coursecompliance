@@ -51,7 +51,13 @@ echo $OUTPUT->heading(get_string('courseissues_title', 'tool_coursecompliance'))
 echo html_writer::div(
     html_writer::link(
         new moodle_url('/course/view.php', ['id' => $courseid]),
-        get_string('backtocourse', 'tool_coursecompliance')
+        get_string('backtocourse', 'tool_coursecompliance'),
+        ['class' => 'btn btn-outline-secondary me-2']
+    ) .
+    html_writer::link(
+        new moodle_url('/admin/tool/coursecompliance/course_history.php', ['courseid' => $courseid]),
+        get_string('coursehistory', 'tool_coursecompliance'),
+        ['class' => 'btn btn-outline-primary']
     ),
     'mb-3'
 );

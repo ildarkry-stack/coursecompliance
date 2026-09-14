@@ -48,6 +48,7 @@ final class cleanup_scans extends \core\task\scheduled_task {
             [$insql, $params] = $DB->get_in_or_equal($oldscans, SQL_PARAMS_NAMED, 'scan');
             $DB->delete_records_select('tool_coursecompliance_result', "scanid $insql", $params);
             $DB->delete_records_select('tool_coursecompliance_assessment', "scanid $insql", $params);
+            $DB->delete_records_select('tool_coursecompliance_course', "scanid $insql", $params);
             $DB->delete_records_select('tool_coursecompliance_scan', "id $insql", $params);
         }
         $oldbatches = $DB->get_fieldset_select(

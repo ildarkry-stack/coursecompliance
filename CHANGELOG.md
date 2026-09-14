@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.12.0-alpha (2026-09-14)
+
+- Added an **Action Center** that consolidates current critical issues, warnings, newly introduced problems and Safe AutoFix candidates across standards and course categories.
+- Added multi-select Safe AutoFix from the Action Center; selected fixes still use immutable preview, conflict detection, background execution, history and rollback.
+- Safe AutoFix now automatically queues a targeted recheck of only the courses actually changed, and current readiness views overlay those recheck results on the last full audit.
+- Added a **Readiness matrix** with Course, Exam, Resit 1, Resit 2, Question bank, Access restrictions, Gradebook and Completion domains.
+- Added a **Pre-session check** that separates courses ready for the session from courses with blockers and explains each blocker.
+- Added per-course weighted readiness snapshots (critical issues carry a larger penalty than warnings/notices) and course readiness history.
+- Added scan deltas: new issues, resolved issues, courses that became ready and courses that lost readiness. The dashboard now includes a “What needs attention now” view.
+- Extended question-bank diagnostics with duplicate-content detection and questions present in the dedicated bank category but unused by the target Quiz. Existing random-pool, draft, broken-reference and correct-answer checks remain available.
+- Added Exam-to-Resit structure comparison for question count, maximum grade and question-bank category source.
+- Added Gradebook integrity checks for missing/orphaned/duplicate Quiz grade items and hidden Quiz grade items. Safe AutoFix can resynchronise an incorrect Quiz grade-item maximum through Moodle APIs.
+- Added course-completion integrity checks for missing criteria and criteria pointing to missing activities.
+- Existing access-restriction auditing is surfaced as a dedicated readiness-matrix domain; safe restriction fixes remain conservative and require unambiguous exam/resit references.
+- Full-audit dashboards are no longer replaced by small test runs or targeted rechecks; current state is built from the last full audit plus newer affected-course rechecks.
+
 ## 0.11.0-alpha (2026-09-14)
 
 - Added deep Quiz integrity checks using Moodle question-bank APIs.

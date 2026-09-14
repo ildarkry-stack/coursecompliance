@@ -79,6 +79,7 @@ final class autofix_manager {
                 'QUIZ_ATTEMPTS_STANDARD',
                 'QUIZ_TIMELIMIT_STANDARD',
                 'QUIZ_GRADE_STANDARD',
+                'QUIZ_GRADEBOOK_MAX_MATCH',
                 'QUIZ_GRADE_TO_PASS_REQUIRED',
                 'QUIZ_GRADE_TO_PASS_MIN',
                 'QUIZ_RIGHT_ANSWER_HIDDEN_WHILE_OPEN',
@@ -100,9 +101,10 @@ final class autofix_manager {
      *
      * @param int $scanid Scan id.
      * @param int $userid User creating the preview.
+     * @param int[] $resultids Optional subset of result ids from the scan.
      * @return int Batch id.
      */
-    public function prepare_scan(int $scanid, int $userid): int {
+    public function prepare_scan(int $scanid, int $userid, array $resultids = []): int {
         global $DB;
 
         $scan = $DB->get_record('tool_coursecompliance_scan', ['id' => $scanid], '*', MUST_EXIST);
@@ -112,6 +114,10 @@ final class autofix_manager {
         $profile = $DB->get_record('tool_coursecompliance_profile', ['id' => $scan->profileid], '*', MUST_EXIST);
         $config = profile_config::decode($profile->configjson);
         $results = $DB->get_records('tool_coursecompliance_result', ['scanid' => $scanid], 'courseid, id');
+        $resultids = array_values(array_unique(array_filter(array_map('intval', $resultids))));
+        if ($resultids) {
+            $results = array_intersect_key($results, array_flip($resultids));
+        }
         $fixable = array_filter(
             $results,
             static fn ($result) => self::is_fixable($result, $config)
@@ -156,7 +162,7 @@ final class autofix_manager {
                 } else {
                     require_capability('moodle/course:manageactivities', $context);
                 }
-                if ($field === 'gradepass') {
+                if (in_array($field, ['gradepass', 'gradeitemmax'], true)) {
                     $gradeitem = $DB->get_record('grade_items', [
                         'courseid' => $courseid,
                         'itemmodule' => 'quiz',
@@ -208,6 +214,7 @@ final class autofix_manager {
                 'scanid' => $scanid,
                 'profileid' => (int)$scan->profileid,
                 'courselimit' => (int)($scan->courselimit ?? 0),
+                'resultids' => array_values(array_map('intval', array_keys($fixable))),
             ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
             'summary' => get_string('batchsummary_autofix', 'tool_coursecompliance', (object)[
                 'scanid' => $scanid,
@@ -230,6 +237,100 @@ final class autofix_manager {
     }
 
     /**
+     * Create a safe preview for selected issue rows.
+     *
+     * @param int[] $resultids Result ids.
+     * @param int $userid User creating the preview.
+     * @return int Batch id.
+     */
+    public function prepare_results(array $resultids, int $userid): int {
+        global $DB;
+
+        $resultids = array_values(array_unique(array_filter(array_map('intval', $resultids))));
+        if (!$resultids) {
+            throw new \moodle_exception('noautofixableissues', 'tool_coursecompliance');
+        }
+        $results = $DB->get_records_list('tool_coursecompliance_result', 'id', $resultids, '', 'id,scanid');
+        if (count($results) !== count($resultids)) {
+            throw new \moodle_exception('noautofixableissues', 'tool_coursecompliance');
+        }
+
+        $scanids = array_values(array_unique(array_map(
+            static fn ($result): int => (int)$result->scanid,
+            $results
+        )));
+        $scans = $DB->get_records_list(
+            'tool_coursecompliance_scan',
+            'id',
+            $scanids,
+            '',
+            'id,profileid,categoryid'
+        );
+        if (count($scans) !== count($scanids)) {
+            throw new \moodle_exception('autofixmixedscans', 'tool_coursecompliance');
+        }
+
+        $profileids = array_unique(array_map(static fn ($scan): int => (int)$scan->profileid, $scans));
+        $categoryids = array_unique(array_map(static fn ($scan): int => (int)$scan->categoryid, $scans));
+        if (count($profileids) !== 1 || count($categoryids) !== 1) {
+            throw new \moodle_exception('autofixmixedscans', 'tool_coursecompliance');
+        }
+
+        $by_scan = [];
+        foreach ($results as $result) {
+            $by_scan[(int)$result->scanid][] = (int)$result->id;
+        }
+        if (count($by_scan) === 1) {
+            $scanid = (int)array_key_first($by_scan);
+            return $this->prepare_scan($scanid, $userid, $by_scan[$scanid]);
+        }
+
+        $batchids = [];
+        $createdbatchids = [];
+        try {
+            foreach ($by_scan as $scanid => $ids) {
+                $batchid = $this->prepare_scan((int)$scanid, $userid, $ids);
+                $batchids[] = $batchid;
+                $createdbatchids[] = $batchid;
+            }
+
+            $targetbatchid = (int)array_shift($batchids);
+            foreach ($batchids as $batchid) {
+                $DB->set_field(
+                    'tool_coursecompliance_act_change',
+                    'batchid',
+                    $targetbatchid,
+                    ['batchid' => (int)$batchid]
+                );
+                $DB->delete_records('tool_coursecompliance_act_batch', ['id' => (int)$batchid]);
+            }
+
+            $batch = $DB->get_record('tool_coursecompliance_act_batch', ['id' => $targetbatchid], '*', MUST_EXIST);
+            $filter = json_decode((string)$batch->filterjson, true);
+            $filter = is_array($filter) ? $filter : [];
+            $filter['scanids'] = $scanids;
+            $filter['resultids'] = $resultids;
+            $batch->filterjson = json_encode($filter, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+            $batch->totalchanges = $DB->count_records(
+                'tool_coursecompliance_act_change',
+                ['batchid' => $targetbatchid]
+            );
+            $batch->summary = get_string('batchsummary_autofixmulti', 'tool_coursecompliance', (object)[
+                'scans' => count($scanids),
+                'changes' => (int)$batch->totalchanges,
+            ]);
+            $DB->update_record('tool_coursecompliance_act_batch', $batch);
+            return $targetbatchid;
+        } catch (\Throwable $e) {
+            foreach ($createdbatchids as $batchid) {
+                $DB->delete_records('tool_coursecompliance_act_change', ['batchid' => (int)$batchid]);
+                $DB->delete_records('tool_coursecompliance_act_batch', ['id' => (int)$batchid]);
+            }
+            throw $e;
+        }
+    }
+
+    /**
      * Build exact desired values for a single result.
      *
      * @param \stdClass $result Scan result.
@@ -248,6 +349,9 @@ final class autofix_manager {
         }
         if ($rulecode === 'QUIZ_GRADE_STANDARD') {
             return ['grade' => (float)($config['examgrade'] ?? 0)];
+        }
+        if ($rulecode === 'QUIZ_GRADEBOOK_MAX_MATCH') {
+            return ['gradeitemmax' => (float)$quiz->grade];
         }
         if (in_array($rulecode, ['QUIZ_GRADE_TO_PASS_REQUIRED', 'QUIZ_GRADE_TO_PASS_MIN'], true)) {
             return ['gradepass' => (float)($config['mingradepass'] ?? 0)];
@@ -282,6 +386,7 @@ final class autofix_manager {
             'QUIZ_ATTEMPTS_STANDARD' => (int)($config['examattempts'] ?? 0) > 0,
             'QUIZ_TIMELIMIT_STANDARD' => (int)($config['examtimelimit'] ?? 0) > 0,
             'QUIZ_GRADE_STANDARD' => (float)($config['examgrade'] ?? 0) > 0,
+            'QUIZ_GRADEBOOK_MAX_MATCH' => true,
             'QUIZ_GRADE_TO_PASS_REQUIRED', 'QUIZ_GRADE_TO_PASS_MIN' =>
                 (float)($config['mingradepass'] ?? 0) > 0,
             'QUIZ_RIGHT_ANSWER_HIDDEN_WHILE_OPEN' => !empty($config['hideanswerswhileopen']),
@@ -514,10 +619,11 @@ final class autofix_manager {
             }
             return !empty($cm->visibleoncoursepage) ? 'show' : 'stealth';
         }
-        if ($field === 'gradepass') {
+        if (in_array($field, ['gradepass', 'gradeitemmax'], true)) {
+            $column = $field === 'gradepass' ? 'gradepass' : 'grademax';
             return (float)$DB->get_field(
                 'grade_items',
-                'gradepass',
+                $column,
                 [
                     'courseid' => (int)$cm->course,
                     'itemmodule' => 'quiz',

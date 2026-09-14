@@ -31,7 +31,16 @@ require_capability('tool/coursecompliance:view', $context);
 $scanid = optional_param('scanid', 0, PARAM_INT);
 $type = optional_param('assessmenttype', '', PARAM_ALPHANUMEXT);
 if (!$scanid) {
-    $scanid = (int)$DB->get_field_sql("SELECT MAX(id) FROM {tool_coursecompliance_scan} WHERE status = 'complete'");
+    $scanid = (int)$DB->get_field_sql(
+        "SELECT MAX(id)
+           FROM {tool_coursecompliance_scan}
+          WHERE status = 'complete' AND scantype = 'audit' AND courselimit = 0"
+    );
+    if (!$scanid) {
+        $scanid = (int)$DB->get_field_sql(
+            "SELECT MAX(id) FROM {tool_coursecompliance_scan} WHERE status = 'complete' AND scantype = 'audit'"
+        );
+    }
 }
 
 $urlparams = ['scanid' => $scanid];
@@ -46,6 +55,7 @@ $PAGE->set_heading(get_string('nav_audit', 'tool_coursecompliance'));
 
 echo $OUTPUT->header();
 echo \tool_coursecompliance\ui::primary_navigation('audit');
+echo \tool_coursecompliance\ui::audit_navigation('readiness');
 echo $OUTPUT->heading(get_string('nav_audit', 'tool_coursecompliance'));
 echo \tool_coursecompliance\ui::intro(get_string('auditintro', 'tool_coursecompliance'));
 
@@ -58,7 +68,8 @@ if (!$scanid) {
 $scan = $DB->get_record('tool_coursecompliance_scan', ['id' => $scanid, 'status' => 'complete'], '*', MUST_EXIST);
 $profile = $DB->get_record('tool_coursecompliance_profile', ['id' => $scan->profileid], '*', MUST_EXIST);
 $category = \core_course_category::get($scan->categoryid, MUST_EXIST, true);
-$states = $DB->get_records('tool_coursecompliance_assessment', ['scanid' => $scanid], 'assessmenttype, courseid');
+$delta = \tool_coursecompliance\scan_analysis::delta($scanid);
+$states = array_values(\tool_coursecompliance\scan_analysis::composite_assessments($scanid));
 
 $periods = [];
 $scoretotal = 0;
@@ -126,6 +137,28 @@ echo \tool_coursecompliance\ui::metric_cards([
         'class' => $totalmissing ? 'text-danger' : 'text-success',
     ],
 ]);
+echo \tool_coursecompliance\ui::metric_cards([
+    [
+        'label' => get_string('newissues', 'tool_coursecompliance'),
+        'value' => (int)$delta['newcount'],
+        'tone' => !empty($delta['newcount']) ? 'danger' : 'success',
+    ],
+    [
+        'label' => get_string('resolvedissues', 'tool_coursecompliance'),
+        'value' => (int)$delta['resolvedcount'],
+        'tone' => 'success',
+    ],
+    [
+        'label' => get_string('becameready', 'tool_coursecompliance'),
+        'value' => (int)$delta['becameready'],
+        'tone' => 'success',
+    ],
+    [
+        'label' => get_string('lostreadiness', 'tool_coursecompliance'),
+        'value' => (int)$delta['lostready'],
+        'tone' => !empty($delta['lostready']) ? 'danger' : 'success',
+    ],
+]);
 
 $readinesschart = \tool_coursecompliance\report_charts::readiness($periods);
 if ($readinesschart) {
@@ -164,12 +197,26 @@ foreach ($periods as $periodtype => $period) {
 }
 echo html_writer::table($table);
 
-$sql = "SELECT rulecode, severity, COUNT(1) AS issuecount
-          FROM {tool_coursecompliance_result}
-         WHERE scanid = :scanid AND component = 'quiz'
-      GROUP BY rulecode, severity
-      ORDER BY issuecount DESC";
-$problems = $DB->get_records_sql($sql, ['scanid' => $scanid], 0, 10);
+$problemcounts = [];
+foreach (\tool_coursecompliance\scan_analysis::composite_results($scanid) as $result) {
+    if ((string)$result->component !== 'quiz') {
+        continue;
+    }
+    $key = (string)$result->rulecode . '|' . (string)$result->severity;
+    if (!isset($problemcounts[$key])) {
+        $problemcounts[$key] = (object)[
+            'rulecode' => (string)$result->rulecode,
+            'severity' => (string)$result->severity,
+            'issuecount' => 0,
+        ];
+    }
+    $problemcounts[$key]->issuecount++;
+}
+$problems = array_values($problemcounts);
+usort($problems, static function ($left, $right): int {
+    return (int)$right->issuecount <=> (int)$left->issuecount;
+});
+$problems = array_slice($problems, 0, 10);
 if ($problems) {
     echo $OUTPUT->heading(get_string('topassessmentproblems', 'tool_coursecompliance'), 3);
     $problemtable = new html_table();
@@ -211,18 +258,36 @@ foreach (['exam', 'resit1', 'resit2'] as $periodtype) {
 }
 echo html_writer::div(implode(' ', $filterlinks), 'mb-3 d-flex flex-wrap gap-2');
 
-$params = ['scanid' => $scanid];
-$where = 'a.scanid = :scanid';
-if (in_array($type, ['exam', 'resit1', 'resit2'], true)) {
-    $where .= ' AND a.assessmenttype = :assessmenttype';
-    $params['assessmenttype'] = $type;
+$detailstates = [];
+$detailcourseids = [];
+foreach ($states as $state) {
+    if (in_array($type, ['exam', 'resit1', 'resit2'], true) && (string)$state->assessmenttype !== $type) {
+        continue;
+    }
+    $detailstates[] = $state;
+    $detailcourseids[(int)$state->courseid] = true;
 }
-$statesql = "SELECT a.*, c.fullname, c.shortname
-               FROM {tool_coursecompliance_assessment} a
-               JOIN {course} c ON c.id = a.courseid
-              WHERE $where
-           ORDER BY a.critical DESC, a.warnings DESC, a.score ASC, c.fullname";
-$detailstates = $DB->get_records_sql($statesql, $params, 0, 5000);
+$detailcourses = $detailcourseids
+    ? $DB->get_records_list('course', 'id', array_keys($detailcourseids), '', 'id,fullname,shortname')
+    : [];
+usort($detailstates, static function ($left, $right) use ($detailcourses): int {
+    $critical = (int)$right->critical <=> (int)$left->critical;
+    if ($critical !== 0) {
+        return $critical;
+    }
+    $warnings = (int)$right->warnings <=> (int)$left->warnings;
+    if ($warnings !== 0) {
+        return $warnings;
+    }
+    $score = (int)$left->score <=> (int)$right->score;
+    if ($score !== 0) {
+        return $score;
+    }
+    $leftcourse = $detailcourses[(int)$left->courseid] ?? null;
+    $rightcourse = $detailcourses[(int)$right->courseid] ?? null;
+    return strcasecmp((string)($leftcourse->fullname ?? ''), (string)($rightcourse->fullname ?? ''));
+});
+$detailstates = array_slice($detailstates, 0, 5000);
 if (!$detailstates) {
     echo $OUTPUT->notification(get_string('noassessmentstates', 'tool_coursecompliance'), 'info');
 } else {
@@ -239,6 +304,10 @@ if (!$detailstates) {
         get_string('actions'),
     ];
     foreach ($detailstates as $state) {
+        $course = $detailcourses[(int)$state->courseid] ?? null;
+        if (!$course) {
+            continue;
+        }
         if (empty($state->existsflag) && empty($state->ignored)) {
             $status = html_writer::span(get_string('missing', 'tool_coursecompliance'), 'badge bg-danger');
         } else if ((int)$state->critical > 0) {
@@ -254,8 +323,8 @@ if (!$detailstates) {
         $detailtable->data[] = [
             html_writer::link(
                 new moodle_url('/course/view.php', ['id' => $state->courseid]),
-                format_string($state->fullname)
-            ) . html_writer::div(s($state->shortname), 'small text-muted'),
+                format_string($course->fullname)
+            ) . html_writer::div(s($course->shortname), 'small text-muted'),
             get_string('period_' . $state->assessmenttype, 'tool_coursecompliance'),
             $objectname,
             (int)$state->score . '%',
@@ -264,7 +333,7 @@ if (!$detailstates) {
             (int)$state->warnings,
             html_writer::link(
                 new moodle_url('/admin/tool/coursecompliance/report.php', [
-                    'scanid' => $scanid,
+                    'scanid' => (int)$state->scanid,
                     'courseid' => $state->courseid,
                     'assessmenttype' => $state->assessmenttype,
                 ]),

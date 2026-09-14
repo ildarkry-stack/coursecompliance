@@ -432,5 +432,63 @@ function xmldb_tool_coursecompliance_upgrade(int $oldversion): bool {
         upgrade_plugin_savepoint(true, 2026091405, 'tool', 'coursecompliance');
     }
 
+    if ($oldversion < 2026091406) {
+        $table = new xmldb_table('tool_coursecompliance_scan');
+        $scopejson = new xmldb_field(
+            'scopejson',
+            XMLDB_TYPE_TEXT,
+            null,
+            null,
+            null,
+            null,
+            null,
+            'courselimit'
+        );
+        if (!$dbman->field_exists($table, $scopejson)) {
+            $dbman->add_field($table, $scopejson);
+        }
+        $scantype = new xmldb_field(
+            'scantype',
+            XMLDB_TYPE_CHAR,
+            '20',
+            null,
+            XMLDB_NOTNULL,
+            null,
+            'audit',
+            'scopejson'
+        );
+        if (!$dbman->field_exists($table, $scantype)) {
+            $dbman->add_field($table, $scantype);
+        }
+
+        $coursetable = new xmldb_table('tool_coursecompliance_course');
+        if (!$dbman->table_exists($coursetable)) {
+            $coursetable->add_field('id', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, XMLDB_SEQUENCE);
+            $coursetable->add_field('scanid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL);
+            $coursetable->add_field('courseid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL);
+            $coursetable->add_field('critical', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0');
+            $coursetable->add_field('warnings', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0');
+            $coursetable->add_field('notices', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0');
+            $coursetable->add_field('ignored', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0');
+            $coursetable->add_field('score', XMLDB_TYPE_INTEGER, '3', null, XMLDB_NOTNULL, null, '100');
+            $coursetable->add_field('status', XMLDB_TYPE_CHAR, '16', null, XMLDB_NOTNULL, null, 'ready');
+            $coursetable->add_field('timecreated', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0');
+            $coursetable->add_key('primary', XMLDB_KEY_PRIMARY, ['id']);
+            $coursetable->add_key(
+                'scan_fk',
+                XMLDB_KEY_FOREIGN,
+                ['scanid'],
+                'tool_coursecompliance_scan',
+                ['id']
+            );
+            $coursetable->add_index('scan_course_uix', XMLDB_INDEX_UNIQUE, ['scanid', 'courseid']);
+            $coursetable->add_index('scan_status_idx', XMLDB_INDEX_NOTUNIQUE, ['scanid', 'status']);
+            $coursetable->add_index('course_idx', XMLDB_INDEX_NOTUNIQUE, ['courseid']);
+            $dbman->create_table($coursetable);
+        }
+
+        upgrade_plugin_savepoint(true, 2026091406, 'tool', 'coursecompliance');
+    }
+
     return true;
 }

@@ -62,17 +62,32 @@ final class scanner {
         $DB->update_record('tool_coursecompliance_scan', $scan);
         $DB->delete_records('tool_coursecompliance_result', ['scanid' => $scanid]);
         $DB->delete_records('tool_coursecompliance_assessment', ['scanid' => $scanid]);
+        $DB->delete_records('tool_coursecompliance_course', ['scanid' => $scanid]);
 
         $category = core_course_category::get($scan->categoryid, MUST_EXIST, true);
         $categoryids = array_merge([$category->id], $category->get_all_children_ids());
         [$insql, $params] = $DB->get_in_or_equal($categoryids, SQL_PARAMS_NAMED, 'cat');
         $params['siteid'] = SITEID;
-        if ($courselimit <= 0 && property_exists($scan, 'courselimit')) {
+        $select = "category $insql AND id <> :siteid";
+        $scope = json_decode((string)($scan->scopejson ?? ''), true);
+        $scopecourseids = is_array($scope) && is_array($scope['courseids'] ?? null)
+            ? array_values(array_unique(array_filter(array_map('intval', $scope['courseids']))))
+            : [];
+        if ($scopecourseids) {
+            [$scopeinsql, $scopeparams] = $DB->get_in_or_equal(
+                $scopecourseids,
+                SQL_PARAMS_NAMED,
+                'scopecourse'
+            );
+            $select .= " AND id $scopeinsql";
+            $params += $scopeparams;
+            $courselimit = 0;
+        } else if ($courselimit <= 0 && property_exists($scan, 'courselimit')) {
             $courselimit = (int)$scan->courselimit;
         }
         $courses = $DB->get_records_select(
             'course',
-            "category $insql AND id <> :siteid",
+            $select,
             $params,
             'fullname ASC, id ASC',
             '*',
@@ -92,6 +107,7 @@ final class scanner {
             && !empty($config['blueprintrules']['enabled']);
         $manualassessmentenabled = $manualenabled && !$visualblueprint;
         $teachers = $manualenabled ? $this->load_teacher_counts($courseids) : [];
+        $courseintegrity = $manualenabled ? $this->load_course_integrity($courseids) : [];
         $quizdata = ($manualassessmentenabled || $visualblueprint)
             ? $this->load_quizzes($courseids, $config)
             : [];
@@ -104,9 +120,14 @@ final class scanner {
         $assessmentcount = 0;
 
         foreach ($courses as $course) {
+            $integrity = $courseintegrity[$course->id] ?? [];
             $coursecontext = [
                 'course' => $course,
                 'teachercount' => $teachers[$course->id] ?? 0,
+                'orphanquizgradeitems' => (int)($integrity['orphanquizgradeitems'] ?? 0),
+                'duplicatequizgradeitems' => (int)($integrity['duplicatequizgradeitems'] ?? 0),
+                'completioncriteriacount' => (int)($integrity['completioncriteriacount'] ?? 0),
+                'brokencompletioncriteria' => (int)($integrity['brokencompletioncriteria'] ?? 0),
             ];
             if ($manualenabled) {
                 foreach (rule_registry::course_rules() as $rule) {
@@ -195,6 +216,23 @@ final class scanner {
                 }
             }
 
+            foreach ($this->compare_assessment_structure((int)$course->id, $quizdata, $config) as $problem) {
+                $outcome = $this->store_direct_violation(
+                    $scanid,
+                    (int)$course->id,
+                    'quiz',
+                    (string)$problem['rulecode'],
+                    'warning',
+                    (string)$problem['assessmenttype'],
+                    (int)$problem['objectid'],
+                    (string)$problem['objectname'],
+                    (string)$problem['message'],
+                    (string)$problem['expected'],
+                    (string)$problem['actual']
+                );
+                $this->increment_outcome($totals, $outcome);
+            }
+
             if (!$manualassessmentenabled) {
                 continue;
             }
@@ -245,6 +283,7 @@ final class scanner {
                     'gradeitemexists' => $data['gradeitemexists'],
                     'gradeitemmax' => $data['gradeitemmax'],
                     'gradeitemlocked' => $data['gradeitemlocked'],
+                    'gradeitemhidden' => $data['gradeitemhidden'],
                     'overridecount' => $data['overridecount'],
                     'maxoverrideattempts' => $data['maxoverrideattempts'],
                     'maxoverridetimeclose' => $data['maxoverridetimeclose'],
@@ -272,6 +311,8 @@ final class scanner {
                 );
             }
         }
+
+        $this->store_course_snapshots($scanid, $courseids);
 
         $scan->status = 'complete';
         $scan->courses = count($courses);
@@ -471,6 +512,54 @@ final class scanner {
     }
 
     /**
+     * Store per-course readiness snapshots for dashboards and delta reports.
+     *
+     * @param int $scanid Scan id.
+     * @param int[] $courseids Scanned course ids.
+     */
+    private function store_course_snapshots(int $scanid, array $courseids): void {
+        global $DB;
+
+        if (!$courseids) {
+            return;
+        }
+        $counts = [];
+        $records = $DB->get_records_sql(
+            "SELECT courseid,
+                    SUM(CASE WHEN severity = 'critical' THEN 1 ELSE 0 END) AS critical,
+                    SUM(CASE WHEN severity = 'warning' THEN 1 ELSE 0 END) AS warnings,
+                    SUM(CASE WHEN severity = 'notice' THEN 1 ELSE 0 END) AS notices
+               FROM {tool_coursecompliance_result}
+              WHERE scanid = :scanid
+           GROUP BY courseid",
+            ['scanid' => $scanid]
+        );
+        foreach ($records as $record) {
+            $counts[(int)$record->courseid] = $record;
+        }
+        $now = time();
+        foreach ($courseids as $courseid) {
+            $record = $counts[(int)$courseid] ?? null;
+            $critical = $record ? (int)$record->critical : 0;
+            $warnings = $record ? (int)$record->warnings : 0;
+            $notices = $record ? (int)$record->notices : 0;
+            $score = max(0, 100 - ($critical * 25) - ($warnings * 8) - ($notices * 2));
+            $status = $critical > 0 ? 'critical' : ($warnings > 0 ? 'warning' : ($notices > 0 ? 'notice' : 'ready'));
+            $DB->insert_record('tool_coursecompliance_course', (object)[
+                'scanid' => $scanid,
+                'courseid' => (int)$courseid,
+                'critical' => $critical,
+                'warnings' => $warnings,
+                'notices' => $notices,
+                'ignored' => 0,
+                'score' => $score,
+                'status' => $status,
+                'timecreated' => $now,
+            ]);
+        }
+    }
+
+    /**
      * Load active exceptions for a profile and course set.
      *
      * @param int $profileid Profile id.
@@ -560,6 +649,153 @@ final class scanner {
     }
 
     /**
+     * Compare resit structure with the exam in the same course.
+     *
+     * @param int $courseid Course id.
+     * @param array $quizdata Loaded Quiz data.
+     * @param array $config Profile configuration.
+     * @return array<int, array<string, mixed>>
+     */
+    private function compare_assessment_structure(int $courseid, array $quizdata, array $config): array {
+        if (empty($config['compareassessmentstructure'])) {
+            return [];
+        }
+        $exam = $quizdata[$courseid]['exam'] ?? null;
+        if (!$exam) {
+            return [];
+        }
+        $problems = [];
+        foreach (['resit1', 'resit2'] as $type) {
+            $candidate = $quizdata[$courseid][$type] ?? null;
+            if (!$candidate) {
+                continue;
+            }
+            $quiz = $candidate['quiz'];
+            if ((int)$candidate['questioncount'] !== (int)$exam['questioncount']) {
+                $problems[] = [
+                    'rulecode' => 'QUIZ_STRUCTURE_DIFF_QUESTION_COUNT',
+                    'assessmenttype' => $type,
+                    'objectid' => (int)$quiz->id,
+                    'objectname' => (string)$quiz->name,
+                    'message' => get_string('v_quiz_structure_diff_question_count', 'tool_coursecompliance'),
+                    'expected' => (string)$exam['questioncount'],
+                    'actual' => (string)$candidate['questioncount'],
+                ];
+            }
+            if (abs((float)$quiz->grade - (float)$exam['quiz']->grade) > 0.00001) {
+                $problems[] = [
+                    'rulecode' => 'QUIZ_STRUCTURE_DIFF_GRADE',
+                    'assessmenttype' => $type,
+                    'objectid' => (int)$quiz->id,
+                    'objectname' => (string)$quiz->name,
+                    'message' => get_string('v_quiz_structure_diff_grade', 'tool_coursecompliance'),
+                    'expected' => (string)$exam['quiz']->grade,
+                    'actual' => (string)$quiz->grade,
+                ];
+            }
+            $examcategories = $exam['integrity']['bankcategories'] ?? [];
+            $candidatecategories = $candidate['integrity']['bankcategories'] ?? [];
+            sort($examcategories);
+            sort($candidatecategories);
+            if ($examcategories && $candidatecategories && $examcategories !== $candidatecategories) {
+                $problems[] = [
+                    'rulecode' => 'QUIZ_STRUCTURE_DIFF_BANK_CATEGORY',
+                    'assessmenttype' => $type,
+                    'objectid' => (int)$quiz->id,
+                    'objectname' => (string)$quiz->name,
+                    'message' => get_string('v_quiz_structure_diff_bank_category', 'tool_coursecompliance'),
+                    'expected' => implode(', ', $examcategories),
+                    'actual' => implode(', ', $candidatecategories),
+                ];
+            }
+        }
+        return $problems;
+    }
+
+    /**
+     * Load gradebook and course-completion integrity counters.
+     *
+     * @param int[] $courseids Course ids.
+     * @return array<int, array<string, int>>
+     */
+    private function load_course_integrity(array $courseids): array {
+        global $DB;
+
+        if (!$courseids) {
+            return [];
+        }
+        $out = [];
+        foreach ($courseids as $courseid) {
+            $out[(int)$courseid] = [
+                'orphanquizgradeitems' => 0,
+                'duplicatequizgradeitems' => 0,
+                'completioncriteriacount' => 0,
+                'brokencompletioncriteria' => 0,
+            ];
+        }
+        [$insql, $params] = $DB->get_in_or_equal($courseids, SQL_PARAMS_NAMED, 'integritycourse');
+
+        $orphans = $DB->get_records_sql(
+            "SELECT gi.courseid, COUNT(1) AS issuecount
+               FROM {grade_items} gi
+          LEFT JOIN {quiz} q ON q.id = gi.iteminstance AND q.course = gi.courseid
+              WHERE gi.courseid $insql
+                AND gi.itemtype = 'mod'
+                AND gi.itemmodule = 'quiz'
+                AND q.id IS NULL
+           GROUP BY gi.courseid",
+            $params
+        );
+        foreach ($orphans as $record) {
+            $out[(int)$record->courseid]['orphanquizgradeitems'] = (int)$record->issuecount;
+        }
+
+        $duplicates = $DB->get_records_sql(
+            "SELECT x.courseid, COUNT(1) AS issuecount
+               FROM (
+                     SELECT courseid, iteminstance
+                       FROM {grade_items}
+                      WHERE courseid $insql
+                        AND itemtype = 'mod'
+                        AND itemmodule = 'quiz'
+                   GROUP BY courseid, iteminstance
+                     HAVING COUNT(1) > 1
+                    ) x
+           GROUP BY x.courseid",
+            $params
+        );
+        foreach ($duplicates as $record) {
+            $out[(int)$record->courseid]['duplicatequizgradeitems'] = (int)$record->issuecount;
+        }
+
+        $criteriacounts = $DB->get_records_sql(
+            "SELECT course AS courseid, COUNT(1) AS criteriacount
+               FROM {course_completion_criteria}
+              WHERE course $insql
+           GROUP BY course",
+            $params
+        );
+        foreach ($criteriacounts as $record) {
+            $out[(int)$record->courseid]['completioncriteriacount'] = (int)$record->criteriacount;
+        }
+
+        $brokencriteria = $DB->get_records_sql(
+            "SELECT ccc.course AS courseid, COUNT(1) AS issuecount
+               FROM {course_completion_criteria} ccc
+          LEFT JOIN {course_modules} cm ON cm.id = ccc.moduleinstance AND cm.course = ccc.course
+              WHERE ccc.course $insql
+                AND ccc.moduleinstance > 0
+                AND cm.id IS NULL
+           GROUP BY ccc.course",
+            $params
+        );
+        foreach ($brokencriteria as $record) {
+            $out[(int)$record->courseid]['brokencompletioncriteria'] = (int)$record->issuecount;
+        }
+        return $out;
+    }
+
+    /**
      * Build a common context for Quiz question-bank integrity rules.
      *
      * @param \stdClass $course Course record.
@@ -592,6 +828,9 @@ final class scanner {
             'bankquestioncount' => (int)($integrity['bankquestioncount'] ?? 0),
             'bankcategorycount' => (int)($integrity['bankcategorycount'] ?? 0),
             'bankcategories' => $integrity['bankcategories'] ?? [],
+            'categoryquestioncount' => (int)($integrity['categoryquestioncount'] ?? 0),
+            'unusedbankquestioncount' => (int)($integrity['unusedbankquestioncount'] ?? 0),
+            'duplicatecontentcount' => (int)($integrity['duplicatecontentcount'] ?? 0),
             'draftquestioncount' => (int)($integrity['draftquestioncount'] ?? 0),
             'brokenquestioncount' => (int)($integrity['brokenquestioncount'] ?? 0),
             'nocorrectanswercount' => (int)($integrity['nocorrectanswercount'] ?? 0),
@@ -648,7 +887,8 @@ final class scanner {
                        gi.id AS gradeitemid,
                        COALESCE(gi.gradepass, 0) AS gradepass,
                        COALESCE(gi.grademax, 0) AS gradeitemmax,
-                       COALESCE(gi.locked, 0) AS gradeitemlocked
+                       COALESCE(gi.locked, 0) AS gradeitemlocked,
+                       COALESCE(gi.hidden, 0) AS gradeitemhidden
                   FROM {quiz} q
                   JOIN {course_modules} cm ON cm.course = q.course AND cm.instance = q.id
                   JOIN {modules} m ON m.id = cm.module AND m.name = 'quiz'
@@ -705,6 +945,7 @@ final class scanner {
                     'gradeitemexists' => !empty($quiz->gradeitemid),
                     'gradeitemmax' => (float)$quiz->gradeitemmax,
                     'gradeitemlocked' => !empty($quiz->gradeitemlocked),
+                    'gradeitemhidden' => !empty($quiz->gradeitemhidden),
                     'overridecount' => $override['count'],
                     'maxoverrideattempts' => $override['maxattempts'],
                     'maxoverridetimeclose' => $override['maxtimeclose'],

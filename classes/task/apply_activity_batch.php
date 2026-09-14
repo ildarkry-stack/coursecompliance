@@ -85,11 +85,26 @@ final class apply_activity_batch extends \core\task\adhoc_task {
             return;
         }
 
-        $courselimit = (int)($filter['courselimit'] ?? 0);
+        $courseids = $DB->get_fieldset_sql(
+            "SELECT DISTINCT courseid
+               FROM {tool_coursecompliance_act_change}
+              WHERE batchid = :batchid AND status = :status",
+            ['batchid' => $batchid, 'status' => 'applied']
+        );
+        $courseids = array_values(array_unique(array_filter(array_map('intval', $courseids))));
+        if (!$courseids) {
+            return;
+        }
+        $courselimit = 0;
         $scanid = $DB->insert_record('tool_coursecompliance_scan', (object)[
             'profileid' => $profileid,
             'categoryid' => (int)$batch->categoryid,
             'courselimit' => $courselimit,
+            'scopejson' => json_encode(
+                ['courseids' => $courseids, 'sourcebatchid' => $batchid],
+                JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES
+            ),
+            'scantype' => 'recheck',
             'userid' => (int)$batch->userid,
             'status' => 'queued',
             'courses' => 0,

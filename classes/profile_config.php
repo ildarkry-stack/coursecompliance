@@ -68,6 +68,7 @@ final class profile_config {
             'requirecorrectanswers' => true,
             'requiremarksmatch' => true,
             'requiresinglebankcategory' => true,
+            'compareassessmentstructure' => true,
             'blueprintmode' => 'manual',
             'templatecourseid' => 0,
             'blueprintversion' => 0,

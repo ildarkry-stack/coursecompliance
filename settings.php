@@ -38,6 +38,13 @@ $ADMIN->add('tool_coursecompliance_root', new admin_externalpage(
 ));
 
 $ADMIN->add('tool_coursecompliance_root', new admin_externalpage(
+    'tool_coursecompliance_actions',
+    get_string('nav_actions', 'tool_coursecompliance'),
+    new moodle_url('/admin/tool/coursecompliance/action_center.php'),
+    'tool/coursecompliance:view'
+));
+
+$ADMIN->add('tool_coursecompliance_root', new admin_externalpage(
     'tool_coursecompliance_readiness',
     get_string('nav_audit', 'tool_coursecompliance'),
     new moodle_url('/admin/tool/coursecompliance/readiness.php'),
