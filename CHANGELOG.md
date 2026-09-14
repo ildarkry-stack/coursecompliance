@@ -176,3 +176,10 @@
 - Expanded audit report filters: severity, missing vs incorrect settings, auto-fixable issues, ready courses, assessment period, and course search.
 - Added conservative Safe Auto-fix. It prepares a preview batch for unambiguous Quiz setting corrections and uses the same conflict checks, history, background worker and rollback path as other activity operations.
 - Safe Auto-fix never creates quizzes or questions and never guesses passwords, subnets, or missing dates.
+
+## 0.9.1-alpha - 2026-09-14
+
+- Added an administrator-only compliance warning on the course home page when the latest applicable audit contains problems.
+- Added a course-navigation problem indicator linking directly to the filtered audit report for that course.
+- Indicators always use the newest completed audit applicable to the course category hierarchy, so older findings are not shown after a clean re-scan.
+- Fixed Moodle CodeSniffer whitespace issues in the availability blueprint test and upgrade script.

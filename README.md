@@ -110,3 +110,7 @@ Version 0.8 makes long-running changes easier to understand and introduces conse
 - **Safe Auto-fix** never writes immediately. It first creates the same immutable preview batch used by Activity Operations, then uses conflict detection, background execution, history and safe rollback.
 - Supported automatic corrections include explicit Quiz standards for attempts, time limit, maximum grade, answer shuffling, browser security and review-option visibility. Blueprint mode can also correct explicit values for the same settings plus Quiz visibility.
 - Content-level decisions remain manual: the plugin does not create quizzes, add or remove questions, choose passwords/subnets, invent missing dates, resolve duplicate idnumbers or guess which missing activity should be used.
+
+### Administrator course indicator
+
+Site administrators see a compliance warning on the course home page when the latest applicable completed audit contains critical issues, warnings, or notices. A matching course-navigation item links directly to the problems for that course. Other users do not see the indicator.

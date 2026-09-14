@@ -101,5 +101,4 @@ final class availability_blueprint_test extends \advanced_testcase {
             '{"op":"&","c":[{"type":"grade","id":0}],"showc":[true]}'
         ));
     }
-
 }
