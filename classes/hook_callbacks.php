@@ -34,11 +34,16 @@ use core\hook\output\before_standard_top_of_body_html_generation;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 final class hook_callbacks {
+    /** @var bool Whether the course UI AMD module has already been registered. */
+    private static bool $courseuiregistered = false;
+
     /**
-     * Add an administrator-only warning to the course home page.
+     * Register the administrator-only course status UI as a fallback.
      *
-     * The hook itself is rendered before the theme navbar, so an AMD module
-     * moves the indicator into the main course content after the page is ready.
+     * The course navigation callback is the primary registration path because
+     * it is already known to run on the target installation. This hook remains
+     * as a harmless fallback for themes/layouts which do not build course
+     * navigation in the usual way.
      *
      * @param before_standard_top_of_body_html_generation $hook Output hook.
      */
@@ -54,63 +59,74 @@ final class hook_callbacks {
             return;
         }
 
-        $courseid = (int)$PAGE->course->id;
-        $categoryid = (int)($PAGE->course->category ?? 0);
-        $summary = course_indicator::get_for_course($courseid, $categoryid);
-        if (!$summary) {
+        $summary = course_indicator::get_for_course(
+            (int)$PAGE->course->id,
+            (int)($PAGE->course->category ?? 0)
+        );
+        if ($summary) {
+            self::register_course_ui((int)$PAGE->course->id, $summary);
+        }
+    }
+
+    /**
+     * Register the coloured course-status banners on the course home page.
+     *
+     * @param int $courseid Course id.
+     * @param \stdClass $summary Current course audit summary.
+     */
+    public static function register_course_ui(int $courseid, \stdClass $summary): void {
+        global $PAGE;
+
+        if (self::$courseuiregistered || !is_siteadmin() || $courseid <= 0) {
             return;
         }
+        if (!str_starts_with((string)$PAGE->pagetype, 'course-view-')) {
+            return;
+        }
+        self::$courseuiregistered = true;
 
-        $details = (object)[
-            'critical' => $summary->critical,
-            'warnings' => $summary->warnings,
-            'notices' => $summary->notices,
-            'total' => $summary->total,
-        ];
+        $reporturl = new \moodle_url('/admin/tool/coursecompliance/course_issues.php', [
+            'courseid' => $courseid,
+        ]);
         $scaninfo = (object)[
             'profile' => format_string($summary->profilename),
             'date' => userdate($summary->scandate),
         ];
-        $reporturl = new \moodle_url('/admin/tool/coursecompliance/course_issues.php', [
+        $payload = [
             'courseid' => $courseid,
-        ]);
-        $alertclass = $summary->critical > 0 ? 'alert-danger' : 'alert-warning';
-        $buttonclass = $summary->critical > 0 ? 'btn-outline-danger' : 'btn-outline-dark';
-        $indicatorid = 'tool-coursecompliance-course-indicator';
+            'critical' => (int)$summary->critical,
+            'warnings' => (int)$summary->warnings,
+            'notices' => (int)$summary->notices,
+            'total' => (int)$summary->total,
+            'ready' => (bool)$summary->ready,
+            'criticaltitle' => get_string(
+                'courseindicator_critical_title',
+                'tool_coursecompliance',
+                $summary->critical
+            ),
+            'criticaltext' => get_string('courseindicator_critical_text', 'tool_coursecompliance'),
+            'warningtitle' => get_string(
+                'courseindicator_warning_title',
+                'tool_coursecompliance',
+                $summary->warnings
+            ),
+            'warningtext' => get_string('courseindicator_warning_text', 'tool_coursecompliance'),
+            'noticetitle' => get_string(
+                'courseindicator_notice_title',
+                'tool_coursecompliance',
+                $summary->notices
+            ),
+            'noticetext' => get_string('courseindicator_notice_text', 'tool_coursecompliance'),
+            'readytitle' => get_string('courseindicator_ready_title', 'tool_coursecompliance'),
+            'readytext' => get_string('courseindicator_ready_text', 'tool_coursecompliance'),
+            'lastscan' => get_string('courseindicator_lastscan', 'tool_coursecompliance', $scaninfo),
+            'reviewlabel' => get_string(
+                $summary->ready ? 'courseindicator_review_ready' : 'courseindicator_review',
+                'tool_coursecompliance'
+            ),
+            'reporturl' => $reporturl->out(false),
+        ];
 
-        $content = \html_writer::start_div(
-            'd-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-2'
-        );
-        $content .= \html_writer::start_div();
-        $content .= \html_writer::tag(
-            'strong',
-            $hook->renderer->pix_icon('i/warning', '') . ' ' .
-                get_string('courseindicator_title', 'tool_coursecompliance')
-        );
-        $content .= \html_writer::div(
-            get_string('courseindicator_summary', 'tool_coursecompliance', $details),
-            'mt-1'
-        );
-        $content .= \html_writer::div(
-            get_string('courseindicator_lastscan', 'tool_coursecompliance', $scaninfo),
-            'small mt-1'
-        );
-        $content .= \html_writer::end_div();
-        $content .= \html_writer::link(
-            $reporturl,
-            get_string('courseindicator_review', 'tool_coursecompliance'),
-            ['class' => 'btn btn-sm ' . $buttonclass]
-        );
-        $content .= \html_writer::end_div();
-
-        $indicator = \html_writer::div(
-            $content,
-            'alert ' . $alertclass . ' shadow-sm mb-3',
-            ['role' => 'alert']
-        );
-        $hook->add_html(\html_writer::div($indicator, 'tool-coursecompliance-course-indicator', [
-            'id' => $indicatorid,
-        ]));
-        $PAGE->requires->js_call_amd('tool_coursecompliance/course_indicator', 'init', [$indicatorid]);
+        $PAGE->requires->js_call_amd('tool_coursecompliance/course_indicator', 'init', [$payload]);
     }
 }

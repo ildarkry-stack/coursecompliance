@@ -23,7 +23,7 @@
  */
 
 /**
- * Add a problem indicator to course navigation for site administrators.
+ * Add a course-compliance indicator to course navigation for site administrators.
  *
  * @param navigation_node $parentnode Course navigation node.
  * @param stdClass $course Course record.
@@ -46,15 +46,20 @@ function tool_coursecompliance_extend_navigation_course(
         return;
     }
 
+    \tool_coursecompliance\hook_callbacks::register_course_ui((int)$course->id, $summary);
+
     $url = new moodle_url('/admin/tool/coursecompliance/course_issues.php', [
         'courseid' => (int)$course->id,
     ]);
+    $navlabel = $summary->ready
+        ? get_string('courseindicator_nav_ready', 'tool_coursecompliance')
+        : get_string('courseindicator_nav', 'tool_coursecompliance', $summary->total);
     $parentnode->add(
-        get_string('courseindicator_nav', 'tool_coursecompliance', $summary->total),
+        $navlabel,
         $url,
         navigation_node::TYPE_SETTING,
         null,
         'tool_coursecompliance_courseissues',
-        new pix_icon('i/warning', '')
+        new pix_icon($summary->ready ? 'i/info' : 'i/warning', '')
     );
 }

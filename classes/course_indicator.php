@@ -25,7 +25,7 @@
 namespace tool_coursecompliance;
 
 /**
- * Resolves current audit problems for a course.
+ * Resolves the latest audit state for a course.
  *
  * @package    tool_coursecompliance
  * @copyright  2026 MIA Academy
@@ -36,15 +36,16 @@ final class course_indicator {
     private static array $cache = [];
 
     /**
-     * Return the current problem summary for a course.
+     * Return the current audit summary for a course.
      *
-     * The latest completed scan of every enabled profile that applies to the
-     * course category is considered. This prevents a newer scan of another
-     * profile from hiding still-current problems found by a different profile.
+     * The latest completed scan of every enabled profile that actually
+     * contains an assessment snapshot for this course is considered. This
+     * allows the UI to distinguish a genuinely clean course from a course
+     * which has not been audited yet.
      *
      * @param int $courseid Course id.
-     * @param int $categoryid Current course category id.
-     * @return null|\stdClass Problem summary, or null when all current audits are clean/unavailable.
+     * @param int $categoryid Current course category id. Retained for callback compatibility.
+     * @return null|\stdClass Audit summary, or null when the course has not been audited yet.
      */
     public static function get_for_course(int $courseid, int $categoryid): ?\stdClass {
         global $DB;
@@ -57,26 +58,16 @@ final class course_indicator {
             return null;
         }
 
-        $path = (string)$DB->get_field('course_categories', 'path', ['id' => $categoryid]);
-        $categoryids = array_values(array_unique(array_filter(
-            array_map('intval', explode('/', $path)),
-            static fn(int $id): bool => $id > 0
-        )));
-        if (!in_array($categoryid, $categoryids, true)) {
-            $categoryids[] = $categoryid;
-        }
-        if (!$categoryids) {
-            self::$cache[$courseid] = null;
-            return null;
-        }
-
-        [$insql, $params] = $DB->get_in_or_equal($categoryids, SQL_PARAMS_NAMED, 'indicatorcat');
-        $params['scanstatus'] = 'complete';
-        $params['profileenabled'] = 1;
+        $params = [
+            'courseid' => $courseid,
+            'scanstatus' => 'complete',
+            'profileenabled' => 1,
+        ];
         $latestsql = "SELECT s.profileid, MAX(s.id) AS scanid
                        FROM {tool_coursecompliance_scan} s
                        JOIN {tool_coursecompliance_profile} p ON p.id = s.profileid
-                      WHERE s.categoryid $insql
+                       JOIN {tool_coursecompliance_assessment} a ON a.scanid = s.id
+                      WHERE a.courseid = :courseid
                             AND s.status = :scanstatus
                             AND p.enabled = :profileenabled
                    GROUP BY s.profileid";
@@ -120,7 +111,7 @@ final class course_indicator {
 
         $summary = (object)[
             'scanid' => 0,
-            'scanids' => [],
+            'scanids' => $scanids,
             'profileid' => 0,
             'profilename' => '',
             'profilecount' => 0,
@@ -129,40 +120,31 @@ final class course_indicator {
             'warnings' => 0,
             'notices' => 0,
             'total' => 0,
+            'ready' => false,
         ];
         $profiles = [];
-        $problemdate = 0;
         foreach ($scans as $scan) {
             $scanid = (int)$scan->id;
             $scanissues = $byscan[$scanid] ?? ['critical' => 0, 'warning' => 0, 'notice' => 0];
-            $total = array_sum($scanissues);
-            if ($total <= 0) {
-                continue;
-            }
-
             $summary->critical += (int)$scanissues['critical'];
             $summary->warnings += (int)$scanissues['warning'];
             $summary->notices += (int)$scanissues['notice'];
-            $summary->scanids[] = $scanid;
             $profiles[] = (string)$scan->profilename;
+
             $scandate = (int)($scan->finishedat ?: $scan->timecreated);
-            if ($scandate >= $problemdate) {
-                $problemdate = $scandate;
+            if ($scandate >= $summary->scandate) {
+                $summary->scandate = $scandate;
                 $summary->scanid = $scanid;
                 $summary->profileid = (int)$scan->profileid;
             }
         }
 
         $summary->total = $summary->critical + $summary->warnings + $summary->notices;
-        if ($summary->total <= 0) {
-            self::$cache[$courseid] = null;
-            return null;
-        }
-
+        $summary->ready = $summary->total === 0;
         $profiles = array_values(array_unique($profiles));
         $summary->profilename = implode(', ', $profiles);
         $summary->profilecount = count($profiles);
-        $summary->scandate = $problemdate;
+
         self::$cache[$courseid] = $summary;
         return $summary;
     }

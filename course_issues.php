@@ -57,7 +57,20 @@ echo html_writer::div(
 );
 
 if (!$summary) {
+    echo $OUTPUT->notification(get_string('courseissues_notchecked', 'tool_coursecompliance'), 'info');
+    echo $OUTPUT->footer();
+    exit;
+}
+
+if ($summary->ready) {
     echo $OUTPUT->notification(get_string('courseissues_clean', 'tool_coursecompliance'), 'success');
+    echo html_writer::div(
+        get_string('courseindicator_lastscan', 'tool_coursecompliance', (object)[
+            'profile' => format_string($summary->profilename),
+            'date' => userdate($summary->scandate),
+        ]),
+        'text-muted small'
+    );
     echo $OUTPUT->footer();
     exit;
 }

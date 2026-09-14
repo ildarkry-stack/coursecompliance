@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.9.3-alpha
+
+- Replaced the unreliable server-rendered course banner placement with a navigation-triggered AMD status panel.
+- Site administrators now see coloured compliance banners immediately on the course home page: red for critical issues, amber for warnings, blue for notices, and green when the course is fully ready.
+- A clean audited course is now distinguished from a course that has never been audited.
+- The course navigation shows a ready state when the latest applicable audits contain no problems.
+- The status panel links directly to the course-specific compliance report and shows the latest audit time/profile.
+
 ## 0.9.2-alpha
 
 - Fixed the administrator course warning placement: the banner is moved into the visible course content area.
