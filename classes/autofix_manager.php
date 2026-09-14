@@ -276,19 +276,19 @@ final class autofix_manager {
             throw new \moodle_exception('autofixmixedscans', 'tool_coursecompliance');
         }
 
-        $by_scan = [];
+        $byscan = [];
         foreach ($results as $result) {
-            $by_scan[(int)$result->scanid][] = (int)$result->id;
+            $byscan[(int)$result->scanid][] = (int)$result->id;
         }
-        if (count($by_scan) === 1) {
-            $scanid = (int)array_key_first($by_scan);
-            return $this->prepare_scan($scanid, $userid, $by_scan[$scanid]);
+        if (count($byscan) === 1) {
+            $scanid = (int)array_key_first($byscan);
+            return $this->prepare_scan($scanid, $userid, $byscan[$scanid]);
         }
 
         $batchids = [];
         $createdbatchids = [];
         try {
-            foreach ($by_scan as $scanid => $ids) {
+            foreach ($byscan as $scanid => $ids) {
                 $batchid = $this->prepare_scan((int)$scanid, $userid, $ids);
                 $batchids[] = $batchid;
                 $createdbatchids[] = $batchid;

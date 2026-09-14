@@ -24,7 +24,6 @@
 
 defined('MOODLE_INTERNAL') || die();
 
-$string['pluginname'] = 'Центр контроля качества курсов';
 $string['accesschecks'] = 'Доступ и безопасность браузера';
 $string['actioncenter'] = 'Центр проблем';
 $string['actioncenterclear'] = 'По выбранным фильтрам текущих проблем соответствия нет.';
@@ -499,6 +498,7 @@ $string['periodclose'] = 'Закрытие / срок сдачи';
 $string['periodopen'] = 'Открытие / начало приёма';
 $string['perpage'] = 'Строк на странице';
 $string['plugincategory'] = 'Контроль качества курсов';
+$string['pluginname'] = 'Центр контроля качества курсов';
 $string['pluginnavigation'] = 'Навигация по контролю качества курсов';
 $string['positivevalueexpected'] = 'Значение не может быть отрицательным.';
 $string['prepareautofix'] = 'Подготовить автоисправление ({$a})';

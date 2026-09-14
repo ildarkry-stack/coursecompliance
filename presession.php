@@ -100,8 +100,11 @@ foreach ($courses as $course) {
     $state = $states[(int)$course->id];
     $blockers = [];
     if ((string)$state->status !== 'ready') {
-        $blockers[] = get_string('coursecomplianceissuescount', 'tool_coursecompliance',
-            (int)$state->critical + (int)$state->warnings + (int)$state->notices);
+        $blockers[] = get_string(
+            'coursecomplianceissuescount',
+            'tool_coursecompliance',
+            (int)$state->critical + (int)$state->warnings + (int)$state->notices
+        );
     }
     foreach ($requiredtypes as $type) {
         $assessment = $assessmentmap[(int)$course->id][$type] ?? null;

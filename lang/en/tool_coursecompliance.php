@@ -24,7 +24,6 @@
 
 defined('MOODLE_INTERNAL') || die();
 
-$string['pluginname'] = 'Course compliance center';
 $string['accesschecks'] = 'Access and browser security';
 $string['actioncenter'] = 'Action Center';
 $string['actioncenterclear'] = 'No current compliance problems match these filters.';
@@ -499,6 +498,7 @@ $string['periodclose'] = 'Close / due date';
 $string['periodopen'] = 'Open / submissions from';
 $string['perpage'] = 'Rows per page';
 $string['plugincategory'] = 'Course quality control';
+$string['pluginname'] = 'Course compliance center';
 $string['pluginnavigation'] = 'Course Compliance navigation';
 $string['positivevalueexpected'] = 'Values must not be negative.';
 $string['prepareautofix'] = 'Prepare auto-fix ({$a})';
