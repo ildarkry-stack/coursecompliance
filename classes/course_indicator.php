@@ -109,9 +109,9 @@ final class course_indicator {
             $value = (int)$count->issuecount;
             if ($count->severity === 'critical') {
                 $summary->critical = $value;
-            } elseif ($count->severity === 'warning') {
+            } else if ($count->severity === 'warning') {
                 $summary->warnings = $value;
-            } elseif ($count->severity === 'notice') {
+            } else if ($count->severity === 'notice') {
                 $summary->notices = $value;
             }
         }
