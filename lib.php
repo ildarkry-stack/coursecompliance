@@ -46,8 +46,7 @@ function tool_coursecompliance_extend_navigation_course(
         return;
     }
 
-    $url = new moodle_url('/admin/tool/coursecompliance/report.php', [
-        'scanid' => $summary->scanid,
+    $url = new moodle_url('/admin/tool/coursecompliance/course_issues.php', [
         'courseid' => (int)$course->id,
     ]);
     $parentnode->add(

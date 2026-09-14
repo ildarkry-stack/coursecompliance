@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.9.2-alpha
+
+- Fixed the administrator course warning placement: the banner is moved into the visible course content area.
+- Course indicators now aggregate the latest applicable scan for each enabled profile instead of letting an unrelated newer scan hide problems.
+- Added a dedicated administrator page with the current problems for one course.
+
 ## 0.9.0-alpha — 2026-09-14
 
 - Uses Moodle's native Restrict access editor for exam/resit profile rules; raw JSON is not exposed to administrators.

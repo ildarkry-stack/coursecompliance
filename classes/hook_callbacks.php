@@ -37,6 +37,9 @@ final class hook_callbacks {
     /**
      * Add an administrator-only warning to the course home page.
      *
+     * The hook itself is rendered before the theme navbar, so an AMD module
+     * moves the indicator into the main course content after the page is ready.
+     *
      * @param before_standard_top_of_body_html_generation $hook Output hook.
      */
     public static function before_standard_top_of_body_html_generation(
@@ -68,18 +71,21 @@ final class hook_callbacks {
             'profile' => format_string($summary->profilename),
             'date' => userdate($summary->scandate),
         ];
-        $reporturl = new \moodle_url('/admin/tool/coursecompliance/report.php', [
-            'scanid' => $summary->scanid,
+        $reporturl = new \moodle_url('/admin/tool/coursecompliance/course_issues.php', [
             'courseid' => $courseid,
         ]);
         $alertclass = $summary->critical > 0 ? 'alert-danger' : 'alert-warning';
         $buttonclass = $summary->critical > 0 ? 'btn-outline-danger' : 'btn-outline-dark';
+        $indicatorid = 'tool-coursecompliance-course-indicator';
 
-        $content = \html_writer::start_div('d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-2');
+        $content = \html_writer::start_div(
+            'd-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-2'
+        );
         $content .= \html_writer::start_div();
         $content .= \html_writer::tag(
             'strong',
-            $hook->renderer->pix_icon('i/warning', '') . ' ' . get_string('courseindicator_title', 'tool_coursecompliance')
+            $hook->renderer->pix_icon('i/warning', '') . ' ' .
+                get_string('courseindicator_title', 'tool_coursecompliance')
         );
         $content .= \html_writer::div(
             get_string('courseindicator_summary', 'tool_coursecompliance', $details),
@@ -97,9 +103,14 @@ final class hook_callbacks {
         );
         $content .= \html_writer::end_div();
 
-        $hook->add_html(\html_writer::div(
-            \html_writer::div($content, 'alert ' . $alertclass . ' shadow-sm mb-3', ['role' => 'alert']),
-            'container-fluid px-3 pt-3'
-        ));
+        $indicator = \html_writer::div(
+            $content,
+            'alert ' . $alertclass . ' shadow-sm mb-3',
+            ['role' => 'alert']
+        );
+        $hook->add_html(\html_writer::div($indicator, 'tool-coursecompliance-course-indicator', [
+            'id' => $indicatorid,
+        ]));
+        $PAGE->requires->js_call_amd('tool_coursecompliance/course_indicator', 'init', [$indicatorid]);
     }
 }
