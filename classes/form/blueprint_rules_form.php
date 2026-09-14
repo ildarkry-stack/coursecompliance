@@ -323,13 +323,15 @@ final class blueprint_rules_form extends \moodleform {
                 'mt-3 mb-2'
             )
         );
-        foreach ([
-            'question_integrity' => 'questionintegrityenabled',
-            'question_ready_only' => 'questionreadyonly',
-            'question_correct_answer' => 'questioncorrectanswerrequired',
-            'marks_match_grade' => 'questionmarksmatchgrade',
-            'single_bank_category' => 'questionsinglebankcategory',
-        ] as $field => $stringkey) {
+        foreach (
+            [
+                'question_integrity' => 'questionintegrityenabled',
+                'question_ready_only' => 'questionreadyonly',
+                'question_correct_answer' => 'questioncorrectanswerrequired',
+                'marks_match_grade' => 'questionmarksmatchgrade',
+                'single_bank_category' => 'questionsinglebankcategory',
+            ] as $field => $stringkey
+        ) {
             $mform->addElement(
                 'advcheckbox',
                 $prefix . $field,

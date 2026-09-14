@@ -161,8 +161,11 @@ if ($latestcomplete) {
     $metrics[] = [
         'label' => get_string('notreadycourses', 'tool_coursecompliance'),
         'value' => $notreadycourses,
-        'help' => get_string('latestscanproblemshelp', 'tool_coursecompliance',
-            (int)$latestcomplete->critical + (int)$latestcomplete->warnings + (int)$latestcomplete->notices),
+        'help' => get_string(
+            'latestscanproblemshelp',
+            'tool_coursecompliance',
+            (int)$latestcomplete->critical + (int)$latestcomplete->warnings + (int)$latestcomplete->notices
+        ),
         'tone' => $notreadycourses > 0 ? 'danger' : 'success',
         'url' => new moodle_url('/admin/tool/coursecompliance/report.php', [
             'scanid' => (int)$latestcomplete->id,
