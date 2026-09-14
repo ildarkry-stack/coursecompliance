@@ -185,6 +185,49 @@ final class availability_blueprint {
     }
 
     /**
+     * Check whether a denormalised Moodle availability tree has valid references.
+     *
+     * Empty restrictions are valid. Completion, grade, group and grouping conditions
+     * must resolve to a positive database id before the rule can be applied safely.
+     *
+     * @param string $json Raw Moodle availability JSON.
+     * @return bool True when all referenced ids are resolved.
+     */
+    public static function is_resolved_json(string $json): bool {
+        $json = trim($json);
+        if ($json === '') {
+            return true;
+        }
+        $decoded = json_decode($json, true);
+        if (!is_array($decoded)) {
+            return false;
+        }
+        return self::node_is_resolved($decoded);
+    }
+
+    /**
+     * Validate references in one availability tree node.
+     *
+     * @param array $node Availability node.
+     * @return bool True when the node and its children are resolved.
+     */
+    private static function node_is_resolved(array $node): bool {
+        $type = (string)($node['type'] ?? '');
+        if ($type === 'completion' && (int)($node['cm'] ?? 0) <= 0) {
+            return false;
+        }
+        if (in_array($type, ['grade', 'group', 'grouping'], true) && (int)($node['id'] ?? 0) <= 0) {
+            return false;
+        }
+        foreach ($node as $child) {
+            if (is_array($child) && !self::node_is_resolved($child)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
      * Normalise one availability tree node recursively.
      *
      * @param array $value Node.

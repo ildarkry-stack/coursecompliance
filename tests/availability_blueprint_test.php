@@ -85,4 +85,21 @@ final class availability_blueprint_test extends \advanced_testcase {
         ];
         $this->assertSame('', availability_blueprint::normalise_json('{"op":"&","c":[],"showc":[]}', $maps));
     }
+
+    /**
+     * Unresolved activity and grade references are rejected before auto-fix.
+     */
+    public function test_resolved_json_requires_positive_dependency_ids(): void {
+        $this->assertTrue(availability_blueprint::is_resolved_json(''));
+        $this->assertTrue(availability_blueprint::is_resolved_json(
+            '{"op":"&","c":[{"type":"completion","cm":11,"e":2}],"showc":[true]}'
+        ));
+        $this->assertFalse(availability_blueprint::is_resolved_json(
+            '{"op":"&","c":[{"type":"completion","cm":0,"e":2}],"showc":[true]}'
+        ));
+        $this->assertFalse(availability_blueprint::is_resolved_json(
+            '{"op":"&","c":[{"type":"grade","id":0}],"showc":[true]}'
+        ));
+    }
+
 }

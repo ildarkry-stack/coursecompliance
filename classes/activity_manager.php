@@ -182,6 +182,7 @@ final class activity_manager {
         $quizsettings = [];
         $rename = null;
         $visibility = null;
+        $availability = null;
         foreach ($changes as $change) {
             if (in_array($change->fieldname, activity_repository::date_fields($activity->modname), true)) {
                 $datechanges[$change->fieldname] = (int)$change->newvalue;
@@ -194,6 +195,8 @@ final class activity_manager {
                 $rename = $change->newvalue;
             } else if ($change->fieldname === 'visibilitystate') {
                 $visibility = $change->newvalue;
+            } else if ($change->fieldname === 'availability') {
+                $availability = (string)$change->newvalue;
             }
         }
 
@@ -261,6 +264,19 @@ final class activity_manager {
             set_coursemodule_name($activity->cmid, $rename);
         }
 
+        if ($availability !== null) {
+            $DB->set_field(
+                'course_modules',
+                'availability',
+                trim($availability) === '' ? null : $availability,
+                ['id' => $activity->cmid]
+            );
+            $cm = get_coursemodule_from_id('', $activity->cmid, $activity->courseid, false, MUST_EXIST);
+            \core\event\course_module_updated::create_from_cm($cm)->trigger();
+            \course_modinfo::purge_course_module_cache($activity->courseid, $activity->cmid);
+            rebuild_course_cache($activity->courseid, false, true);
+        }
+
         if ($visibility !== null) {
             require_once($CFG->dirroot . '/course/lib.php');
             if ($visibility === 'stealth' && empty($CFG->allowstealth)) {
@@ -298,6 +314,9 @@ final class activity_manager {
         }
         if ($field === 'visibilitystate') {
             return $activity->visibilitystate;
+        }
+        if ($field === 'availability') {
+            return (string)($activity->availability ?? '');
         }
         if ($activity->modname === 'quiz' && in_array($field, self::QUIZ_SETTING_FIELDS, true)) {
             return $DB->get_field('quiz', $field, ['id' => $activity->instanceid], MUST_EXIST);

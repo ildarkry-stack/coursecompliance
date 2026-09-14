@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.9.0-alpha — 2026-09-14
+
+- Uses Moodle's native Restrict access editor for exam/resit profile rules; raw JSON is not exposed to administrators.
+- Completion and grade dependency selectors are limited to the configured Exam, Resit 1 and Resit 2 targets and show those friendly labels directly.
+- Stores availability rules portably by assessment idnumber and resolves them to course-specific IDs only when editing/applying.
+- Adds safe auto-fix for Blueprint assessment access restrictions when every referenced exam/resit/group/grouping can be resolved unambiguously.
+- Automatically queues a fresh compliance scan after a successful safe auto-fix batch and links the new report from the operation page.
+
+
 ## 0.7.2-alpha
 
 - Replaced automatic chart colours with a consistent semantic palette across reports.

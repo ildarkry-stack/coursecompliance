@@ -130,7 +130,7 @@ final class autofix_manager {
             "module = :moduleid AND instance $instancesql AND deletioninprogress = 0",
             ['moduleid' => $moduleid] + $instanceparams,
             '',
-            'id,course,instance,visible,visibleoncoursepage'
+            'id,course,instance,visible,visibleoncoursepage,availability'
         );
         $cmmap = [];
         foreach ($cms as $cm) {
@@ -290,6 +290,7 @@ final class autofix_manager {
             'BLUEPRINT_ASSESSMENT_BROWSERSECURITY',
             'BLUEPRINT_ASSESSMENT_REVIEW',
             'BLUEPRINT_ASSESSMENT_VISIBILITY',
+            'BLUEPRINT_ASSESSMENT_AVAILABILITY',
         ];
         if (!in_array($rulecode, $supported, true)) {
             return false;
@@ -312,6 +313,12 @@ final class autofix_manager {
             return false;
         }
         $templatesettings = is_array($template) ? ($template['settings'] ?? []) : [];
+        if ($field === 'availability') {
+            if ($source === 'template') {
+                return array_key_exists('availability', $template);
+            }
+            return array_key_exists('availability_manual', $rules);
+        }
         if ($field === 'review') {
             if ($source === 'template') {
                 foreach (self::REVIEW_FIELDS as $reviewfield) {
@@ -371,6 +378,26 @@ final class autofix_manager {
         $templatesettings = $template['settings'] ?? [];
         $field = self::blueprint_field((string)$result->rulecode);
 
+        if ($field === 'availability') {
+            $source = (string)($rules['availability_source'] ?? 'ignore');
+            $portable = $source === 'template'
+                ? (string)($template['availability'] ?? '')
+                : (string)($rules['availability_manual'] ?? '');
+            $targetidnumbers = [];
+            foreach (['exam', 'resit1', 'resit2'] as $targettype) {
+                $targetidnumber = trim((string)($config[$targettype . 'idnumber'] ?? $targettype));
+                if ($targetidnumber !== '') {
+                    $targetidnumbers[] = $targetidnumber;
+                }
+            }
+            $maps = availability_blueprint::build_maps((int)$cm->course, $targetidnumbers);
+            $raw = availability_blueprint::denormalise_json($portable, $maps);
+            if (!availability_blueprint::is_resolved_json($raw)) {
+                return [];
+            }
+            return ['availability' => $raw];
+        }
+
         if ($field === 'review') {
             $source = (string)($rules['review_source'] ?? 'ignore');
             $values = [];
@@ -418,6 +445,7 @@ final class autofix_manager {
             'BLUEPRINT_ASSESSMENT_BROWSERSECURITY' => 'browsersecurity',
             'BLUEPRINT_ASSESSMENT_REVIEW' => 'review',
             'BLUEPRINT_ASSESSMENT_VISIBILITY' => 'visible',
+            'BLUEPRINT_ASSESSMENT_AVAILABILITY' => 'availability',
             default => '',
         };
     }
@@ -454,6 +482,9 @@ final class autofix_manager {
      * @return int|float|string
      */
     private function current_value(\stdClass $quiz, \stdClass $cm, string $field): int|float|string {
+        if ($field === 'availability') {
+            return (string)($cm->availability ?? '');
+        }
         if ($field === 'visibilitystate') {
             if (empty($cm->visible)) {
                 return 'hide';

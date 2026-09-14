@@ -72,9 +72,12 @@ $batchconfig = json_decode((string)$batch->filterjson, true) ?: [];
  *
  * @param \stdClass $change Change record.
  * @param string $value Stored value.
+ * @param array $batchconfig Decoded batch configuration.
  * @return string Display value.
  */
-function tool_coursecompliance_format_change_value(\stdClass $change, string $value): string {
+function tool_coursecompliance_format_change_value(\stdClass $change, string $value, array $batchconfig = []): string {
+    global $DB;
+
     $datefields = [
         'timeopen',
         'timeclose',
@@ -89,6 +92,43 @@ function tool_coursecompliance_format_change_value(\stdClass $change, string $va
     }
     if ($change->fieldname === 'visibilitystate') {
         return get_string('visibility_' . $value, 'tool_coursecompliance');
+    }
+    if ($change->fieldname === 'availability') {
+        if (trim($value) === '') {
+            return get_string('none', 'tool_coursecompliance');
+        }
+        static $profileconfigs = [];
+        static $coursemaps = [];
+        $profileid = (int)($batchconfig['profileid'] ?? 0);
+        if ($profileid > 0) {
+            if (!array_key_exists($profileid, $profileconfigs)) {
+                $profile = $DB->get_record('tool_coursecompliance_profile', ['id' => $profileid]);
+                $profileconfigs[$profileid] = $profile
+                    ? \tool_coursecompliance\profile_config::decode($profile->configjson)
+                    : [];
+            }
+            $config = $profileconfigs[$profileid];
+            $targetidnumbers = [];
+            foreach (['exam', 'resit1', 'resit2'] as $type) {
+                $idnumber = trim((string)($config[$type . 'idnumber'] ?? $type));
+                if ($idnumber !== '') {
+                    $targetidnumbers[] = $idnumber;
+                }
+            }
+            $mapkey = (int)$change->courseid . ':' . implode('|', $targetidnumbers);
+            if (!isset($coursemaps[$mapkey])) {
+                $coursemaps[$mapkey] = \tool_coursecompliance\availability_blueprint::build_maps(
+                    (int)$change->courseid,
+                    $targetidnumbers
+                );
+            }
+            $portable = \tool_coursecompliance\availability_blueprint::normalise_json(
+                $value,
+                $coursemaps[$mapkey]
+            );
+            return s(\tool_coursecompliance\blueprint_manager::format_availability_for_display($portable));
+        }
+        return get_string('restrictions_configured', 'tool_coursecompliance');
     }
     if ($change->fieldname === 'timelimit') {
         return (int)$value > 0 ? format_time((int)$value) : get_string('none', 'tool_coursecompliance');
@@ -314,8 +354,8 @@ if ($batch->action === 'session_schedule') {
                 $course ? html_writer::link($courseurl, format_string($course->fullname)) : (string)$change->courseid,
                 $activitylabel,
                 get_string('field_' . $change->fieldname, 'tool_coursecompliance'),
-                tool_coursecompliance_format_change_value($change, $change->oldvalue),
-                tool_coursecompliance_format_change_value($change, $change->newvalue),
+                tool_coursecompliance_format_change_value($change, $change->oldvalue, $batchconfig),
+                tool_coursecompliance_format_change_value($change, $change->newvalue, $batchconfig),
                 get_string('changestatus_' . $change->status, 'tool_coursecompliance'),
                 s($change->message),
             ];
@@ -355,7 +395,17 @@ if ($batch->status === 'preview' && (int)$batch->totalchanges > 0 && $canmanageb
 }
 
 if ($batch->action === 'autofix_scan' && in_array($batch->status, ['complete', 'partial'], true)) {
-    echo html_writer::div(get_string('autofixrescanrequired', 'tool_coursecompliance'), 'alert alert-info mt-3');
+    $rescanid = (int)($batchconfig['rescanid'] ?? 0);
+    if ($rescanid > 0) {
+        $rescanurl = new moodle_url('/admin/tool/coursecompliance/report.php', ['scanid' => $rescanid]);
+        echo html_writer::div(
+            get_string('autofixrescanqueued', 'tool_coursecompliance') . ' ' .
+                html_writer::link($rescanurl, get_string('viewreport', 'tool_coursecompliance')),
+            'alert alert-info mt-3'
+        );
+    } else {
+        echo html_writer::div(get_string('autofixrescanrequired', 'tool_coursecompliance'), 'alert alert-info mt-3');
+    }
 }
 
 if (

@@ -402,5 +402,12 @@ function xmldb_tool_coursecompliance_upgrade(int $oldversion): bool {
         upgrade_plugin_savepoint(true, 2026091110, 'tool', 'coursecompliance');
     }
 
+
+    if ($oldversion < 2026091400) {
+        // Version 0.9 adds profile-driven native availability editing and safe remediation.
+        // No database schema changes are required.
+        upgrade_plugin_savepoint(true, 2026091400, 'tool', 'coursecompliance');
+    }
+
     return true;
 }

@@ -105,20 +105,24 @@ $form->set_data((object)[
     'availabilityconditionsjson' => $rawjson,
 ]);
 
+$targetlabels = [];
+foreach (['exam', 'resit1', 'resit2'] as $type) {
+    $idnumber = trim((string)($config[$type . 'idnumber'] ?? $type));
+    if ($idnumber !== '') {
+        $targetlabels[$idnumber] = get_string('period_' . $type, 'tool_coursecompliance') . ' (' . $idnumber . ')';
+    }
+}
 $filterconfig = [
     'allowedcmids' => array_values($maps['idnumbertocm']),
     'allowedgradeids' => array_values($maps['idnumbertogradeid']),
-    'cmlabels' => array_combine(
-        array_map('strval', array_values($maps['idnumbertocm'])),
-        array_map(
-            static fn(string $idnumber): string => $maps['targetlabels'][$idnumber] ?? $idnumber,
-            array_keys($maps['idnumbertocm'])
-        )
-    ) ?: [],
+    'cmlabels' => [],
     'gradelabels' => [],
 ];
+foreach ($maps['idnumbertocm'] as $idnumber => $cmid) {
+    $filterconfig['cmlabels'][(string)$cmid] = $targetlabels[$idnumber] ?? $idnumber;
+}
 foreach ($maps['idnumbertogradeid'] as $idnumber => $gradeid) {
-    $filterconfig['gradelabels'][(string)$gradeid] = $maps['targetlabels'][$idnumber] ?? $idnumber;
+    $filterconfig['gradelabels'][(string)$gradeid] = $targetlabels[$idnumber] ?? $idnumber;
 }
 $PAGE->requires->js_call_amd('tool_coursecompliance/availability_filter', 'init', [$filterconfig]);
 
