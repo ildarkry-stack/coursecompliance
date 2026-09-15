@@ -1,5 +1,23 @@
 # Course Compliance Center (`tool_coursecompliance`)
 
+## 0.17 Compatibility & Release Readiness
+
+CourseCompliance 0.17 is the first **beta** line and targets one shared codebase for **Moodle 5.0, 5.1 and 5.2**. GitHub Actions now separates release-quality static analysis from a compatibility matrix that installs the plugin and runs PHPUnit across supported Moodle/PHP combinations on PostgreSQL, with MySQL 8.4 coverage for every supported Moodle branch.
+
+The plugin metadata now declares Moodle 5.0 as the minimum version and Moodle 5.2 as the highest tested branch. A cross-version PHPUnit smoke suite verifies the Moodle hook, Quiz, Question Bank, AdHoc task and messaging APIs required by the plugin. Publication-oriented compatibility, security, contribution and release-checklist documents are included in the repository.
+
+See [`docs/COMPATIBILITY.md`](docs/COMPATIBILITY.md) for the supported-version policy.
+
+### Installation
+
+Install the ZIP through Moodle's plugin installer, or copy the `coursecompliance` directory to the administration-tool plugin directory for your Moodle branch:
+
+- Moodle 5.0 source tree: `admin/tool/coursecompliance`;
+- Moodle 5.1 and 5.2 source tree: `public/admin/tool/coursecompliance`.
+
+Then run the normal Moodle upgrade and keep cron enabled. Moodle CLI scripts remain under `<moodleroot>/admin/cli/`; CourseCompliance audits and confirmed bulk operations depend on AdHoc task processing.
+
+
 ## 0.16 Architecture & Scale
 
 Version 0.16 changes how large audits execute without changing the administrator workflow. A selected set of courses is now divided into independent Moodle AdHoc worker batches and aggregated into one parent report. The default worker size is 10 courses and can be changed in CourseCompliance settings. This reduces peak memory, limits the impact of a single heavy course and makes audits of hundreds of courses practical with multiple Moodle task workers.
@@ -39,7 +57,7 @@ Safe AutoFix remains deliberately conservative. It can repair only settings for 
 
 The administration UI uses a consistent visual system across dashboard, standards, reports, session planning and activity operations. The dashboard includes course readiness (ready vs. needs attention), while the standards editor uses semantic sections instead of letter/number prefixes.
 
-Administrative quality-control, assessment readiness and safe bulk-operations toolkit for **Moodle 5.1** and large installations.
+Administrative quality-control, assessment readiness and safe bulk-operations toolkit for **Moodle 5.0–5.2** and large installations.
 
 ## 0.3.0-alpha
 

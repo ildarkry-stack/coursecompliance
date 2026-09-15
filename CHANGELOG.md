@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.17.0-beta — 2026-09-15
+
+- Declared one supported codebase for Moodle 5.0, 5.1 and 5.2.
+- Lowered the minimum Moodle requirement to 5.0 and promoted the plugin maturity to beta.
+- Added a GitHub Actions compatibility matrix covering supported PHP ranges on PostgreSQL 16 plus MySQL 8.4 smoke coverage for every supported Moodle branch.
+- Split release-quality static checks from cross-version PHPUnit jobs to keep CI useful without repeating expensive lint jobs for every matrix entry.
+- Added cross-version API regression tests for output hooks, Quiz grading, Question Bank inspection, AdHoc tasks and Moodle Messaging.
+- Added compatibility, security, contribution and release-readiness documentation in preparation for public distribution.
+- No database schema changes are introduced in 0.17.
+
 ## 0.16.0-alpha — 2026-09-15
 
 - Added scalable parent/worker scan orchestration. Large selected audits are split into independent Moodle AdHoc tasks instead of one long-running scanner task.
