@@ -155,3 +155,9 @@ The audit also records the question-bank category spread for each target. When a
 
 Audit launches can be limited to 1, 5, 10, 20, 50 or 100 courses for staged testing, or run against all courses for a complete readiness result.
 
+
+## 0.15 Current-state reports and staged course audits
+
+The Action Center now resolves the newest completed check for every course/profile pair instead of treating an older category-wide scan as permanently authoritative. This means a newer clean audit of one course immediately removes obsolete findings from the current problem list, while historical scan reports remain available as historical snapshots.
+
+Audit launch is now staged for large installations: choose a standard and category, load its course tree, then select the exact courses to inspect. The picker shows each course's latest check date and readiness status and provides search plus quick selection controls for the first 5, 10 or 20 courses, all visible courses, or none. Only the selected course ids are queued in the background scan.

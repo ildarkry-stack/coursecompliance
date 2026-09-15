@@ -312,7 +312,10 @@ final class scan_analysis {
     }
 
     /**
-     * Return current results from the latest completed scan for each profile/category pair.
+     * Return current issues from the newest completed scan that actually checked each course/profile pair.
+     *
+     * A newer targeted or manually selected audit supersedes older findings for the same course and profile,
+     * even when the newer scan is clean. This keeps the Action Center aligned with the course-level indicator.
      *
      * @param int $limit Maximum number of result rows.
      * @return \stdClass[]
@@ -320,107 +323,72 @@ final class scan_analysis {
     public static function current_action_results(int $limit = 1000): array {
         global $DB;
 
-        $scans = array_values($DB->get_records(
-            'tool_coursecompliance_scan',
-            ['status' => 'complete'],
-            'id DESC',
-            '*',
-            0,
-            1000
-        ));
-        $pairs = [];
-        foreach ($scans as $scan) {
-            $key = (int)$scan->profileid . ':' . (int)$scan->categoryid;
-            if (!isset($pairs[$key])) {
-                $pairs[$key] = ['baseline' => null, 'fallback' => null, 'rechecks' => []];
-            }
-            if ($pairs[$key]['baseline']) {
-                continue;
-            }
-            $scantype = (string)($scan->scantype ?? 'audit');
-            if ($scantype === 'recheck') {
-                $pairs[$key]['rechecks'][] = $scan;
-                continue;
-            }
-            if ($pairs[$key]['fallback'] === null) {
-                $pairs[$key]['fallback'] = $scan;
-            }
-            if (empty($scan->courselimit) && trim((string)($scan->scopejson ?? '')) === '') {
-                $pairs[$key]['baseline'] = $scan;
-            }
-        }
-
-        $current = [];
-        $profiles = [];
-        foreach ($pairs as $pairkey => $pair) {
-            $baseline = $pair['baseline'] ?? $pair['fallback'];
-            if (!$baseline) {
-                continue;
-            }
-            $profiles[(int)$baseline->profileid] = true;
-            foreach ($DB->get_records('tool_coursecompliance_result', ['scanid' => $baseline->id]) as $result) {
-                $current[$pairkey . '|' . self::result_signature($result)] = $result;
-            }
-
-            $rechecks = array_reverse($pair['rechecks']);
-            foreach ($rechecks as $recheck) {
-                if ((int)$recheck->id <= (int)$baseline->id) {
-                    continue;
-                }
-                $scope = json_decode((string)($recheck->scopejson ?? ''), true);
-                $courseids = is_array($scope) && is_array($scope['courseids'] ?? null)
-                    ? array_values(array_unique(array_filter(array_map('intval', $scope['courseids']))))
-                    : [];
-                if (!$courseids) {
-                    continue;
-                }
-                $courselookup = array_fill_keys($courseids, true);
-                foreach ($current as $signature => $result) {
-                    if (
-                        str_starts_with($signature, $pairkey . '|')
-                        && isset($courselookup[(int)$result->courseid])
-                    ) {
-                        unset($current[$signature]);
-                    }
-                }
-                foreach ($DB->get_records('tool_coursecompliance_result', ['scanid' => $recheck->id]) as $result) {
-                    $current[$pairkey . '|' . self::result_signature($result)] = $result;
-                }
-                $profiles[(int)$recheck->profileid] = true;
-            }
-        }
-
-        if (!$current) {
+        $rowkeysql = $DB->sql_concat('cs.courseid', "'-'", 's.profileid');
+        $latestsql = "SELECT $rowkeysql AS rowkey,
+                             cs.courseid, s.profileid, MAX(s.id) AS scanid
+                        FROM {tool_coursecompliance_course} cs
+                        JOIN {tool_coursecompliance_scan} s ON s.id = cs.scanid
+                       WHERE s.status = :status
+                    GROUP BY cs.courseid, s.profileid";
+        $latestrows = $DB->get_records_sql($latestsql, ['status' => 'complete']);
+        if (!$latestrows) {
             return [];
         }
-        $profileids = array_keys($profiles);
-        $profilerecords = $DB->get_records_list('tool_coursecompliance_profile', 'id', $profileids, '', 'id,name');
-        $courseids = array_values(array_unique(array_map(
-            static fn ($result): int => (int)$result->courseid,
-            $current
-        )));
-        $courses = $DB->get_records_list('course', 'id', $courseids, '', 'id,fullname,shortname');
-        $scanids = array_values(array_unique(array_map(
-            static fn ($result): int => (int)$result->scanid,
-            $current
-        )));
-        $scanrecords = $DB->get_records_list(
+
+        $latest = [];
+        $scanids = [];
+        $profileids = [];
+        $courseids = [];
+        foreach ($latestrows as $row) {
+            $key = (int)$row->courseid . ':' . (int)$row->profileid;
+            $latest[$key] = (int)$row->scanid;
+            $scanids[(int)$row->scanid] = true;
+            $profileids[(int)$row->profileid] = true;
+            $courseids[(int)$row->courseid] = true;
+        }
+
+        [$scaninsql, $scanparams] = $DB->get_in_or_equal(array_keys($scanids), SQL_PARAMS_NAMED, 'currentscan');
+        $scanrecords = $DB->get_records_select(
             'tool_coursecompliance_scan',
-            'id',
-            $scanids,
+            "id $scaninsql",
+            $scanparams,
             '',
-            'id,profileid,categoryid,timecreated'
+            'id,profileid,categoryid,timecreated,finishedat'
         );
+        $profilerecords = $DB->get_records_list(
+            'tool_coursecompliance_profile',
+            'id',
+            array_keys($profileids),
+            '',
+            'id,name'
+        );
+        $courses = $DB->get_records_list(
+            'course',
+            'id',
+            array_keys($courseids),
+            '',
+            'id,fullname,shortname'
+        );
+        $results = $DB->get_records_select(
+            'tool_coursecompliance_result',
+            "scanid $scaninsql",
+            $scanparams
+        );
+
         $out = [];
-        foreach ($current as $result) {
+        foreach ($results as $result) {
             $scan = $scanrecords[(int)$result->scanid] ?? null;
             $course = $courses[(int)$result->courseid] ?? null;
             if (!$scan || !$course) {
                 continue;
             }
+            $key = (int)$result->courseid . ':' . (int)$scan->profileid;
+            if (($latest[$key] ?? 0) !== (int)$result->scanid) {
+                continue;
+            }
             $result->profileid = (int)$scan->profileid;
             $result->categoryid = (int)$scan->categoryid;
-            $result->scantime = (int)$scan->timecreated;
+            $result->scantime = (int)($scan->finishedat ?: $scan->timecreated);
             $result->fullname = (string)$course->fullname;
             $result->shortname = (string)$course->shortname;
             $result->profilename = isset($profilerecords[(int)$scan->profileid])
@@ -428,6 +396,7 @@ final class scan_analysis {
                 : '';
             $out[] = $result;
         }
+
         usort($out, static function ($left, $right): int {
             $weights = ['critical' => 0, 'warning' => 1, 'notice' => 2];
             $severity = ($weights[$left->severity] ?? 3) <=> ($weights[$right->severity] ?? 3);
@@ -437,6 +406,49 @@ final class scan_analysis {
             return strcasecmp((string)$left->fullname, (string)$right->fullname);
         });
         return array_slice($out, 0, max(0, $limit));
+    }
+
+    /**
+     * Return the newest completed readiness snapshot for each requested course.
+     *
+     * @param int[] $courseids Course ids.
+     * @param int $profileid Optional profile filter, 0 for any profile.
+     * @return array<int, \stdClass> Keyed by course id.
+     */
+    public static function latest_course_states(array $courseids, int $profileid = 0): array {
+        global $DB;
+
+        $courseids = array_values(array_unique(array_filter(array_map('intval', $courseids))));
+        if (!$courseids) {
+            return [];
+        }
+        [$courseinsql, $params] = $DB->get_in_or_equal($courseids, SQL_PARAMS_NAMED, 'statecourse');
+        $params['status'] = 'complete';
+        $profilewhere = '';
+        if ($profileid > 0) {
+            $profilewhere = ' AND s.profileid = :profileid';
+            $params['profileid'] = $profileid;
+        }
+        $sql = "SELECT cs.*, s.profileid, s.finishedat, s.timecreated AS scantimecreated,
+                       p.name AS profilename
+                  FROM {tool_coursecompliance_course} cs
+                  JOIN {tool_coursecompliance_scan} s ON s.id = cs.scanid
+             LEFT JOIN {tool_coursecompliance_profile} p ON p.id = s.profileid
+                 WHERE cs.courseid $courseinsql
+                   AND s.status = :status
+                       $profilewhere
+              ORDER BY s.id DESC";
+        $records = $DB->get_records_sql($sql, $params);
+        $states = [];
+        foreach ($records as $record) {
+            $courseid = (int)$record->courseid;
+            if (isset($states[$courseid])) {
+                continue;
+            }
+            $record->scandate = (int)($record->finishedat ?: $record->scantimecreated);
+            $states[$courseid] = $record;
+        }
+        return $states;
     }
 
     /**

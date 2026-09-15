@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.15.0-alpha — 2026-09-15
+
+- Fixed stale Action Center findings: the current problem list now follows the newest completed check for each course/profile pair, including manually selected partial audits. A clean newer audit removes obsolete findings from older category-wide scans.
+- Prevented duplicate current issues caused by the same course being included in scans of different parent categories.
+- Replaced numeric course limits with an explicit staged course picker. Administrators choose a category, then select the exact courses to audit.
+- Added course search, Select all / Clear / first 5 / 10 / 20 helpers for large categories.
+- Added the latest audit date and current readiness status next to every course before a scan is launched.
+
 ## 0.14.0-alpha — 2026-09-15
 
 - Reworked correct-answer integrity checks to avoid false critical findings for valid shuffled `multichoice` and `match` questions.

@@ -252,3 +252,23 @@ body[id^="page-admin-tool-coursecompliance"] .cc-form-group-title {
 .path-admin-tool-coursecompliance .cc-panel .generaltable:last-child {
     margin-bottom: 0;
 }
+
+
+/* Audit course picker. */
+.cc-course-picker-search {
+    min-width: 260px;
+    max-width: 420px;
+}
+.cc-course-picker-table {
+    min-width: 760px;
+}
+.cc-course-picker-table .cc-course-picker-check {
+    width: 42px;
+    text-align: center;
+}
+.cc-course-picker-table tbody tr {
+    cursor: pointer;
+}
+.cc-course-picker-table tbody tr:has(input:checked) {
+    background: color-mix(in srgb, var(--bs-primary) 8%, transparent);
+}

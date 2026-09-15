@@ -34,7 +34,13 @@ $PAGE->set_pagelayout('admin');
 $PAGE->set_title(get_string('pluginname', 'tool_coursecompliance'));
 $PAGE->set_heading(get_string('pluginname', 'tool_coursecompliance'));
 
-$form = new \tool_coursecompliance\form\scan_form();
+$selectedcategoryid = optional_param('categoryid', 0, PARAM_INT);
+$selectedprofileid = optional_param('profileid', 0, PARAM_INT);
+$form = new \tool_coursecompliance\form\scan_form(null, [
+    'categoryid' => $selectedcategoryid,
+    'profileid' => $selectedprofileid,
+]);
+$PAGE->requires->js_call_amd('tool_coursecompliance/course_selector', 'init');
 if ($data = $form->get_data()) {
     require_capability('tool/coursecompliance:scan', $context);
     $profileid = (int)$data->profileid;
@@ -45,10 +51,12 @@ if ($data = $form->get_data()) {
     if (!$profileexists) {
         throw new moodle_exception('profilemustbeselected', 'tool_coursecompliance');
     }
+    $courseids = \tool_coursecompliance\form\scan_form::parse_course_ids((string)$data->courseidsjson);
     $scanid = $DB->insert_record('tool_coursecompliance_scan', (object)[
         'profileid' => $profileid,
-        'categoryid' => $data->categoryid,
-        'courselimit' => (int)$data->courselimit,
+        'categoryid' => (int)$data->categoryid,
+        'courselimit' => 0,
+        'scopejson' => json_encode(['courseids' => $courseids], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
         'userid' => $USER->id,
         'status' => 'queued',
         'timecreated' => time(),
@@ -56,7 +64,7 @@ if ($data = $form->get_data()) {
     $task = new \tool_coursecompliance\task\run_scan();
     $task->set_custom_data([
         'scanid' => $scanid,
-        'courselimit' => (int)$data->courselimit,
+        'courselimit' => 0,
     ]);
     $task->set_userid($USER->id);
     \core\task\manager::queue_adhoc_task($task);
