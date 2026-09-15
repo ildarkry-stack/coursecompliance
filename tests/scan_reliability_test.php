@@ -151,7 +151,19 @@ final class scan_reliability_test extends \advanced_testcase {
 
         $completeid = $this->insert_child($parentid, $profileid, $category->id, $userid, 1, 'complete', 100, 10, 2048, 0);
         $secondstatus = $bothcomplete ? 'complete' : 'failed';
-        $failedid = $this->insert_child($parentid, $profileid, $category->id, $userid, 2, $secondstatus, 200, 20, 4096, 1);
+        $secondretries = $bothcomplete ? 1 : 0;
+        $failedid = $this->insert_child(
+            $parentid,
+            $profileid,
+            $category->id,
+            $userid,
+            2,
+            $secondstatus,
+            200,
+            20,
+            4096,
+            $secondretries
+        );
         return ['parent' => $parentid, 'complete' => $completeid, 'failed' => $failedid];
     }
 
