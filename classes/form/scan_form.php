@@ -231,12 +231,13 @@ final class scan_form extends \moodleform {
         $html .= \html_writer::start_div('table-responsive');
         $html .= \html_writer::start_tag('table', ['class' => 'table table-hover align-middle cc-course-picker-table']);
         $html .= \html_writer::start_tag('thead');
-        $html .= \html_writer::tag('tr',
-            \html_writer::tag('th', '', ['class' => 'cc-course-picker-check']) .
-            \html_writer::tag('th', get_string('course')) .
-            \html_writer::tag('th', get_string('lastcheck', 'tool_coursecompliance')) .
-            \html_writer::tag('th', get_string('coursecondition', 'tool_coursecompliance'))
-        );
+        $headercells = [
+            \html_writer::tag('th', '', ['class' => 'cc-course-picker-check']),
+            \html_writer::tag('th', get_string('course')),
+            \html_writer::tag('th', get_string('lastcheck', 'tool_coursecompliance')),
+            \html_writer::tag('th', get_string('coursecondition', 'tool_coursecompliance')),
+        ];
+        $html .= \html_writer::tag('tr', implode('', $headercells));
         $html .= \html_writer::end_tag('thead');
         $html .= \html_writer::start_tag('tbody');
         foreach ($courses as $course) {
@@ -303,4 +304,3 @@ final class scan_form extends \moodleform {
         return $html;
     }
 }
-
