@@ -92,9 +92,31 @@ jobs:
         if: ${{ !cancelled() }}
         run: moodle-plugin-ci mustache --moodle ./moodle "$PLUGIN_PATH"
 
-      - name: Grunt
+      - name: Grunt / AMD JavaScript
         if: ${{ !cancelled() }}
-        run: moodle-plugin-ci grunt --moodle ./moodle --max-lint-warnings 0 "$PLUGIN_PATH"
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # Moodle 5.1+ moved plugins below public/. Moodle 5.0 keeps the old layout.
+          if [[ -d "./moodle/public/admin/tool/coursecompliance" ]]; then
+            MOODLE_PLUGIN_ROOT="public/admin/tool/coursecompliance"
+          elif [[ -d "./moodle/admin/tool/coursecompliance" ]]; then
+            MOODLE_PLUGIN_ROOT="admin/tool/coursecompliance"
+          else
+            echo "Installed tool_coursecompliance directory was not found" >&2
+            find ./moodle -type d -path '*/admin/tool/coursecompliance' -print || true
+            exit 1
+          fi
+
+          # Run Moodle's own Grunt from the directory that contains Gruntfile.js.
+          # Do not use `moodle-plugin-ci grunt` here: with a checkout supplied as an
+          # explicit plugin path it can try to back up/restore the repository .git
+          # directory and fail with permissions errors.
+          source "$NVM_DIR/nvm.sh"
+          cd ./moodle
+          nvm use
+          npx grunt amd --root="$MOODLE_PLUGIN_ROOT"
 
       - name: PHPUnit
         if: ${{ !cancelled() }}
