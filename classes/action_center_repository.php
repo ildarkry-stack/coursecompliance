@@ -154,12 +154,13 @@ final class action_center_repository {
         if ($search !== '') {
             $pattern = '%' . $DB->sql_like_escape($search) . '%';
             $searchparts = [];
-            foreach ([
+            $searchfields = [
                 'c.fullname' => 'ccsearchfullname',
                 'c.shortname' => 'ccsearchshortname',
                 'r.message' => 'ccsearchmessage',
                 'r.rulecode' => 'ccsearchrule',
-            ] as $field => $paramname) {
+            ];
+            foreach ($searchfields as $field => $paramname) {
                 $searchparts[] = $DB->sql_like($field, ':' . $paramname, false, false);
                 $params[$paramname] = $pattern;
             }
