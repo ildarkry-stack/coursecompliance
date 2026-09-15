@@ -555,27 +555,31 @@ final class blueprint_rules_form extends \moodleform {
             get_string('reviewmatrixnativehelp', 'tool_coursecompliance')
         );
 
-        // A hidden lock lets us reproduce the two always-disabled core Quiz options.
+        // Keep the two fixed core Quiz states immutable in manual mode.
         $lockname = $prefix . 'review_native_lock';
         $mform->addElement('hidden', $lockname, 1);
         $mform->setType($lockname, PARAM_BOOL);
 
         foreach ($periods as $period => $periodstring) {
             $group = [];
+            $withhelp = $period === 'during';
             foreach ($reviewfields as $field => [$identifier, $component]) {
                 $name = $prefix . 'review_' . $field . '_' . $period;
                 $label = get_string($identifier, $component);
-                $group[] = $mform->createElement('html', \html_writer::start_div('review_option_item'));
-                $element = $mform->createElement('checkbox', $name, '', $label);
-                if ($period === 'during') {
-                    $element->_helpbutton = $OUTPUT->render(new \help_icon($identifier, $component));
+                if ($withhelp) {
+                    $label .= ' ' . $OUTPUT->help_icon($identifier, $component);
                 }
-                $group[] = $element;
-                $group[] = $mform->createElement('html', \html_writer::end_div());
+                $group[] = $mform->createElement('checkbox', $name, '', $label);
             }
 
             $groupname = $prefix . 'review_' . $period . '_optionsgrp';
-            $mform->addGroup($group, $groupname, get_string($periodstring, 'quiz'), null, false);
+            $mform->addGroup(
+                $group,
+                $groupname,
+                get_string($periodstring, 'quiz'),
+                null,
+                false
+            );
 
             foreach (array_keys($reviewfields) as $field) {
                 $name = $prefix . 'review_' . $field . '_' . $period;

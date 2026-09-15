@@ -29,12 +29,18 @@ $context = context_system::instance();
 require_capability('tool/coursecompliance:view', $context);
 
 $resultid = required_param('resultid', PARAM_INT);
+$area = optional_param('area', '', PARAM_ALPHA);
+$inaudit = $area === 'audit';
 $result = $DB->get_record('tool_coursecompliance_result', ['id' => $resultid], '*', MUST_EXIST);
 $course = get_course((int)$result->courseid);
 $issues = \tool_coursecompliance\question_issue_repository::for_result($result);
 
 $PAGE->set_context($context);
-$PAGE->set_url(new moodle_url('/admin/tool/coursecompliance/question_issues.php', ['resultid' => $resultid]));
+$pageparams = ['resultid' => $resultid];
+if ($inaudit) {
+    $pageparams['area'] = 'audit';
+}
+$PAGE->set_url(new moodle_url('/admin/tool/coursecompliance/question_issues.php', $pageparams));
 $PAGE->set_pagelayout('admin');
 $PAGE->set_title(get_string('questionissuedetails', 'tool_coursecompliance'));
 $PAGE->set_heading(get_string('questionissuedetails', 'tool_coursecompliance'));
@@ -61,7 +67,10 @@ foreach ($issues as $issue) {
 }
 
 echo $OUTPUT->header();
-echo \tool_coursecompliance\ui::primary_navigation('questions');
+echo \tool_coursecompliance\ui::primary_navigation($inaudit ? 'audit' : 'questions');
+if ($inaudit) {
+    echo \tool_coursecompliance\ui::audit_navigation('questions');
+}
 echo \tool_coursecompliance\ui::page_heading(
     get_string('questionissuedetails', 'tool_coursecompliance'),
     get_string('questionissuedetailsintro', 'tool_coursecompliance', (object)[
@@ -103,7 +112,10 @@ $topactions .= html_writer::link(
     ['class' => 'btn btn-outline-primary me-2']
 );
 $topactions .= html_writer::link(
-    new moodle_url('/admin/tool/coursecompliance/question_bank.php'),
+    new moodle_url(
+        '/admin/tool/coursecompliance/question_bank.php',
+        $inaudit ? ['area' => 'audit'] : []
+    ),
     get_string('allquestionproblems', 'tool_coursecompliance'),
     ['class' => 'btn btn-outline-primary']
 );

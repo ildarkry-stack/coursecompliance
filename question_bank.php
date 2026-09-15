@@ -33,12 +33,17 @@ $issuecode = optional_param('issuecode', '', PARAM_ALPHANUMEXT);
 $assessmenttype = optional_param('assessmenttype', '', PARAM_ALPHANUMEXT);
 $qtype = optional_param('qtype', '', PARAM_ALPHANUMEXT);
 $search = trim(optional_param('search', '', PARAM_TEXT));
+$area = optional_param('area', '', PARAM_ALPHA);
+$inaudit = $area === 'audit';
 
 $params = [];
 foreach (['severity', 'issuecode', 'assessmenttype', 'qtype', 'search'] as $name) {
     if ($$name !== '') {
         $params[$name] = $$name;
     }
+}
+if ($inaudit) {
+    $params['area'] = 'audit';
 }
 $PAGE->set_context($context);
 $PAGE->set_url(new moodle_url('/admin/tool/coursecompliance/question_bank.php', $params));
@@ -104,7 +109,10 @@ foreach ($issues as $issue) {
 }
 
 echo $OUTPUT->header();
-echo \tool_coursecompliance\ui::primary_navigation('questions');
+echo \tool_coursecompliance\ui::primary_navigation($inaudit ? 'audit' : 'questions');
+if ($inaudit) {
+    echo \tool_coursecompliance\ui::audit_navigation('questions');
+}
 echo \tool_coursecompliance\ui::page_heading(
     get_string('questionbankquality', 'tool_coursecompliance'),
     get_string('questionbankqualityintro', 'tool_coursecompliance')
@@ -133,6 +141,13 @@ echo \tool_coursecompliance\ui::metric_cards([
 ]);
 
 $filterbody = html_writer::start_tag('form', ['method' => 'get', 'class' => 'row g-2 align-items-end']);
+if ($inaudit) {
+    $filterbody .= html_writer::empty_tag('input', [
+        'type' => 'hidden',
+        'name' => 'area',
+        'value' => 'audit',
+    ]);
+}
 $filterbody .= html_writer::div(
     html_writer::label(get_string('severity', 'tool_coursecompliance'), 'id_severity', false, ['class' => 'form-label']) .
     html_writer::select([

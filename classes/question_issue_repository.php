@@ -147,6 +147,7 @@ final class question_issue_repository {
     public static function url_for_result(\stdClass $result): \moodle_url {
         return new \moodle_url('/admin/tool/coursecompliance/question_issues.php', [
             'resultid' => (int)$result->id,
+            'area' => 'audit',
         ]);
     }
 
@@ -286,8 +287,14 @@ final class question_issue_repository {
             'question_not_ready' => !empty($details['status'])
                 ? get_string('qissue_statusvalue', 'tool_coursecompliance', (string)$details['status'])
                 : '',
+            'correct_answer_unchecked' => ($details['reason'] ?? '') === 'unsupported_qtype'
+                ? get_string(
+                    'qissue_unsupportedqtype',
+                    'tool_coursecompliance',
+                    (string)($details['qtype'] ?? '')
+                )
+                : (!empty($details['error']) ? (string)$details['error'] : ''),
             'broken_question',
-            'correct_answer_unchecked',
             'random_pool_broken',
             'structure_error' => !empty($details['error']) ? (string)$details['error'] : '',
             default => '',
@@ -359,11 +366,46 @@ final class question_issue_repository {
      */
     private static function correct_answer_detail(array $details): string {
         $reason = (string)($details['reason'] ?? '');
-        if ($reason === 'empty_correct_response') {
-            return get_string('qissue_correctresponseempty', 'tool_coursecompliance');
+        if ($reason === 'multichoice_too_few_answers') {
+            return get_string(
+                'qissue_multichoicetoofewanswers',
+                'tool_coursecompliance',
+                (int)($details['answers'] ?? 0)
+            );
         }
-        if ($reason === 'correct_response_not_full_credit') {
-            return get_string('qissue_correctresponsefraction', 'tool_coursecompliance', (float)($details['fraction'] ?? 0));
+        if ($reason === 'multichoice_options_missing') {
+            return get_string('qissue_multichoiceoptionsmissing', 'tool_coursecompliance');
+        }
+        if ($reason === 'multichoice_single_full_credit') {
+            return get_string(
+                'qissue_multichoicesinglefullcredit',
+                'tool_coursecompliance',
+                (int)($details['fullcreditanswers'] ?? 0)
+            );
+        }
+        if ($reason === 'multichoice_multi_fraction_total') {
+            return get_string(
+                'qissue_multichoicemultifraction',
+                'tool_coursecompliance',
+                format_float((float)($details['positivefractiontotal'] ?? 0), 4)
+            );
+        }
+        if ($reason === 'match_not_enough_complete_pairs') {
+            return get_string(
+                'qissue_matchcompletepairs',
+                'tool_coursecompliance',
+                (int)($details['completepairs'] ?? 0)
+            );
+        }
+        if ($reason === 'no_full_credit_answer_record') {
+            return get_string(
+                'qissue_nofullcreditanswer',
+                'tool_coursecompliance',
+                (object)[
+                    'qtype' => (string)($details['qtype'] ?? ''),
+                    'count' => (int)($details['answercount'] ?? 0),
+                ]
+            );
         }
         return '';
     }

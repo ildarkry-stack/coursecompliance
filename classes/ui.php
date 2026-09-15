@@ -81,7 +81,7 @@ final class ui {
         if (has_capability('moodle/site:config', $context)) {
             $items['settings'] = [
                 'label' => get_string('nav_settings', 'tool_coursecompliance'),
-                'url' => new \moodle_url('/admin/settings.php', ['section' => 'tool_coursecompliance_settings']),
+                'url' => new \moodle_url('/admin/tool/coursecompliance/plugin_settings.php'),
                 'capability' => 'moodle/site:config',
             ];
         }
@@ -154,7 +154,7 @@ final class ui {
             ],
             'questions' => [
                 get_string('nav_questions', 'tool_coursecompliance'),
-                new \moodle_url('/admin/tool/coursecompliance/question_bank.php'),
+                new \moodle_url('/admin/tool/coursecompliance/question_bank.php', ['area' => 'audit']),
             ],
         ];
         return self::secondary_navigation($items, $active, 'auditnavigation');

@@ -80,27 +80,10 @@ $ADMIN->add('tool_coursecompliance_root', new admin_externalpage(
 ));
 
 if ($hassiteconfig) {
-    $settings = new admin_settingpage(
+    $ADMIN->add('tool_coursecompliance_root', new admin_externalpage(
         'tool_coursecompliance_settings',
-        get_string('nav_settings', 'tool_coursecompliance')
-    );
-    if ($ADMIN->fulltree) {
-        $settings->add(new admin_setting_configtext(
-            'tool_coursecompliance/retentiondays',
-            get_string('retentiondays', 'tool_coursecompliance'),
-            get_string('retentiondays_desc', 'tool_coursecompliance'),
-            90,
-            PARAM_INT
-        ));
-        $categoryoptions = [0 => get_string('notselected', 'tool_coursecompliance')]
-            + \core_course_category::make_categories_list();
-        $settings->add(new admin_setting_configselect(
-            'tool_coursecompliance/sessiondefaultcategory',
-            get_string('sessiondefaultcategory', 'tool_coursecompliance'),
-            get_string('sessiondefaultcategory_desc', 'tool_coursecompliance'),
-            0,
-            $categoryoptions
-        ));
-    }
-    $ADMIN->add('tool_coursecompliance_root', $settings);
+        get_string('nav_settings', 'tool_coursecompliance'),
+        new moodle_url('/admin/tool/coursecompliance/plugin_settings.php'),
+        'moodle/site:config'
+    ));
 }

@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.14.0-alpha — 2026-09-15
+
+- Reworked correct-answer integrity checks to avoid false critical findings for valid shuffled `multichoice` and `match` questions.
+- Added type-aware validation for core multiple choice, matching, short-answer, numerical and true/false questions.
+- Unsupported automatically graded question types are now reported as a partial-check notice instead of a critical error.
+- Kept Question Bank inside the **Audit & reports** navigation context when opened from that section.
+- Reworked Blueprint Quiz review settings to use Moodle's native period-oriented checkbox-group layout and dependencies.
+- Added an in-plugin Settings page so administrators keep the Course Compliance navigation while changing plugin configuration.
+- Site administration now links Course Compliance Settings to the same integrated settings page.
+
 ## 0.13.0-alpha (2026-09-14)
 
 - Added persistent **per-question diagnostics** for Quiz/question-bank audit findings. Aggregate errors such as “41 questions without a valid correct answer” can now be expanded to the exact questions involved.
