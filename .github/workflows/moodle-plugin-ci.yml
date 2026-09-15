@@ -78,7 +78,7 @@ jobs:
 
       - name: Validate plugin
         if: ${{ !cancelled() }}
-        run: moodle-plugin-ci validate "$PLUGIN_PATH"
+        run: moodle-plugin-ci validate --moodle ./moodle "$PLUGIN_PATH"
 
       - name: Check upgrade savepoints
         if: ${{ !cancelled() }}
@@ -86,19 +86,19 @@ jobs:
 
       - name: PHPDoc checker
         if: ${{ !cancelled() }}
-        run: moodle-plugin-ci phpdoc --max-warnings 0 "$PLUGIN_PATH"
+        run: moodle-plugin-ci phpdoc --moodle ./moodle --max-warnings 0 "$PLUGIN_PATH"
 
       - name: Mustache lint
         if: ${{ !cancelled() }}
-        run: moodle-plugin-ci mustache "$PLUGIN_PATH"
+        run: moodle-plugin-ci mustache --moodle ./moodle "$PLUGIN_PATH"
 
       - name: Grunt
         if: ${{ !cancelled() }}
-        run: moodle-plugin-ci grunt --max-lint-warnings 0 "$PLUGIN_PATH"
+        run: moodle-plugin-ci grunt --moodle ./moodle --max-lint-warnings 0 "$PLUGIN_PATH"
 
       - name: PHPUnit
         if: ${{ !cancelled() }}
-        run: moodle-plugin-ci phpunit --fail-on-warning "$PLUGIN_PATH"
+        run: moodle-plugin-ci phpunit --moodle ./moodle --fail-on-warning "$PLUGIN_PATH"
 
   compatibility:
     name: ${{ matrix.moodle-branch }} / PHP ${{ matrix.php }} / ${{ matrix.database }}
@@ -215,7 +215,7 @@ jobs:
           MOODLE_BRANCH: ${{ matrix.moodle-branch }}
 
       - name: PHPUnit compatibility suite
-        run: moodle-plugin-ci phpunit --fail-on-warning "$PLUGIN_PATH"
+        run: moodle-plugin-ci phpunit --moodle ./moodle --fail-on-warning "$PLUGIN_PATH"
 
   required-checks:
     name: Required checks
