@@ -31,6 +31,24 @@ final class quiz_integrity_inspector {
     /** Maximum number of question definitions loaded for deep validation in one Quiz. */
     private const MAX_DEEP_QUESTIONS = 500;
 
+    /** @var array<int, \stdClass[]> Preloaded answer rows keyed by question id. */
+    private static array $answercache = [];
+
+    /** @var array<int, \stdClass> Preloaded multiple-choice options keyed by question id. */
+    private static array $multichoicecache = [];
+
+    /** @var array<int, \stdClass[]> Preloaded matching rows keyed by question id. */
+    private static array $matchcache = [];
+
+    /**
+     * Reset per-process preload caches before a new scan worker starts.
+     */
+    public static function reset_preload_cache(): void {
+        self::$answercache = [];
+        self::$multichoicecache = [];
+        self::$matchcache = [];
+    }
+
     /**
      * Inspect one Quiz and its question-bank references.
      *
@@ -267,23 +285,10 @@ final class quiz_integrity_inspector {
                 $deepids = array_slice($deepids, 0, self::MAX_DEEP_QUESTIONS);
                 $result['deepchecktruncated'] = true;
             }
+            self::preload_validation_data($deepids);
 
             foreach ($deepids as $questionid) {
-                try {
-                    $question = \question_bank::load_question($questionid);
-                } catch (\Throwable $e) {
-                    $result['brokenquestioncount']++;
-                    $result['issues'][] = self::issue(
-                        'broken_question',
-                        'critical',
-                        $metadata[$questionid] ?? null,
-                        0,
-                        ['error' => self::clean_error($e->getMessage())]
-                    );
-                    continue;
-                }
-
-                $questionstatus = (string)($metadata[$questionid]->status ?? ($question->status ?? ''));
+                $questionstatus = (string)($metadata[$questionid]->status ?? '');
                 if ($questionstatus !== '' && $questionstatus !== 'ready') {
                     $result['draftquestioncount']++;
                     $result['issues'][] = self::issue(
@@ -294,14 +299,31 @@ final class quiz_integrity_inspector {
                         ['status' => $questionstatus]
                     );
                 }
-                if (!($question instanceof \question_automatically_gradable)) {
+
+                $qtype = (string)($metadata[$questionid]->qtype ?? '');
+                if (in_array($qtype, ['description', 'essay'], true)) {
                     continue;
                 }
+                if (!in_array($qtype, ['multichoice', 'match', 'shortanswer', 'numerical', 'truefalse'], true)) {
+                    try {
+                        $question = \question_bank::load_question($questionid);
+                    } catch (\Throwable $e) {
+                        $result['brokenquestioncount']++;
+                        $result['issues'][] = self::issue(
+                            'broken_question',
+                            'critical',
+                            $metadata[$questionid] ?? null,
+                            0,
+                            ['error' => self::clean_error($e->getMessage())]
+                        );
+                        continue;
+                    }
+                    if (!($question instanceof \question_automatically_gradable)) {
+                        continue;
+                    }
+                }
 
-                $answercheck = self::validate_correct_answer(
-                    $questionid,
-                    (string)($metadata[$questionid]->qtype ?? '')
-                );
+                $answercheck = self::validate_correct_answer($questionid, $qtype);
                 if ($answercheck['status'] === 'invalid') {
                     $result['nocorrectanswercount']++;
                     $result['issues'][] = self::issue(
@@ -342,6 +364,61 @@ final class quiz_integrity_inspector {
     }
 
     /**
+     * Preload answer data used by deep validation in a constant number of queries.
+     *
+     * @param int[] $questionids Question ids.
+     */
+    private static function preload_validation_data(array $questionids): void {
+        global $DB;
+
+        $questionids = array_values(array_unique(array_filter(array_map('intval', $questionids))));
+        if (!$questionids) {
+            return;
+        }
+        $missing = array_values(array_filter(
+            $questionids,
+            static fn (int $questionid): bool => !array_key_exists($questionid, self::$answercache)
+        ));
+        if (!$missing) {
+            return;
+        }
+        foreach ($missing as $questionid) {
+            self::$answercache[$questionid] = [];
+            self::$matchcache[$questionid] = [];
+        }
+
+        [$insql, $params] = $DB->get_in_or_equal($missing, SQL_PARAMS_NAMED, 'preloadanswer');
+        $answers = $DB->get_records_select('question_answers', "question $insql", $params, 'id ASC');
+        foreach ($answers as $answer) {
+            self::$answercache[(int)$answer->question][] = $answer;
+        }
+
+        [$insql, $params] = $DB->get_in_or_equal($missing, SQL_PARAMS_NAMED, 'preloadmulti');
+        $options = $DB->get_records_select(
+            'qtype_multichoice_options',
+            "questionid $insql",
+            $params,
+            '',
+            'id, questionid, single'
+        );
+        foreach ($options as $option) {
+            self::$multichoicecache[(int)$option->questionid] = $option;
+        }
+
+        [$insql, $params] = $DB->get_in_or_equal($missing, SQL_PARAMS_NAMED, 'preloadmatch');
+        $subquestions = $DB->get_records_select(
+            'qtype_match_subquestions',
+            "questionid $insql",
+            $params,
+            'id ASC',
+            'id, questionid, questiontext, answertext'
+        );
+        foreach ($subquestions as $subquestion) {
+            self::$matchcache[(int)$subquestion->questionid][] = $subquestion;
+        }
+    }
+
+    /**
      * Validate that a core automatically-graded question has a defensible full-credit answer.
      *
      * This deliberately avoids calling get_correct_response()/grade_response() on a bare
@@ -376,9 +453,7 @@ final class quiz_integrity_inspector {
      * @return array
      */
     private static function validate_multichoice_answer(int $questionid): array {
-        global $DB;
-
-        $answers = $DB->get_records('question_answers', ['question' => $questionid], 'id ASC');
+        $answers = self::$answercache[$questionid] ?? [];
         $answers = array_values(array_filter(
             $answers,
             static fn (\stdClass $answer): bool => trim((string)$answer->answer) !== ''
@@ -393,12 +468,7 @@ final class quiz_integrity_inspector {
             ];
         }
 
-        $options = $DB->get_record(
-            'qtype_multichoice_options',
-            ['questionid' => $questionid],
-            'id, single',
-            IGNORE_MISSING
-        );
+        $options = self::$multichoicecache[$questionid] ?? null;
         if (!$options) {
             return [
                 'status' => 'invalid',
@@ -455,14 +525,7 @@ final class quiz_integrity_inspector {
      * @return array
      */
     private static function validate_match_answer(int $questionid): array {
-        global $DB;
-
-        $subquestions = $DB->get_records(
-            'qtype_match_subquestions',
-            ['questionid' => $questionid],
-            'id ASC',
-            'id, questiontext, answertext'
-        );
+        $subquestions = self::$matchcache[$questionid] ?? [];
         $completepairs = 0;
         foreach ($subquestions as $subquestion) {
             if (
@@ -494,9 +557,7 @@ final class quiz_integrity_inspector {
      * @return array
      */
     private static function validate_full_credit_answer_record(int $questionid, string $qtype): array {
-        global $DB;
-
-        $answers = $DB->get_records('question_answers', ['question' => $questionid], 'id ASC');
+        $answers = self::$answercache[$questionid] ?? [];
         foreach ($answers as $answer) {
             if (trim((string)$answer->answer) === '') {
                 continue;

@@ -47,6 +47,14 @@ final class plugin_settings_form extends \moodleform {
         $mform->setType('retentiondays', PARAM_INT);
         $mform->addHelpButton('retentiondays', 'retentiondays', 'tool_coursecompliance');
 
+        $mform->addElement(
+            'select',
+            'scanbatchsize',
+            get_string('scanbatchsize', 'tool_coursecompliance'),
+            [5 => '5', 10 => '10', 20 => '20', 30 => '30', 50 => '50']
+        );
+        $mform->addHelpButton('scanbatchsize', 'scanbatchsize', 'tool_coursecompliance');
+
         $categoryoptions = [0 => get_string('notselected', 'tool_coursecompliance')]
             + \core_course_category::make_categories_list();
         $mform->addElement(

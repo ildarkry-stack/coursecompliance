@@ -30,6 +30,8 @@ require_capability('tool/coursecompliance:view', $context);
 $severity = optional_param('severity', '', PARAM_ALPHA);
 $kind = optional_param('kind', '', PARAM_ALPHA);
 $search = trim(optional_param('search', '', PARAM_TEXT));
+$page = max(0, optional_param('page', 0, PARAM_INT));
+$perpage = 100;
 
 $urlparams = [];
 if ($severity !== '') {
@@ -41,16 +43,40 @@ if ($kind !== '') {
 if ($search !== '') {
     $urlparams['search'] = $search;
 }
+if ($page > 0) {
+    $urlparams['page'] = $page;
+}
 $PAGE->set_context($context);
 $PAGE->set_url(new moodle_url('/admin/tool/coursecompliance/action_center.php', $urlparams));
 $PAGE->set_pagelayout('admin');
 $PAGE->set_title(get_string('actioncenter', 'tool_coursecompliance'));
 $PAGE->set_heading(get_string('actioncenter', 'tool_coursecompliance'));
 
-$results = \tool_coursecompliance\scan_analysis::current_action_results(3000);
+// Normal browsing is SQL-paged. The computed "new" and "autofix" views still use
+// the current-state helper because those properties depend on profile configuration
+// and cross-scan signatures rather than columns stored on the result row.
+$metricresults = \tool_coursecompliance\scan_analysis::current_action_results(5000);
+$severitycounts = \tool_coursecompliance\action_center_repository::severity_counts();
+if ($kind === '') {
+    $results = \tool_coursecompliance\action_center_repository::page(
+        $severity,
+        $search,
+        $page,
+        $perpage
+    );
+    $totalfiltered = \tool_coursecompliance\action_center_repository::count($severity, $search);
+} else {
+    $results = $metricresults;
+    $totalfiltered = 0;
+}
+
 $configs = [];
 $newsignatures = [];
-foreach ($results as $result) {
+$analysisresults = [];
+foreach (array_merge($metricresults, $results) as $result) {
+    $analysisresults[(int)$result->id] = $result;
+}
+foreach ($analysisresults as $result) {
     $scanid = (int)$result->scanid;
     if (!isset($newsignatures[$scanid])) {
         $delta = \tool_coursecompliance\scan_analysis::delta($scanid);
@@ -64,16 +90,11 @@ foreach ($results as $result) {
     }
 }
 
-$criticalcount = 0;
-$warningcount = 0;
+$criticalcount = (int)($severitycounts['critical'] ?? 0);
+$warningcount = (int)($severitycounts['warning'] ?? 0);
 $newcount = 0;
 $fixablecount = 0;
-foreach ($results as $result) {
-    if ($result->severity === 'critical') {
-        $criticalcount++;
-    } else if ($result->severity === 'warning') {
-        $warningcount++;
-    }
+foreach ($metricresults as $result) {
     $signature = \tool_coursecompliance\scan_analysis::result_signature($result);
     if (!empty($newsignatures[(int)$result->scanid][$signature])) {
         $newcount++;
@@ -100,16 +121,16 @@ foreach ($results as $result) {
     $isnew = !empty($newsignatures[(int)$result->scanid][$signature]);
     $config = $configs[(int)$result->profileid] ?? [];
     $isfixable = \tool_coursecompliance\autofix_manager::is_fixable($result, $config);
-    if ($severity !== '' && $result->severity !== $severity) {
-        continue;
-    }
     if ($kind === 'new' && !$isnew) {
         continue;
     }
     if ($kind === 'autofix' && !$isfixable) {
         continue;
     }
-    if ($search !== '') {
+    if ($kind !== '' && $severity !== '' && $result->severity !== $severity) {
+        continue;
+    }
+    if ($kind !== '' && $search !== '') {
         $haystack = \core_text::strtolower(
             $result->fullname . ' ' . $result->shortname . ' ' . $result->message . ' ' . $result->rulecode
         );
@@ -120,6 +141,10 @@ foreach ($results as $result) {
     $result->isnew = $isnew;
     $result->isfixable = $isfixable;
     $filtered[] = $result;
+}
+if ($kind !== '') {
+    $totalfiltered = count($filtered);
+    $filtered = array_slice($filtered, $page * $perpage, $perpage);
 }
 
 $baseurl = new moodle_url('/admin/tool/coursecompliance/action_center.php');
@@ -208,6 +233,10 @@ $filterbody .= html_writer::empty_tag('input', [
 ]);
 $filterbody .= html_writer::end_tag('form');
 echo \tool_coursecompliance\ui::panel(get_string('filters', 'tool_coursecompliance'), $filterbody);
+
+if ($totalfiltered > $perpage) {
+    echo $OUTPUT->paging_bar($totalfiltered, $page, $perpage, $PAGE->url);
+}
 
 if (!$filtered) {
     echo \tool_coursecompliance\ui::panel(
@@ -322,9 +351,12 @@ if ($canfix) {
     $body .= html_writer::end_tag('form');
 }
 echo \tool_coursecompliance\ui::panel(
-    get_string('currentissuescount', 'tool_coursecompliance', count($filtered)),
+    get_string('currentissuescount', 'tool_coursecompliance', $totalfiltered),
     $body,
     get_string('actioncenterlisthelp', 'tool_coursecompliance')
 );
+if ($totalfiltered > $perpage) {
+    echo $OUTPUT->paging_bar($totalfiltered, $page, $perpage, $PAGE->url);
+}
 
 echo $OUTPUT->footer();

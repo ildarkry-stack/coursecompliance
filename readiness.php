@@ -34,11 +34,11 @@ if (!$scanid) {
     $scanid = (int)$DB->get_field_sql(
         "SELECT MAX(id)
            FROM {tool_coursecompliance_scan}
-          WHERE status = 'complete' AND scantype = 'audit' AND courselimit = 0"
+          WHERE status = 'complete' AND scantype = 'audit' AND parentid = 0 AND courselimit = 0"
     );
     if (!$scanid) {
         $scanid = (int)$DB->get_field_sql(
-            "SELECT MAX(id) FROM {tool_coursecompliance_scan} WHERE status = 'complete' AND scantype = 'audit'"
+            "SELECT MAX(id) FROM {tool_coursecompliance_scan} WHERE status = 'complete' AND scantype = 'audit' AND parentid = 0"
         );
     }
 }

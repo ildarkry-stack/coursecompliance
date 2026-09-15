@@ -61,6 +61,10 @@ final class run_scan extends \core\task\adhoc_task {
                 $scan->finishedat = time();
                 $scan->errormessage = $e->getMessage();
                 $DB->update_record('tool_coursecompliance_scan', $scan);
+                if ((int)($scan->parentid ?? 0) > 0) {
+                    mtrace('Course Compliance batch #' . (int)($scan->batchno ?? 0) . ' failed: ' . $e->getMessage());
+                    return;
+                }
             }
             throw $e;
         }

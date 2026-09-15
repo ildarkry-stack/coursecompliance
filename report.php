@@ -90,9 +90,19 @@ if (!empty($config['blueprint']) && is_array($config['blueprint'])) {
 }
 
 if ($scan->status === 'queued' || $scan->status === 'running') {
+    $runningmessage = s(get_string('scanrunning', 'tool_coursecompliance'));
+    if ((int)($scan->batchtotal ?? 0) > 0) {
+        $completedbatches = $DB->count_records('tool_coursecompliance_scan', [
+            'parentid' => (int)$scan->id,
+            'status' => 'complete',
+        ]);
+        $runningmessage .= ' ' . s(get_string('scanbatchprogress', 'tool_coursecompliance', (object)[
+            'complete' => $completedbatches,
+            'total' => (int)$scan->batchtotal,
+        ]));
+    }
     echo html_writer::div(
-        \tool_coursecompliance\ui::status_badge((string)$scan->status) . ' ' .
-            s(get_string('scanrunning', 'tool_coursecompliance')),
+        \tool_coursecompliance\ui::status_badge((string)$scan->status) . ' ' . $runningmessage,
         'alert alert-info'
     );
     echo $OUTPUT->single_button(

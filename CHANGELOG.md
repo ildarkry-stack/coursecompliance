@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.16.0-alpha — 2026-09-15
+
+- Added scalable parent/worker scan orchestration. Large selected audits are split into independent Moodle AdHoc tasks instead of one long-running scanner task.
+- Added scan aggregation: worker results are merged into the parent audit only after every batch finishes, keeping reports and current-state logic consistent.
+- Added configurable worker size (5/10/20/30/50 courses; default 10) and live batch progress on the scan report.
+- Added Moodle Messaging notifications when an audit completes or fails.
+- Added SQL-backed Action Center pagination for normal severity/search browsing so large issue lists are not rendered in one request.
+- Prevented internal worker scans from appearing as current audits, dashboard history or course readiness state.
+- Removed the largest Question Bank N+1 hotspot by preloading answer rows, multiple-choice options and matching pairs in bulk and avoiding full question-object loads for supported core types.
+- Split question-bank integrity rules into a dedicated registry and extracted course-scope loading/scheduling/notification responsibilities from the scanner path.
+- Added regression coverage for batching, stale Action Center findings and real Moodle Quiz question types (`multichoice`, `match`, `shortanswer`).
+
 ## 0.15.0-alpha — 2026-09-15
 
 - Fixed stale Action Center findings: the current problem list now follows the newest completed check for each course/profile pair, including manually selected partial audits. A clean newer audit removes obsolete findings from older category-wide scans.

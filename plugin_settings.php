@@ -37,6 +37,7 @@ $PAGE->set_heading(get_string('nav_settings', 'tool_coursecompliance'));
 $form = new \tool_coursecompliance\form\plugin_settings_form();
 if ($data = $form->get_data()) {
     set_config('retentiondays', max(1, (int)$data->retentiondays), 'tool_coursecompliance');
+    set_config('scanbatchsize', max(1, min(50, (int)$data->scanbatchsize)), 'tool_coursecompliance');
     set_config('sessiondefaultcategory', (int)$data->sessiondefaultcategory, 'tool_coursecompliance');
     redirect(
         $PAGE->url,
@@ -48,6 +49,7 @@ if ($data = $form->get_data()) {
 
 $form->set_data((object)[
     'retentiondays' => (int)get_config('tool_coursecompliance', 'retentiondays') ?: 90,
+    'scanbatchsize' => (int)get_config('tool_coursecompliance', 'scanbatchsize') ?: 10,
     'sessiondefaultcategory' => (int)get_config('tool_coursecompliance', 'sessiondefaultcategory'),
 ]);
 

@@ -24,7 +24,6 @@
 
 namespace tool_coursecompliance;
 
-use core_course_category;
 use tool_coursecompliance\local\rule\rule;
 
 /**
@@ -56,6 +55,7 @@ final class scanner {
             throw new \moodle_exception('scaninvalidprofile', 'tool_coursecompliance');
         }
         $config = profile_config::decode($profile->configjson);
+        quiz_integrity_inspector::reset_preload_cache();
 
         $scan->status = 'running';
         $scan->startedat = time();
@@ -65,36 +65,7 @@ final class scanner {
         $DB->delete_records('tool_coursecompliance_course', ['scanid' => $scanid]);
         $DB->delete_records('tool_coursecompliance_qissue', ['scanid' => $scanid]);
 
-        $category = core_course_category::get($scan->categoryid, MUST_EXIST, true);
-        $categoryids = array_merge([$category->id], $category->get_all_children_ids());
-        [$insql, $params] = $DB->get_in_or_equal($categoryids, SQL_PARAMS_NAMED, 'cat');
-        $params['siteid'] = SITEID;
-        $select = "category $insql AND id <> :siteid";
-        $scope = json_decode((string)($scan->scopejson ?? ''), true);
-        $scopecourseids = is_array($scope) && is_array($scope['courseids'] ?? null)
-            ? array_values(array_unique(array_filter(array_map('intval', $scope['courseids']))))
-            : [];
-        if ($scopecourseids) {
-            [$scopeinsql, $scopeparams] = $DB->get_in_or_equal(
-                $scopecourseids,
-                SQL_PARAMS_NAMED,
-                'scopecourse'
-            );
-            $select .= " AND id $scopeinsql";
-            $params += $scopeparams;
-            $courselimit = 0;
-        } else if ($courselimit <= 0 && property_exists($scan, 'courselimit')) {
-            $courselimit = (int)$scan->courselimit;
-        }
-        $courses = $DB->get_records_select(
-            'course',
-            $select,
-            $params,
-            'fullname ASC, id ASC',
-            '*',
-            0,
-            max(0, $courselimit)
-        );
+        $courses = course_scope_loader::load($scan, $courselimit);
         $courseids = array_keys($courses);
 
         $this->exceptions = $this->load_exceptions((int)$profile->id, $courseids);

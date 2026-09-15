@@ -329,8 +329,13 @@ final class scan_analysis {
                         FROM {tool_coursecompliance_course} cs
                         JOIN {tool_coursecompliance_scan} s ON s.id = cs.scanid
                        WHERE s.status = :status
+                         AND s.parentid = 0
+                         AND s.scantype <> :batchtype
                     GROUP BY cs.courseid, s.profileid";
-        $latestrows = $DB->get_records_sql($latestsql, ['status' => 'complete']);
+        $latestrows = $DB->get_records_sql($latestsql, [
+            'status' => 'complete',
+            'batchtype' => 'batch',
+        ]);
         if (!$latestrows) {
             return [];
         }
@@ -436,6 +441,7 @@ final class scan_analysis {
              LEFT JOIN {tool_coursecompliance_profile} p ON p.id = s.profileid
                  WHERE cs.courseid $courseinsql
                    AND s.status = :status
+                   AND s.parentid = 0
                        $profilewhere
               ORDER BY s.id DESC";
         $records = $DB->get_records_sql($sql, $params);

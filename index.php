@@ -61,13 +61,7 @@ if ($data = $form->get_data()) {
         'status' => 'queued',
         'timecreated' => time(),
     ]);
-    $task = new \tool_coursecompliance\task\run_scan();
-    $task->set_custom_data([
-        'scanid' => $scanid,
-        'courselimit' => 0,
-    ]);
-    $task->set_userid($USER->id);
-    \core\task\manager::queue_adhoc_task($task);
+    \tool_coursecompliance\scan_scheduler::queue($scanid, $courseids, (int)$USER->id);
     redirect(
         new moodle_url('/admin/tool/coursecompliance/report.php', ['scanid' => $scanid]),
         get_string('scanqueued', 'tool_coursecompliance')
@@ -78,6 +72,7 @@ $latestsql = "SELECT s.*, p.name AS profilename, cc.name AS categoryname
                 FROM {tool_coursecompliance_scan} s
            LEFT JOIN {tool_coursecompliance_profile} p ON p.id = s.profileid
            LEFT JOIN {course_categories} cc ON cc.id = s.categoryid
+               WHERE s.parentid = 0
             ORDER BY s.timecreated DESC";
 $scans = $DB->get_records_sql($latestsql, [], 0, 20);
 $latestcomplete = null;
@@ -86,6 +81,7 @@ $fullscansql = "SELECT s.*, p.name AS profilename, cc.name AS categoryname
              LEFT JOIN {tool_coursecompliance_profile} p ON p.id = s.profileid
              LEFT JOIN {course_categories} cc ON cc.id = s.categoryid
                  WHERE s.status = :status
+                   AND s.parentid = 0
                    AND s.courselimit = 0
                    AND s.scantype = :scantype
               ORDER BY s.timecreated DESC";
@@ -104,7 +100,7 @@ if (!$latestcomplete) {
 
 $trend = array_values($DB->get_records_select(
     'tool_coursecompliance_scan',
-    "status = :status AND scantype = :scantype AND courselimit = 0",
+    "status = :status AND scantype = :scantype AND parentid = 0 AND courselimit = 0",
     ['status' => 'complete', 'scantype' => 'audit'],
     'timecreated DESC',
     'id,timecreated,critical,warnings',
@@ -115,7 +111,7 @@ $trend = array_reverse($trend);
 
 $queuedcount = $DB->count_records_select(
     'tool_coursecompliance_scan',
-    "status = :queued OR status = :running",
+    "parentid = 0 AND (status = :queued OR status = :running)",
     ['queued' => 'queued', 'running' => 'running']
 );
 

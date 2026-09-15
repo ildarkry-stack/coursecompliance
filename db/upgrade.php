@@ -523,5 +523,25 @@ function xmldb_tool_coursecompliance_upgrade(int $oldversion): bool {
         upgrade_plugin_savepoint(true, 2026091407, 'tool', 'coursecompliance');
     }
 
+    if ($oldversion < 2026091502) {
+        $table = new xmldb_table('tool_coursecompliance_scan');
+        $fields = [
+            new xmldb_field('parentid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0', 'scantype'),
+            new xmldb_field('batchno', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0', 'parentid'),
+            new xmldb_field('batchtotal', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0', 'batchno'),
+        ];
+        foreach ($fields as $field) {
+            if (!$dbman->field_exists($table, $field)) {
+                $dbman->add_field($table, $field);
+            }
+        }
+        $index = new xmldb_index('parent_status_idx', XMLDB_INDEX_NOTUNIQUE, ['parentid', 'status']);
+        if (!$dbman->index_exists($table, $index)) {
+            $dbman->add_index($table, $index);
+        }
+
+        upgrade_plugin_savepoint(true, 2026091502, 'tool', 'coursecompliance');
+    }
+
     return true;
 }

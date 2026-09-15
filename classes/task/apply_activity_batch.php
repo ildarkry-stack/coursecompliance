@@ -119,12 +119,11 @@ final class apply_activity_batch extends \core\task\adhoc_task {
             'timecreated' => time(),
         ]);
 
-        $task = new run_scan();
-        $task->set_custom_data([
-            'scanid' => $scanid,
-            'courselimit' => $courselimit,
-        ]);
-        \core\task\manager::queue_adhoc_task($task);
+        \tool_coursecompliance\scan_scheduler::queue(
+            $scanid,
+            $courseids,
+            (int)$batch->userid
+        );
 
         $filter['rescanid'] = $scanid;
         $batch->filterjson = json_encode($filter, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);

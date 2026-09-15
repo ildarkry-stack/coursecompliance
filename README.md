@@ -1,5 +1,13 @@
 # Course Compliance Center (`tool_coursecompliance`)
 
+## 0.16 Architecture & Scale
+
+Version 0.16 changes how large audits execute without changing the administrator workflow. A selected set of courses is now divided into independent Moodle AdHoc worker batches and aggregated into one parent report. The default worker size is 10 courses and can be changed in CourseCompliance settings. This reduces peak memory, limits the impact of a single heavy course and makes audits of hundreds of courses practical with multiple Moodle task workers.
+
+The scan report shows completed batch progress, while Moodle Messaging notifies the initiating administrator when the parent audit completes or fails. Internal worker scans are deliberately excluded from dashboards, readiness views and current-problem calculations.
+
+Question-bank validation now preloads answer records, multiple-choice options and matching pairs in bulk instead of issuing per-question queries for supported core question types. The scanner path has also been decomposed into scheduling, scope-loading, notification and question-integrity rule services. Action Center uses SQL pagination for its normal issue list, and new regression tests cover stale-current-state handling, batched scans and valid real Moodle Quiz questions.
+
 ## 0.13 Question bank problem analysis
 
 Version 0.13 focuses on moving from aggregate Quiz warnings to actionable question-level diagnostics. The **Question bank quality** page shows the exact questions behind current audit findings, including their question id, type, bank category, version status and the reason the check failed. Aggregate report rows link directly to these details.
