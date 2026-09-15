@@ -73,24 +73,24 @@ jobs:
 
       - name: PHP lint
         if: ${{ !cancelled() }}
-        run: moodle-plugin-ci phplint
+        run: moodle-plugin-ci phplint "$PLUGIN_PATH"
 
       - name: Moodle CodeSniffer
         if: ${{ !cancelled() }}
-        run: moodle-plugin-ci phpcs --max-warnings 0
+        run: moodle-plugin-ci phpcs --max-warnings 0 "$PLUGIN_PATH"
 
       - name: Validate plugin
         if: ${{ !cancelled() }}
-        run: moodle-plugin-ci validate
+        run: moodle-plugin-ci validate "$PLUGIN_PATH"
 
       - name: Check upgrade savepoints
         if: ${{ !cancelled() }}
-        run: moodle-plugin-ci savepoints
+        run: moodle-plugin-ci savepoints "$PLUGIN_PATH"
 
       - name: PHPDoc checker
         if: ${{ !cancelled() }}
-        run: moodle-plugin-ci phpdoc --max-warnings 0
+        run: moodle-plugin-ci phpdoc --max-warnings 0 "$PLUGIN_PATH"
 
       - name: PHPUnit
         if: ${{ !cancelled() }}
-        run: moodle-plugin-ci phpunit --fail-on-warning
+        run: moodle-plugin-ci phpunit --fail-on-warning "$PLUGIN_PATH"

@@ -124,7 +124,6 @@
       <INDEXES>
         <INDEX NAME="userid_idx" UNIQUE="false" FIELDS="userid" />
         <INDEX NAME="status_idx" UNIQUE="false" FIELDS="status" />
-        <INDEX NAME="parent_status_idx" UNIQUE="false" FIELDS="parentid, status" />
         <INDEX NAME="created_idx" UNIQUE="false" FIELDS="timecreated" />
       </INDEXES>
     </TABLE>
