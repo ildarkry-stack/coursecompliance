@@ -8,7 +8,14 @@ The plugin metadata now declares Moodle 5.0 as the minimum version and Moodle 5.
 
 See [`docs/COMPATIBILITY.md`](docs/COMPATIBILITY.md) for the supported-version policy.
 
-### Installation
+#
+## Reliability and large audits
+
+CourseCompliance splits large audits into Moodle AdHoc worker tasks. Version 0.18 adds automatic worker retry (one retry by default), manual retry of failed batches without rerunning successful batches, and audit performance telemetry (worker time, database queries, peak memory and retry count). Administrators can tune worker size and retry count from **CourseCompliance → Settings**.
+
+See [`docs/PERFORMANCE.md`](docs/PERFORMANCE.md) for the recommended 50 → 100 → 250 → 500 course load-test ladder and recovery procedure.
+
+## Installation
 
 Install the ZIP through Moodle's plugin installer, or copy the `coursecompliance` directory to the administration-tool plugin directory for your Moodle branch:
 

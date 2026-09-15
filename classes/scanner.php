@@ -308,6 +308,7 @@ final class scanner {
         $scan->notices = $totals['notice'];
         $scan->ignored = $totals['ignored'];
         $scan->finishedat = time();
+        $scan->errormessage = '';
         $DB->update_record('tool_coursecompliance_scan', $scan);
     }
 

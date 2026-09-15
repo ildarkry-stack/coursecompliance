@@ -23,6 +23,8 @@
 - [ ] Run a batched audit of at least 50 courses.
 - [ ] Verify parent scan aggregation after all worker tasks finish.
 - [ ] Verify a failed worker does not corrupt completed worker results.
+- [ ] Verify automatic worker retry and manual retry of failed batches.
+- [ ] Record worker time, DB queries and peak memory for the 50/100/250/500-course ladder.
 - [ ] Verify Question Bank audit on multichoice, match, shortanswer, numerical, true/false and random pools.
 - [ ] Verify Action Center removes stale issues after a newer clean scan.
 - [ ] Preview, apply and rollback one Safe AutoFix batch.

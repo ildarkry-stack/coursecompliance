@@ -58,6 +58,29 @@ final class schema_definition_test extends \advanced_testcase {
     }
 
     /**
+     * Reliability telemetry fields are present on clean installations.
+     */
+    public function test_scan_table_contains_reliability_metrics(): void {
+        $path = dirname(__DIR__) . '/db/install.xml';
+        $xml = simplexml_load_file($path);
+        $this->assertNotFalse($xml);
+
+        $fields = [];
+        foreach ($xml->TABLES->TABLE as $table) {
+            if ((string)$table['NAME'] !== 'tool_coursecompliance_scan') {
+                continue;
+            }
+            foreach ($table->FIELDS->FIELD as $field) {
+                $fields[] = (string)$field['NAME'];
+            }
+        }
+
+        foreach (['durationms', 'dbqueries', 'peakmemory', 'retrycount'] as $field) {
+            $this->assertContains($field, $fields);
+        }
+    }
+
+    /**
      * Assert that a comma-separated field list only contains declared fields.
      *
      * @param string $tablename Table name.

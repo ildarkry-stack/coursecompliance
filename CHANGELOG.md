@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.18.0-beta — 2026-09-15
+
+- Added automatic retry for failed scan workers with a conservative default of one retry and a configurable 0–3 retry limit.
+- Added manual **Retry failed batches** recovery that preserves successful worker results and requeues only failed packages.
+- Added per-worker performance telemetry: execution time, database query count, peak PHP memory and retry count. Parent audits aggregate these metrics for capacity planning.
+- Added performance cards to completed audit reports and failed-worker diagnostics to failed audit reports.
+- Added regression tests for worker retry recovery, finalizer metric aggregation and performance measurements.
+- Added schema fields for scan performance/reliability telemetry; no existing audit/result data is removed.
+
 ## 0.17.0-beta — 2026-09-15
 
 - Declared one supported codebase for Moodle 5.0, 5.1 and 5.2.

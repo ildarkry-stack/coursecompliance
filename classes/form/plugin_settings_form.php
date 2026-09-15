@@ -55,6 +55,14 @@ final class plugin_settings_form extends \moodleform {
         );
         $mform->addHelpButton('scanbatchsize', 'scanbatchsize', 'tool_coursecompliance');
 
+        $mform->addElement(
+            'select',
+            'scanbatchretries',
+            get_string('scanbatchretries', 'tool_coursecompliance'),
+            [0 => '0', 1 => '1', 2 => '2', 3 => '3']
+        );
+        $mform->addHelpButton('scanbatchretries', 'scanbatchretries', 'tool_coursecompliance');
+
         $categoryoptions = [0 => get_string('notselected', 'tool_coursecompliance')]
             + \core_course_category::make_categories_list();
         $mform->addElement(

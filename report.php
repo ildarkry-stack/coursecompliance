@@ -118,6 +118,46 @@ if ($scan->status === 'failed') {
             s(get_string('scanfailed', 'tool_coursecompliance') . ': ' . $scan->errormessage),
         'alert alert-danger'
     );
+
+    $failedchildren = $DB->get_records('tool_coursecompliance_scan', [
+        'parentid' => (int)$scan->id,
+        'status' => 'failed',
+    ], 'batchno ASC, id ASC');
+    if ($failedchildren) {
+        echo $OUTPUT->heading(get_string('scanfailedbatches', 'tool_coursecompliance'), 3);
+        $failedtable = new html_table();
+        $failedtable->attributes['class'] = 'generaltable table-sm';
+        $failedtable->head = [
+            get_string('batch', 'tool_coursecompliance'),
+            get_string('courses', 'tool_coursecompliance'),
+            get_string('scanretries', 'tool_coursecompliance'),
+            get_string('error'),
+        ];
+        foreach ($failedchildren as $child) {
+            $scope = json_decode((string)$child->scopejson, true);
+            $coursecount = count($scope['courseids'] ?? []);
+            $failedtable->data[] = [
+                '#' . (int)$child->batchno,
+                $coursecount,
+                (int)($child->retrycount ?? 0),
+                s((string)$child->errormessage),
+            ];
+        }
+        echo html_writer::table($failedtable);
+
+        if (has_capability('tool/coursecompliance:scan', $context)) {
+            $retryurl = new moodle_url('/admin/tool/coursecompliance/scan_retry.php');
+            echo html_writer::start_tag('form', ['method' => 'post', 'action' => $retryurl->out(false)]);
+            echo html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'sesskey', 'value' => sesskey()]);
+            echo html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'scanid', 'value' => $scanid]);
+            echo html_writer::empty_tag('input', [
+                'type' => 'submit',
+                'class' => 'btn btn-primary',
+                'value' => get_string('scanretryfailed', 'tool_coursecompliance'),
+            ]);
+            echo html_writer::end_tag('form');
+        }
+    }
     echo $OUTPUT->footer();
     exit;
 }
@@ -179,6 +219,37 @@ echo \tool_coursecompliance\ui::metric_cards([
         'class' => $autofixablecount > 0 ? 'text-primary' : 'text-success',
     ],
 ]);
+
+$performancemetrics = [];
+if ((int)($scan->durationms ?? 0) > 0) {
+    $performancemetrics[] = [
+        'label' => get_string('scanworkertime', 'tool_coursecompliance'),
+        'value' => format_time((int)ceil((int)$scan->durationms / 1000)),
+    ];
+}
+if ((int)($scan->dbqueries ?? 0) > 0) {
+    $performancemetrics[] = [
+        'label' => get_string('scandbqueries', 'tool_coursecompliance'),
+        'value' => (int)$scan->dbqueries,
+    ];
+}
+if ((int)($scan->peakmemory ?? 0) > 0) {
+    $performancemetrics[] = [
+        'label' => get_string('scanpeakmemory', 'tool_coursecompliance'),
+        'value' => display_size((int)$scan->peakmemory),
+    ];
+}
+if ((int)($scan->retrycount ?? 0) > 0) {
+    $performancemetrics[] = [
+        'label' => get_string('scanretries', 'tool_coursecompliance'),
+        'value' => (int)$scan->retrycount,
+        'class' => 'text-warning',
+    ];
+}
+if ($performancemetrics) {
+    echo $OUTPUT->heading(get_string('scanperformance', 'tool_coursecompliance'), 3);
+    echo \tool_coursecompliance\ui::metric_cards($performancemetrics);
+}
 
 $severitychart = \tool_coursecompliance\report_charts::severity(
     (int)$scan->critical,

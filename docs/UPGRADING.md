@@ -9,6 +9,10 @@
 5. Confirm that cron/AdHoc task processing is running.
 6. Run one small selective audit before launching a large category audit.
 
+## 0.17 to 0.18
+
+0.18 adds scan reliability/performance fields (`durationms`, `dbqueries`, `peakmemory`, `retrycount`) to the scan table. Existing audit data is retained. After the Moodle upgrade completes, open **CourseCompliance → Settings** and review the worker batch size and automatic retry count before the next large audit.
+
 ## 0.16 to 0.17
 
 0.17 changes compatibility metadata, CI coverage and release documentation. It does not add or remove database fields. Existing scans, Action Center state, standards, exceptions, Question Bank diagnostics and activity-operation history are retained.

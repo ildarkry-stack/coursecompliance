@@ -80,6 +80,10 @@ final class scan_scheduler {
                 'parentid' => $scanid,
                 'batchno' => $batchno,
                 'batchtotal' => $batchtotal,
+                'durationms' => 0,
+                'dbqueries' => 0,
+                'peakmemory' => 0,
+                'retrycount' => 0,
                 'userid' => $userid ?: (int)$parent->userid,
                 'status' => 'queued',
                 'courses' => 0,
@@ -127,6 +131,98 @@ final class scan_scheduler {
             $task->set_next_run_time(time() + $delay);
         }
         \core\task\manager::queue_adhoc_task($task);
+    }
+
+    /**
+     * Requeue every failed worker of a parent scan.
+     *
+     * Successful workers are preserved and will be reused by the finalizer.
+     *
+     * @param int $scanid Parent scan id.
+     * @param int $userid User requesting the retry.
+     * @return int Number of workers requeued, or -1 when only finalization was requeued.
+     */
+    public static function retry_failed_batches(int $scanid, int $userid = 0): int {
+        global $DB;
+
+        $parent = $DB->get_record('tool_coursecompliance_scan', ['id' => $scanid], '*', MUST_EXIST);
+        $failed = $DB->get_records('tool_coursecompliance_scan', [
+            'parentid' => $scanid,
+            'status' => 'failed',
+        ], 'batchno ASC, id ASC');
+        if (!$failed) {
+            $children = $DB->get_records('tool_coursecompliance_scan', ['parentid' => $scanid]);
+            if ($children) {
+                $parent->status = 'running';
+                $parent->finishedat = 0;
+                $parent->errormessage = '';
+                $DB->update_record('tool_coursecompliance_scan', $parent);
+                self::queue_finalizer($scanid, $userid ?: (int)$parent->userid, 5);
+                return -1;
+            }
+            return 0;
+        }
+
+        $parent->status = 'running';
+        $parent->finishedat = 0;
+        $parent->errormessage = '';
+        $DB->update_record('tool_coursecompliance_scan', $parent);
+
+        foreach ($failed as $child) {
+            self::retry_child((int)$child->id, $userid ?: (int)$parent->userid);
+        }
+        self::queue_finalizer($scanid, $userid ?: (int)$parent->userid, 15);
+        return count($failed);
+    }
+
+    /**
+     * Requeue one worker scan.
+     *
+     * @param int $scanid Worker scan id.
+     * @param int $userid User associated with the task.
+     * @param int $delay Optional delay in seconds.
+     */
+    public static function retry_child(int $scanid, int $userid = 0, int $delay = 0): void {
+        global $DB;
+
+        $scan = $DB->get_record('tool_coursecompliance_scan', ['id' => $scanid], '*', MUST_EXIST);
+        if ((int)$scan->parentid <= 0) {
+            throw new \coding_exception('Only worker scans can be retried with retry_child().');
+        }
+        $scan->status = 'queued';
+        $scan->startedat = 0;
+        $scan->finishedat = 0;
+        $scan->durationms = 0;
+        $scan->dbqueries = 0;
+        $scan->peakmemory = 0;
+        $scan->retrycount = (int)$scan->retrycount + 1;
+        $DB->update_record('tool_coursecompliance_scan', $scan);
+
+        $task = new \tool_coursecompliance\task\run_scan();
+        $task->set_custom_data([
+            'scanid' => $scanid,
+            'courselimit' => 0,
+        ]);
+        if ($userid > 0) {
+            $task->set_userid($userid);
+        }
+        if ($delay > 0) {
+            $task->set_next_run_time(time() + $delay);
+        }
+        \core\task\manager::queue_adhoc_task($task);
+    }
+
+    /**
+     * Maximum automatic retries for a failed worker.
+     *
+     * @return int
+     */
+    public static function max_batch_retries(): int {
+        $configured = get_config('tool_coursecompliance', 'scanbatchretries');
+        if ($configured === false) {
+            return 1;
+        }
+        return max(0, min(3, (int)$configured));
     }
 
     /**

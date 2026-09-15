@@ -28,11 +28,15 @@ namespace tool_coursecompliance\task;
  * Ad hoc task that runs a compliance scan.
  */
 final class run_scan extends \core\task\adhoc_task {
+    /** Automatic retry delay for a failed worker. */
+    private const RETRY_DELAY = 30;
+
     /**
      * Execute the scan task.
      */
     public function execute(): void {
         global $DB;
+
         $data = $this->get_custom_data();
         $scanid = (int)($data->scanid ?? 0);
         $courselimit = (int)($data->courselimit ?? 0);
@@ -53,13 +57,40 @@ final class run_scan extends \core\task\adhoc_task {
             return;
         }
 
+        $performance = \tool_coursecompliance\scan_performance::start();
         try {
             (new \tool_coursecompliance\scanner())->run($scanid, $courselimit);
+            \tool_coursecompliance\scan_performance::store(
+                $scanid,
+                \tool_coursecompliance\scan_performance::finish($performance)
+            );
         } catch (\Throwable $e) {
+            $metrics = \tool_coursecompliance\scan_performance::finish($performance);
             if ($scan = $DB->get_record('tool_coursecompliance_scan', ['id' => $scanid])) {
+                $scan->durationms = (int)$metrics['durationms'];
+                $scan->dbqueries = (int)$metrics['dbqueries'];
+                $scan->peakmemory = (int)$metrics['peakmemory'];
+                $scan->errormessage = $e->getMessage();
+
+                if (
+                    (int)($scan->parentid ?? 0) > 0
+                    && (int)($scan->retrycount ?? 0) < \tool_coursecompliance\scan_scheduler::max_batch_retries()
+                ) {
+                    $DB->update_record('tool_coursecompliance_scan', $scan);
+                    \tool_coursecompliance\scan_scheduler::retry_child(
+                        $scanid,
+                        (int)$scan->userid,
+                        self::RETRY_DELAY
+                    );
+                    mtrace(
+                        'Course Compliance batch #' . (int)($scan->batchno ?? 0)
+                        . ' failed and was queued for retry: ' . $e->getMessage()
+                    );
+                    return;
+                }
+
                 $scan->status = 'failed';
                 $scan->finishedat = time();
-                $scan->errormessage = $e->getMessage();
                 $DB->update_record('tool_coursecompliance_scan', $scan);
                 if ((int)($scan->parentid ?? 0) > 0) {
                     mtrace('Course Compliance batch #' . (int)($scan->batchno ?? 0) . ' failed: ' . $e->getMessage());

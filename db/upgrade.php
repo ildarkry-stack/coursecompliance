@@ -548,5 +548,22 @@ function xmldb_tool_coursecompliance_upgrade(int $oldversion): bool {
         upgrade_plugin_savepoint(true, 2026091503, 'tool', 'coursecompliance');
     }
 
+    if ($oldversion < 2026091504) {
+        $table = new xmldb_table('tool_coursecompliance_scan');
+        $fields = [
+            new xmldb_field('durationms', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0', 'batchtotal'),
+            new xmldb_field('dbqueries', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0', 'durationms'),
+            new xmldb_field('peakmemory', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0', 'dbqueries'),
+            new xmldb_field('retrycount', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0', 'peakmemory'),
+        ];
+        foreach ($fields as $field) {
+            if (!$dbman->field_exists($table, $field)) {
+                $dbman->add_field($table, $field);
+            }
+        }
+
+        upgrade_plugin_savepoint(true, 2026091504, 'tool', 'coursecompliance');
+    }
+
     return true;
 }

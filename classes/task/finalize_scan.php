@@ -111,13 +111,40 @@ final class finalize_scan extends \core\task\adhoc_task {
                 static fn (\stdClass $child): int => (int)$child->ignored,
                 $children
             ));
+            $parent->durationms = array_sum(array_map(
+                static fn (\stdClass $child): int => (int)($child->durationms ?? 0),
+                $children
+            ));
+            $parent->dbqueries = array_sum(array_map(
+                static fn (\stdClass $child): int => (int)($child->dbqueries ?? 0),
+                $children
+            ));
+            $parent->peakmemory = max(array_map(
+                static fn (\stdClass $child): int => (int)($child->peakmemory ?? 0),
+                $children
+            ));
+            $parent->retrycount = array_sum(array_map(
+                static fn (\stdClass $child): int => (int)($child->retrycount ?? 0),
+                $children
+            ));
             $parent->finishedat = time();
             $parent->errormessage = '';
             $DB->update_record('tool_coursecompliance_scan', $parent);
 
             $transaction->allow_commit();
         } catch (\Throwable $e) {
-            $transaction->rollback($e);
+            try {
+                $transaction->rollback($e);
+            } catch (\Throwable $rollbackexception) {
+                $e = $rollbackexception;
+            }
+            $parent = $DB->get_record('tool_coursecompliance_scan', ['id' => $scanid], '*', MUST_EXIST);
+            $parent->status = 'failed';
+            $parent->finishedat = time();
+            $parent->errormessage = $e->getMessage();
+            $DB->update_record('tool_coursecompliance_scan', $parent);
+            \tool_coursecompliance\scan_notifier::failed($parent);
+            return;
         }
 
         self::delete_children($children);

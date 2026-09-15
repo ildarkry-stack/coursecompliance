@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='UTF-8'?>
-<XMLDB xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" PATH="admin/tool/coursecompliance/db" VERSION="2026091503" COMMENT="XMLDB file for tool_coursecompliance" xsi:noNamespaceSchemaLocation="../../../lib/xmldb/xmldb.xsd">
+<XMLDB xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" PATH="admin/tool/coursecompliance/db" VERSION="2026091504" COMMENT="XMLDB file for tool_coursecompliance" xsi:noNamespaceSchemaLocation="../../../lib/xmldb/xmldb.xsd">
   <TABLES>
     <TABLE NAME="tool_coursecompliance_profile" COMMENT="Compliance profiles">
       <FIELDS>
@@ -26,6 +26,10 @@
         <FIELD NAME="parentid" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" />
         <FIELD NAME="batchno" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" />
         <FIELD NAME="batchtotal" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" />
+        <FIELD NAME="durationms" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" />
+        <FIELD NAME="dbqueries" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" />
+        <FIELD NAME="peakmemory" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" />
+        <FIELD NAME="retrycount" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" />
         <FIELD NAME="userid" TYPE="int" LENGTH="10" NOTNULL="true" />
         <FIELD NAME="status" TYPE="char" LENGTH="20" NOTNULL="true" DEFAULT="queued" />
         <FIELD NAME="courses" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" />
