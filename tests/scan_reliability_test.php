@@ -39,7 +39,14 @@ final class scan_reliability_test extends \advanced_testcase {
 
         $this->resetAfterTest();
         $this->setAdminUser();
-        $ids = $this->create_parent_with_children((int)$USER->id);
+        $ids = $this->create_parent_with_children((int)$USER->id, false, 0);
+        $failedbefore = $DB->get_record(
+            'tool_coursecompliance_scan',
+            ['id' => $ids['failed']],
+            '*',
+            MUST_EXIST
+        );
+        $this->assertSame(0, (int)$failedbefore->retrycount);
 
         $count = scan_scheduler::retry_failed_batches($ids['parent'], (int)$USER->id);
         $this->assertSame(1, $count);
@@ -49,7 +56,7 @@ final class scan_reliability_test extends \advanced_testcase {
         $parent = $DB->get_record('tool_coursecompliance_scan', ['id' => $ids['parent']], '*', MUST_EXIST);
 
         $this->assertSame('queued', $failed->status);
-        $this->assertSame(1, (int)$failed->retrycount);
+        $this->assertSame((int)$failedbefore->retrycount + 1, (int)$failed->retrycount);
         $this->assertSame('complete', $complete->status);
         $this->assertSame('running', $parent->status);
         $this->assertSame(0, (int)$parent->finishedat);
@@ -81,7 +88,7 @@ final class scan_reliability_test extends \advanced_testcase {
 
         $this->resetAfterTest();
         $this->setAdminUser();
-        $ids = $this->create_parent_with_children(0, true);
+        $ids = $this->create_parent_with_children(0, true, 1);
 
         $task = new \tool_coursecompliance\task\finalize_scan();
         $task->set_custom_data(['scanid' => $ids['parent']]);
@@ -116,9 +123,14 @@ final class scan_reliability_test extends \advanced_testcase {
      *
      * @param int $userid User id.
      * @param bool $bothcomplete Whether both children should be complete.
+     * @param int $secondretries Initial retry count for the second worker.
      * @return array
      */
-    private function create_parent_with_children(int $userid, bool $bothcomplete = false): array {
+    private function create_parent_with_children(
+        int $userid,
+        bool $bothcomplete = false,
+        int $secondretries = 0
+    ): array {
         global $DB;
 
         $category = $this->getDataGenerator()->create_category();
@@ -151,7 +163,6 @@ final class scan_reliability_test extends \advanced_testcase {
 
         $completeid = $this->insert_child($parentid, $profileid, $category->id, $userid, 1, 'complete', 100, 10, 2048, 0);
         $secondstatus = $bothcomplete ? 'complete' : 'failed';
-        $secondretries = $bothcomplete ? 1 : 0;
         $failedid = $this->insert_child(
             $parentid,
             $profileid,
