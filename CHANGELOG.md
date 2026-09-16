@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.19.0-rc1 — 2026-09-16
+
+- Added a read-only **Diagnostics** page under Settings with the plugin release, Moodle/PHP/database compatibility checks, required-API checks, pending CourseCompliance tasks, failed parent audits, long-running audits and last completed audit information.
+- Completed Moodle Privacy API coverage with `core_userlist_provider`, system-context user discovery and approved multi-user deletion.
+- Declared CourseCompliance scan notifications as use of Moodle's core Messaging subsystem in Privacy API metadata.
+- Expanded privacy regression coverage to verify user discovery and selective deletion of audit, operation and exception records while preserving another administrator's data.
+- Scoped the remaining audit-course-picker CSS selectors to CourseCompliance pages to avoid leaking plugin styles into unrelated Moodle screens.
+- Reworked the README for public distribution and added Marketplace, privacy and release-candidate QA documentation.
+- Added structured GitHub bug/feature templates and a pull-request checklist.
+- Added release-package validation to CI so distributable ZIPs contain a single `coursecompliance/` root and exclude repository metadata.
+- No database schema changes are introduced in 0.19.0-rc1.
+
 ## 0.18.0-beta — 2026-09-15
 
 - Added automatic retry for failed scan workers with a conservative default of one retry and a configurable 0–3 retry limit.

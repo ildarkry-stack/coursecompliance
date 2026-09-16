@@ -239,18 +239,79 @@ jobs:
       - name: PHPUnit compatibility suite
         run: moodle-plugin-ci phpunit --moodle ./moodle --fail-on-warning "$PLUGIN_PATH"
 
+  package-check:
+    name: Release package structure
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out plugin
+        uses: actions/checkout@v6
+        with:
+          path: repo
+          persist-credentials: false
+
+      - name: Build and validate distributable ZIP
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ -f "repo/version.php" ]]; then
+            SOURCE_DIR="repo"
+          elif [[ -f "repo/coursecompliance/version.php" ]]; then
+            SOURCE_DIR="repo/coursecompliance"
+          else
+            echo "Cannot find tool_coursecompliance version.php" >&2
+            exit 1
+          fi
+
+          rm -rf staging release
+          mkdir -p staging/coursecompliance release
+          rsync -a \
+            --exclude='.git' \
+            --exclude='.github' \
+            "$SOURCE_DIR/" staging/coursecompliance/
+          (cd staging && zip -qr ../release/tool_coursecompliance.zip coursecompliance)
+          unzip -t release/tool_coursecompliance.zip
+
+          python - <<'PY'
+          import zipfile
+
+          path = 'release/tool_coursecompliance.zip'
+          required = {
+              'coursecompliance/version.php',
+              'coursecompliance/README.md',
+              'coursecompliance/LICENSE',
+              'coursecompliance/db/install.xml',
+          }
+          with zipfile.ZipFile(path) as archive:
+              names = set(archive.namelist())
+          missing = sorted(required - names)
+          if missing:
+              raise SystemExit(f'Missing required release files: {missing}')
+          invalid = [
+              name for name in names
+              if not name.startswith('coursecompliance/')
+              or '/.git/' in name
+              or '/.github/' in name
+          ]
+          if invalid:
+              raise SystemExit(f'Invalid release paths: {invalid[:20]}')
+          print(f'Release package contains {len(names)} paths under coursecompliance/.')
+          PY
+
   required-checks:
     name: Required checks
     if: ${{ always() }}
     needs:
       - static-analysis
       - compatibility
+      - package-check
     runs-on: ubuntu-24.04
     steps:
       - name: Verify all CI jobs passed
         run: |
           [[ "${{ needs.static-analysis.result }}" == "success" ]]
           [[ "${{ needs.compatibility.result }}" == "success" ]]
+          [[ "${{ needs.package-check.result }}" == "success" ]]
 
   release-package:
     name: Build release package
@@ -262,17 +323,45 @@ jobs:
       - name: Check out plugin
         uses: actions/checkout@v6
         with:
-          path: coursecompliance
+          path: repo
           persist-credentials: false
 
       - name: Build Moodle plugin ZIP
         shell: bash
         run: |
-          rm -rf release
-          mkdir -p release
-          zip -qr "release/tool_coursecompliance-${GITHUB_REF_NAME}.zip" coursecompliance \
-            -x 'coursecompliance/.git/*' \
-               'coursecompliance/.github/*'
+          set -euo pipefail
+
+          if [[ -f "repo/version.php" ]]; then
+            SOURCE_DIR="repo"
+          elif [[ -f "repo/coursecompliance/version.php" ]]; then
+            SOURCE_DIR="repo/coursecompliance"
+          else
+            echo "Cannot find tool_coursecompliance version.php" >&2
+            exit 1
+          fi
+
+          RELEASE=$(python - "$SOURCE_DIR/version.php" <<'PY'
+          import re
+          import sys
+          text = open(sys.argv[1], encoding='utf-8').read()
+          match = re.search(r"\$plugin->release\s*=\s*'([^']+)'", text)
+          if not match:
+              raise SystemExit('Could not read $plugin->release from version.php')
+          print(match.group(1))
+          PY
+          )
+          if [[ "v${RELEASE}" != "$GITHUB_REF_NAME" ]]; then
+            echo "Tag $GITHUB_REF_NAME does not match plugin release v${RELEASE}" >&2
+            exit 1
+          fi
+
+          rm -rf staging release
+          mkdir -p staging/coursecompliance release
+          rsync -a \
+            --exclude='.git' \
+            --exclude='.github' \
+            "$SOURCE_DIR/" staging/coursecompliance/
+          (cd staging && zip -qr "../release/tool_coursecompliance-${GITHUB_REF_NAME}.zip" coursecompliance)
           unzip -t "release/tool_coursecompliance-${GITHUB_REF_NAME}.zip"
 
       - name: Upload release package

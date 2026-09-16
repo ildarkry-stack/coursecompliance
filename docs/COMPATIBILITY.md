@@ -35,3 +35,7 @@ A new Moodle branch is not added to `$plugin->supported` until clean install, st
 ## Manual installation paths
 
 The repository layout changed in Moodle 5.1. For manual source-tree installation use `admin/tool/coursecompliance` on Moodle 5.0 and `public/admin/tool/coursecompliance` on Moodle 5.1/5.2. Installing the ZIP through the Moodle administrator interface avoids this distinction.
+
+## Runtime diagnostics
+
+From 0.19.0-rc1, site administrators can open **CourseCompliance → Settings → Diagnostics** to compare the running Moodle, PHP and database environment with this compatibility policy and to inspect CourseCompliance background-work health. The page is read-only and is intended to make support reports reproducible.

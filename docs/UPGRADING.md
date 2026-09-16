@@ -9,6 +9,10 @@
 5. Confirm that cron/AdHoc task processing is running.
 6. Run one small selective audit before launching a large category audit.
 
+## 0.18 to 0.19
+
+0.19.0-rc1 adds release-readiness documentation, a read-only Diagnostics page and more complete Privacy API support. It does not change the CourseCompliance database schema. Existing standards, scans, question diagnostics, exceptions and operation history are retained. After upgrading, open **CourseCompliance → Settings → Diagnostics** and confirm that the detected Moodle, PHP and database environment is inside the supported range.
+
 ## 0.17 to 0.18
 
 0.18 adds scan reliability/performance fields (`durationms`, `dbqueries`, `peakmemory`, `retrycount`) to the scan table. Existing audit data is retained. After the Moodle upgrade completes, open **CourseCompliance → Settings** and review the worker batch size and automatic retry count before the next large audit.

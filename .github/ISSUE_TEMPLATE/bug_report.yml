@@ -1,0 +1,72 @@
+name: Bug report
+description: Report reproducible CourseCompliance behaviour that differs from what you expected.
+title: "[Bug] "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do not include production credentials, student data or database dumps. For security issues, follow SECURITY.md instead of opening a public issue.
+  - type: input
+    id: release
+    attributes:
+      label: CourseCompliance release
+      placeholder: 0.19.0-rc1
+    validations:
+      required: true
+  - type: dropdown
+    id: moodle
+    attributes:
+      label: Moodle version
+      options:
+        - "5.0"
+        - "5.1"
+        - "5.2"
+        - Other / not sure
+    validations:
+      required: true
+  - type: input
+    id: php
+    attributes:
+      label: PHP version
+      placeholder: 8.3.x
+  - type: dropdown
+    id: database
+    attributes:
+      label: Database
+      options:
+        - PostgreSQL
+        - MySQL / MariaDB
+        - Other / not sure
+    validations:
+      required: true
+  - type: input
+    id: auditid
+    attributes:
+      label: Audit or operation ID
+      description: If the problem belongs to a specific audit or batch, provide its numeric ID.
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      description: Describe the smallest reliable sequence that triggers the problem.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected result
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual result
+    validations:
+      required: true
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Diagnostics
+      description: Copy non-sensitive values from CourseCompliance → Settings → Diagnostics and any relevant Moodle debug message.

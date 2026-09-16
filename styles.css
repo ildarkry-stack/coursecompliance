@@ -255,20 +255,20 @@ body[id^="page-admin-tool-coursecompliance"] .cc-form-group-title {
 
 
 /* Audit course picker. */
-.cc-course-picker-search {
+.path-admin-tool-coursecompliance .cc-course-picker-search {
     min-width: 260px;
     max-width: 420px;
 }
-.cc-course-picker-table {
+.path-admin-tool-coursecompliance .cc-course-picker-table {
     min-width: 760px;
 }
-.cc-course-picker-table .cc-course-picker-check {
+.path-admin-tool-coursecompliance .cc-course-picker-table .cc-course-picker-check {
     width: 42px;
     text-align: center;
 }
-.cc-course-picker-table tbody tr {
+.path-admin-tool-coursecompliance .cc-course-picker-table tbody tr {
     cursor: pointer;
 }
-.cc-course-picker-table tbody tr:has(input:checked) {
+.path-admin-tool-coursecompliance .cc-course-picker-table tbody tr:has(input:checked) {
     background: color-mix(in srgb, var(--bs-primary) 8%, transparent);
 }

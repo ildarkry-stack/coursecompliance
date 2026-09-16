@@ -181,6 +181,26 @@ final class ui {
     }
 
     /**
+     * Render secondary navigation for administration and support pages.
+     *
+     * @param string $active Active key.
+     * @return string HTML.
+     */
+    public static function settings_navigation(string $active): string {
+        $items = [
+            'settings' => [
+                get_string('nav_settings', 'tool_coursecompliance'),
+                new \moodle_url('/admin/tool/coursecompliance/plugin_settings.php'),
+            ],
+            'diagnostics' => [
+                get_string('diagnostics', 'tool_coursecompliance'),
+                new \moodle_url('/admin/tool/coursecompliance/diagnostics.php'),
+            ],
+        ];
+        return self::secondary_navigation($items, $active, 'settingsnavigation');
+    }
+
+    /**
      * Render a row of metric cards.
      *
      * @param array $metrics Metrics.

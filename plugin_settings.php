@@ -58,6 +58,7 @@ $form->set_data((object)[
 
 echo $OUTPUT->header();
 echo \tool_coursecompliance\ui::primary_navigation('settings');
+echo \tool_coursecompliance\ui::settings_navigation('settings');
 echo \tool_coursecompliance\ui::page_heading(
     get_string('nav_settings', 'tool_coursecompliance'),
     get_string('settingsintro', 'tool_coursecompliance')

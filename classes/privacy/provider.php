@@ -26,7 +26,9 @@ namespace tool_coursecompliance\privacy;
 
 use core_privacy\local\metadata\collection;
 use core_privacy\local\request\approved_contextlist;
+use core_privacy\local\request\approved_userlist;
 use core_privacy\local\request\contextlist;
+use core_privacy\local\request\userlist;
 use core_privacy\local\request\writer;
 
 /**
@@ -34,7 +36,8 @@ use core_privacy\local\request\writer;
  */
 final class provider implements
     \core_privacy\local\metadata\provider,
-    \core_privacy\local\request\plugin\provider {
+    \core_privacy\local\request\plugin\provider,
+    \core_privacy\local\request\core_userlist_provider {
     /**
      * Describe personal data stored by the plugin.
      *
@@ -67,6 +70,11 @@ final class provider implements
             ],
             'privacy:metadata:exception'
         );
+        $collection->add_subsystem_link(
+            'core_message',
+            [],
+            'privacy:metadata:coremessage'
+        );
         return $collection;
     }
 
@@ -91,6 +99,27 @@ final class provider implements
     }
 
     /**
+     * Get users whose personal data is stored in the supplied context.
+     *
+     * CourseCompliance stores administrator-owned audit metadata in the system context.
+     *
+     * @param userlist $userlist User list for a context and component.
+     */
+    public static function get_users_in_context(userlist $userlist): void {
+        $context = $userlist->get_context();
+        if ($context->contextlevel !== CONTEXT_SYSTEM) {
+            return;
+        }
+
+        $sql = "SELECT userid FROM {tool_coursecompliance_scan} WHERE userid > 0
+                 UNION
+                SELECT userid FROM {tool_coursecompliance_act_batch} WHERE userid > 0
+                 UNION
+                SELECT userid FROM {tool_coursecompliance_exception} WHERE userid > 0";
+        $userlist->add_from_sql('userid', $sql, []);
+    }
+
+    /**
      * Export personal data for approved contexts.
      *
      * @param approved_contextlist $contextlist Approved context list.
@@ -103,13 +132,25 @@ final class provider implements
             return;
         }
 
+        $systemcontextid = \context_system::instance()->id;
+        $approvedsystemcontext = false;
+        foreach ($contexts as $context) {
+            if ((int)$context->id === (int)$systemcontextid) {
+                $approvedsystemcontext = true;
+                break;
+            }
+        }
+        if (!$approvedsystemcontext) {
+            return;
+        }
+
         $userid = $contextlist->get_user()->id;
         $records = $DB->get_records(
             'tool_coursecompliance_scan',
             ['userid' => $userid],
             'timecreated ASC',
-            'id, profileid, categoryid, courselimit, status, courses, assessments, critical, warnings, notices, ' .
-                'startedat, finishedat, timecreated'
+            'id, profileid, categoryid, courselimit, scantype, status, courses, assessments, critical, warnings, notices, ' .
+                'ignored, durationms, dbqueries, peakmemory, retrycount, startedat, finishedat, errormessage, timecreated'
         );
         $audits = [];
         foreach ($records as $record) {
@@ -121,7 +162,7 @@ final class provider implements
             ['userid' => $userid],
             'timecreated ASC',
             'id, categoryid, action, status, summary, totalchanges, applied, skipped, failed, ' .
-                'timecreated, timestarted, timefinished'
+                'timecreated, timestarted, timefinished, errormessage'
         );
         $operations = [];
         foreach ($batches as $batch) {
@@ -132,7 +173,7 @@ final class provider implements
             'tool_coursecompliance_exception',
             ['userid' => $userid],
             'timecreated ASC',
-            'id, profileid, courseid, rulecode, component, objectid, reason, expiresat, enabled, timecreated'
+            'id, profileid, courseid, rulecode, component, objectid, reason, expiresat, enabled, timecreated, timemodified'
         );
         $exceptiondata = [];
         foreach ($exceptions as $exception) {
@@ -171,40 +212,76 @@ final class provider implements
      * @param approved_contextlist $contextlist Approved context list.
      */
     public static function delete_data_for_user(approved_contextlist $contextlist): void {
-        global $DB;
-
-        if (!$contextlist->get_contexts()) {
+        $contexts = $contextlist->get_contexts();
+        if (!$contexts) {
             return;
         }
 
-        $userid = $contextlist->get_user()->id;
+        $systemcontextid = \context_system::instance()->id;
+        foreach ($contexts as $context) {
+            if ((int)$context->id === (int)$systemcontextid) {
+                self::delete_data_for_userids([(int)$contextlist->get_user()->id]);
+                return;
+            }
+        }
+    }
+
+    /**
+     * Delete personal data for multiple users in one context.
+     *
+     * @param approved_userlist $userlist Approved users in a context.
+     */
+    public static function delete_data_for_users(approved_userlist $userlist): void {
+        $context = $userlist->get_context();
+        if ($context->contextlevel !== CONTEXT_SYSTEM) {
+            return;
+        }
+        self::delete_data_for_userids(array_map('intval', $userlist->get_userids()));
+    }
+
+    /**
+     * Delete plugin data owned by the supplied user ids.
+     *
+     * @param array $userids User ids.
+     */
+    private static function delete_data_for_userids(array $userids): void {
+        global $DB;
+
+        $userids = array_values(array_unique(array_filter($userids, static fn(int $userid): bool => $userid > 0)));
+        if (!$userids) {
+            return;
+        }
+
+        [$userinsql, $userparams] = $DB->get_in_or_equal($userids, SQL_PARAMS_NAMED, 'ccuserid');
+
         $scanids = $DB->get_fieldset_select(
             'tool_coursecompliance_scan',
             'id',
-            'userid = :userid',
-            ['userid' => $userid]
+            "userid $userinsql",
+            $userparams
         );
         if ($scanids) {
-            [$insql, $params] = $DB->get_in_or_equal($scanids, SQL_PARAMS_NAMED, 'scan');
-            $DB->delete_records_select('tool_coursecompliance_result', "scanid $insql", $params);
-            $DB->delete_records_select('tool_coursecompliance_assessment', "scanid $insql", $params);
-            $DB->delete_records_select('tool_coursecompliance_course', "scanid $insql", $params);
-            $DB->delete_records_select('tool_coursecompliance_qissue', "scanid $insql", $params);
-            $DB->delete_records_select('tool_coursecompliance_scan', "id $insql", $params);
+            [$scaninsql, $scanparams] = $DB->get_in_or_equal($scanids, SQL_PARAMS_NAMED, 'ccscan');
+            $DB->delete_records_select('tool_coursecompliance_result', "scanid $scaninsql", $scanparams);
+            $DB->delete_records_select('tool_coursecompliance_assessment', "scanid $scaninsql", $scanparams);
+            $DB->delete_records_select('tool_coursecompliance_course', "scanid $scaninsql", $scanparams);
+            $DB->delete_records_select('tool_coursecompliance_qissue', "scanid $scaninsql", $scanparams);
+            $DB->delete_records_select('tool_coursecompliance_scan', "id $scaninsql", $scanparams);
         }
 
-        $DB->delete_records('tool_coursecompliance_exception', ['userid' => $userid]);
+        $DB->delete_records_select('tool_coursecompliance_exception', "userid $userinsql", $userparams);
+
         $batchids = $DB->get_fieldset_select(
             'tool_coursecompliance_act_batch',
             'id',
-            'userid = :userid',
-            ['userid' => $userid]
+            "userid $userinsql",
+            $userparams
         );
         if ($batchids) {
-            [$insql, $params] = $DB->get_in_or_equal($batchids, SQL_PARAMS_NAMED, 'batch');
-            $DB->delete_records_select('tool_coursecompliance_act_change', "batchid $insql", $params);
-            $DB->delete_records_select('tool_coursecompliance_session_issue', "batchid $insql", $params);
-            $DB->delete_records_select('tool_coursecompliance_act_batch', "id $insql", $params);
+            [$batchinsql, $batchparams] = $DB->get_in_or_equal($batchids, SQL_PARAMS_NAMED, 'ccbatch');
+            $DB->delete_records_select('tool_coursecompliance_act_change', "batchid $batchinsql", $batchparams);
+            $DB->delete_records_select('tool_coursecompliance_session_issue', "batchid $batchinsql", $batchparams);
+            $DB->delete_records_select('tool_coursecompliance_act_batch', "id $batchinsql", $batchparams);
         }
     }
 
