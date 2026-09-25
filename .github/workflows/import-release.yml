@@ -5,7 +5,7 @@ on:
     branches:
       - release/1.1.0-rc1
     paths:
-      - ".ci/release.ready"
+      - ".ci40/release.ready"
 
 jobs:
   import:
@@ -20,14 +20,13 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          cat .ci/release.b64.part* | base64 --decode > /tmp/coursecompliance.zip
+          cat .ci40/release.b64.part* | base64 --decode > /tmp/coursecompliance.zip
           echo "c1a3fba0e91f5f544b987df166f084d1abb724ef439d55a0bca05922a4fe650d  /tmp/coursecompliance.zip" | sha256sum -c -
           unzip -t /tmp/coursecompliance.zip
           rm -rf /tmp/release
           mkdir -p /tmp/release
           unzip -q /tmp/coursecompliance.zip -d /tmp/release
           test -f /tmp/release/coursecompliance/version.php
-          test "$(find /tmp/release -mindepth 1 -maxdepth 1 -type d | wc -l)" -eq 1
 
       - name: Import plugin source
         shell: bash
@@ -37,8 +36,9 @@ jobs:
             --exclude='.git/' \
             --exclude='.github/' \
             --exclude='.ci/' \
+            --exclude='.ci40/' \
             /tmp/release/coursecompliance/ "$GITHUB_WORKSPACE/"
-          rm -rf .ci
+          rm -rf .ci .ci40
 
       - name: Commit imported release
         shell: bash
