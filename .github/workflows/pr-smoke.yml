@@ -1,0 +1,10 @@
+name: PR smoke
+
+on:
+  workflow_dispatch:
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "CourseCompliance release branch"
