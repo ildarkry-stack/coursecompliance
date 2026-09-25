@@ -1,0 +1,51 @@
+name: Import CourseCompliance release
+
+on:
+  push:
+    branches:
+      - release/1.1.0-rc1
+    paths:
+      - ".ci/release.ready"
+
+jobs:
+  import:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out release branch
+        uses: actions/checkout@v6
+        with:
+          ref: release/1.1.0-rc1
+
+      - name: Reconstruct and validate release
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat .ci/release.b64.part* | base64 --decode > /tmp/coursecompliance.zip
+          echo "c1a3fba0e91f5f544b987df166f084d1abb724ef439d55a0bca05922a4fe650d  /tmp/coursecompliance.zip" | sha256sum -c -
+          unzip -t /tmp/coursecompliance.zip
+          rm -rf /tmp/release
+          mkdir -p /tmp/release
+          unzip -q /tmp/coursecompliance.zip -d /tmp/release
+          test -f /tmp/release/coursecompliance/version.php
+          test "$(find /tmp/release -mindepth 1 -maxdepth 1 -type d | wc -l)" -eq 1
+
+      - name: Import plugin source
+        shell: bash
+        run: |
+          set -euo pipefail
+          rsync -a --delete \
+            --exclude='.git/' \
+            --exclude='.github/' \
+            --exclude='.ci/' \
+            /tmp/release/coursecompliance/ "$GITHUB_WORKSPACE/"
+          rm -rf .ci
+
+      - name: Commit imported release
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Import CourseCompliance 1.1.0-rc1"
+          git push origin HEAD:release/1.1.0-rc1
