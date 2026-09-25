@@ -117,12 +117,11 @@ final class question_issue_repository {
             return $counts;
         }
         [$insql, $params] = $DB->get_in_or_equal(array_keys($scanids), SQL_PARAMS_NAMED, 'detailscan');
-        $records = $DB->get_records_select(
-            'tool_coursecompliance_qissue',
-            "scanid $insql",
-            $params,
-            '',
-            'id, scanid, courseid, assessmenttype, issuecode'
+        $records = $DB->get_recordset_sql(
+            "SELECT scanid, courseid, assessmenttype, issuecode, COUNT(1) AS issuecount
+               FROM {tool_coursecompliance_qissue} WHERE scanid $insql
+           GROUP BY scanid, courseid, assessmenttype, issuecode",
+            $params
         );
         foreach ($records as $record) {
             $key = self::detail_key(
@@ -132,9 +131,10 @@ final class question_issue_repository {
                 (string)$record->issuecode
             );
             foreach ($lookup[$key] ?? [] as $resultid) {
-                $counts[$resultid]++;
+                $counts[$resultid] += (int)$record->issuecount;
             }
         }
+        $records->close();
         return $counts;
     }
 
@@ -194,59 +194,106 @@ final class question_issue_repository {
      * @return \stdClass[]
      */
     public static function current_issues(int $limit = 5000): array {
+        return self::current_page([], 0, max(1, $limit));
+    }
+
+    /**
+     * Shared current scope, including suppression by newer clean scans.
+     *
+     * @param array $filters UI filters.
+     * @return array FROM/WHERE SQL and parameters.
+     */
+    private static function current_scope(array $filters): array {
         global $DB;
+        $params = [];
+        $pairs = [];
+        $index = 0;
+        foreach (self::RULE_ISSUES as $rule => $codes) {
+            [$insql, $inparams] = $DB->get_in_or_equal($codes, SQL_PARAMS_NAMED, 'qicode' . $index);
+            $key = 'qirule' . $index++;
+            $params += $inparams;
+            $params[$key] = $rule;
+            $pairs[] = "(r.rulecode = :$key AND qi.issuecode $insql)";
+        }
+        $mapping = implode(' OR ', $pairs);
+        $current = current_scan::predicate('s', 'qi.courseid');
+        $sql = "FROM {tool_coursecompliance_qissue} qi
+                 JOIN {tool_coursecompliance_scan} s ON s.id = qi.scanid
+                 JOIN {course} c ON c.id = qi.courseid
+            LEFT JOIN {quiz} q ON q.id = qi.quizid
+                WHERE $current
+                  AND EXISTS (SELECT 1 FROM {tool_coursecompliance_result} r
+                               WHERE r.scanid = qi.scanid AND r.courseid = qi.courseid
+                                 AND r.assessmenttype = qi.assessmenttype AND ($mapping))";
+        foreach (['severity', 'issuecode', 'assessmenttype', 'qtype'] as $field) {
+            if (!empty($filters[$field])) {
+                $sql .= " AND qi.$field = :filter$field";
+                $params['filter' . $field] = $filters[$field];
+            }
+        }
+        if (!empty($filters['search'])) {
+            $parts = [];
+            $pattern = '%' . $DB->sql_like_escape($filters['search']) . '%';
+            foreach (['c.fullname', 'c.shortname', 'qi.questionname', 'qi.categoryname', 'q.name'] as $i => $field) {
+                $key = 'qisearch' . $i;
+                $parts[] = $DB->sql_like($field, ':' . $key, false, false);
+                $params[$key] = $pattern;
+            }
+            $sql .= ' AND (' . implode(' OR ', $parts) . ')';
+        }
+        return [$sql, $params];
+    }
 
-        $results = scan_analysis::current_action_results(10000);
-        $allowed = [];
-        $scanids = [];
-        foreach ($results as $result) {
-            $codes = self::issue_codes_for_rule((string)$result->rulecode);
-            if (!$codes) {
-                continue;
-            }
-            $scanid = (int)$result->scanid;
-            $scanids[$scanid] = true;
-            foreach ($codes as $code) {
-                $allowed[self::detail_key($scanid, (int)$result->courseid, (string)$result->assessmenttype, $code)] = true;
-            }
-        }
-        if (!$scanids) {
-            return [];
-        }
+    /**
+     * Get one page after all filters have been applied in SQL.
+     *
+     * @param array $filters UI filters.
+     * @param int $page Zero-based page.
+     * @param int $perpage Maximum returned rows.
+     * @return array Detailed issues.
+     */
+    public static function current_page(array $filters, int $page = 0, int $perpage = 100): array {
+        global $DB;
+        [$scope, $params] = self::current_scope($filters);
+        return array_values($DB->get_records_sql(
+            "SELECT qi.*, c.fullname, c.shortname, q.name AS quizname $scope ORDER BY qi.id DESC",
+            $params,
+            max(0, $page) * max(1, $perpage),
+            max(1, $perpage)
+        ));
+    }
 
-        [$insql, $params] = $DB->get_in_or_equal(array_keys($scanids), SQL_PARAMS_NAMED, 'currentscan');
-        $allcodes = [];
-        foreach (array_keys($allowed) as $key) {
-            $parts = explode('|', $key);
-            $allcodes[$parts[3] ?? ''] = true;
-        }
-        unset($allcodes['']);
-        [$codesql, $codeparams] = $DB->get_in_or_equal(array_keys($allcodes), SQL_PARAMS_NAMED, 'currentissue');
-        $params += $codeparams;
-        $sql = "SELECT qi.*, c.fullname, c.shortname, q.name AS quizname
-                  FROM {tool_coursecompliance_qissue} qi
-                  JOIN {course} c ON c.id = qi.courseid
-             LEFT JOIN {quiz} q ON q.id = qi.quizid
-                 WHERE qi.scanid $insql
-                   AND qi.issuecode $codesql
-              ORDER BY qi.id DESC";
-        $records = $DB->get_records_sql($sql, $params);
-        $out = [];
-        foreach ($records as $record) {
-            $key = self::detail_key(
-                (int)$record->scanid,
-                (int)$record->courseid,
-                (string)$record->assessmenttype,
-                (string)$record->issuecode
-            );
-            if (isset($allowed[$key])) {
-                $out[] = $record;
-                if (count($out) >= $limit) {
-                    break;
-                }
-            }
-        }
-        return $out;
+    /**
+     * Count all matching issues, without a display cap.
+     *
+     * @param array $filters UI filters.
+     * @return int Total.
+     */
+    public static function current_count(array $filters = []): int {
+        global $DB;
+        [$scope, $params] = self::current_scope($filters);
+        return (int)$DB->count_records_sql("SELECT COUNT(1) $scope", $params);
+    }
+
+    /**
+     * Return complete dashboard totals and bounded distinct filter choices.
+     *
+     * @return array Dashboard values.
+     */
+    public static function current_summary(): array {
+        global $DB;
+        [$scope, $params] = self::current_scope([]);
+        $totals = $DB->get_record_sql(
+            "SELECT COUNT(DISTINCT CASE WHEN qi.questionid > 0 THEN qi.questionid ELSE NULL END) AS questions,
+                    SUM(CASE WHEN qi.severity = 'critical' THEN 1 ELSE 0 END) AS critical,
+                    SUM(CASE WHEN qi.issuecode = 'no_correct_answer' THEN 1 ELSE 0 END) AS nocorrect,
+                    SUM(CASE WHEN qi.issuecode IN ('broken_question', 'correct_answer_unchecked', 'structure_error')
+                             THEN 1 ELSE 0 END) AS partialcount $scope",
+            $params
+        );
+        $codes = $DB->get_fieldset_sql("SELECT DISTINCT qi.issuecode $scope", $params);
+        $types = $DB->get_fieldset_sql("SELECT DISTINCT qi.qtype $scope", $params);
+        return ['totals' => $totals, 'codes' => $codes, 'types' => array_filter($types)];
     }
 
     /**

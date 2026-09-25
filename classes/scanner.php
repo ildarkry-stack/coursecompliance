@@ -42,8 +42,9 @@ final class scanner {
      *
      * @param int $scanid Scan record id.
      * @param int $courselimit Maximum number of courses to inspect, 0 for all.
+     * @param bool $publish Whether to publish completion before returning.
      */
-    public function run(int $scanid, int $courselimit = 0): void {
+    public function run(int $scanid, int $courselimit = 0, bool $publish = true): void {
         global $DB;
 
         $scan = $DB->get_record('tool_coursecompliance_scan', ['id' => $scanid], '*', MUST_EXIST);
@@ -54,7 +55,8 @@ final class scanner {
         if (!$profile) {
             throw new \moodle_exception('scaninvalidprofile', 'tool_coursecompliance');
         }
-        $config = profile_config::decode($profile->configjson);
+        scan_snapshot::capture($scan);
+        $config = scan_snapshot::config($scan);
         quiz_integrity_inspector::reset_preload_cache();
 
         $scan->status = 'running';
@@ -300,7 +302,7 @@ final class scanner {
 
         $this->store_course_snapshots($scanid, $courseids);
 
-        $scan->status = 'complete';
+        $scan->status = $publish ? 'complete' : 'running';
         $scan->courses = count($courses);
         $scan->assessments = $assessmentcount;
         $scan->critical = $totals['critical'];

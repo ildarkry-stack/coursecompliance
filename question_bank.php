@@ -51,62 +51,23 @@ $PAGE->set_pagelayout('admin');
 $PAGE->set_title(get_string('questionbankquality', 'tool_coursecompliance'));
 $PAGE->set_heading(get_string('questionbankquality', 'tool_coursecompliance'));
 
-$issues = \tool_coursecompliance\question_issue_repository::current_issues(10000);
-$allissues = $issues;
-$questionids = [];
-$criticalcount = 0;
-$nocorrectcount = 0;
-$brokenorpartial = 0;
+$page = max(0, optional_param('page', 0, PARAM_INT));
+$perpage = 100;
+$filters = compact('severity', 'issuecode', 'assessmenttype', 'qtype', 'search');
+$summary = \tool_coursecompliance\question_issue_repository::current_summary();
+$questioncount = (int)$summary['totals']->questions;
+$criticalcount = (int)$summary['totals']->critical;
+$nocorrectcount = (int)$summary['totals']->nocorrect;
+$brokenorpartial = (int)$summary['totals']->partialcount;
 $issueoptions = [];
-$qtypeoptions = [];
-foreach ($allissues as $issue) {
-    if (!empty($issue->questionid)) {
-        $questionids[(int)$issue->questionid] = true;
-    }
-    if ($issue->severity === 'critical') {
-        $criticalcount++;
-    }
-    if ($issue->issuecode === 'no_correct_answer') {
-        $nocorrectcount++;
-    }
-    if (in_array($issue->issuecode, ['broken_question', 'correct_answer_unchecked', 'structure_error'], true)) {
-        $brokenorpartial++;
-    }
-    $issueoptions[(string)$issue->issuecode] = \tool_coursecompliance\question_issue_repository::issue_label(
-        (string)$issue->issuecode
-    );
-    if ($issue->qtype !== '') {
-        $qtypeoptions[(string)$issue->qtype] = (string)$issue->qtype;
-    }
+foreach ($summary['codes'] as $code) {
+    $issueoptions[$code] = \tool_coursecompliance\question_issue_repository::issue_label($code);
 }
+$qtypeoptions = array_combine($summary['types'], $summary['types']);
 asort($issueoptions);
 asort($qtypeoptions);
-
-$filtered = [];
-foreach ($issues as $issue) {
-    if ($severity !== '' && $issue->severity !== $severity) {
-        continue;
-    }
-    if ($issuecode !== '' && $issue->issuecode !== $issuecode) {
-        continue;
-    }
-    if ($assessmenttype !== '' && $issue->assessmenttype !== $assessmenttype) {
-        continue;
-    }
-    if ($qtype !== '' && $issue->qtype !== $qtype) {
-        continue;
-    }
-    if ($search !== '') {
-        $haystack = \core_text::strtolower(
-            $issue->fullname . ' ' . $issue->shortname . ' ' . $issue->questionname . ' ' .
-            $issue->categoryname . ' ' . $issue->quizname
-        );
-        if (!str_contains($haystack, \core_text::strtolower($search))) {
-            continue;
-        }
-    }
-    $filtered[] = $issue;
-}
+$total = \tool_coursecompliance\question_issue_repository::current_count($filters);
+$filtered = \tool_coursecompliance\question_issue_repository::current_page($filters, $page, $perpage);
 
 echo $OUTPUT->header();
 echo \tool_coursecompliance\ui::primary_navigation($inaudit ? 'audit' : 'questions');
@@ -120,8 +81,8 @@ echo \tool_coursecompliance\ui::page_heading(
 echo \tool_coursecompliance\ui::metric_cards([
     [
         'label' => get_string('problemquestions', 'tool_coursecompliance'),
-        'value' => count($questionids),
-        'tone' => count($questionids) ? 'danger' : 'success',
+        'value' => $questioncount,
+        'tone' => $questioncount ? 'danger' : 'success',
     ],
     [
         'label' => get_string('criticalquestionissues', 'tool_coursecompliance'),
@@ -219,7 +180,8 @@ $filterbody .= html_writer::end_tag('form');
 echo \tool_coursecompliance\ui::panel(get_string('filters', 'tool_coursecompliance'), $filterbody);
 
 if (!$filtered) {
-    echo $OUTPUT->notification(get_string('questionbankissuesclear', 'tool_coursecompliance'), 'success');
+    echo $OUTPUT->notification(get_string('noproblemsforfilter', 'tool_coursecompliance'), 'info');
+    echo $OUTPUT->paging_bar($total, $page, $perpage, $PAGE->url);
     echo $OUTPUT->footer();
     exit;
 }

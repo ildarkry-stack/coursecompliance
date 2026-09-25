@@ -43,26 +43,55 @@ final class cleanup_scans extends \core\task\scheduled_task {
         global $DB;
         $days = max(1, (int)get_config('tool_coursecompliance', 'retentiondays'));
         $cutoff = time() - ($days * DAYSECS);
-        $oldscans = $DB->get_fieldset_select('tool_coursecompliance_scan', 'id', 'timecreated < :cutoff', ['cutoff' => $cutoff]);
-        if ($oldscans) {
-            [$insql, $params] = $DB->get_in_or_equal($oldscans, SQL_PARAMS_NAMED, 'scan');
-            $DB->delete_records_select('tool_coursecompliance_result', "scanid $insql", $params);
-            $DB->delete_records_select('tool_coursecompliance_assessment', "scanid $insql", $params);
-            $DB->delete_records_select('tool_coursecompliance_course', "scanid $insql", $params);
-            $DB->delete_records_select('tool_coursecompliance_qissue', "scanid $insql", $params);
-            $DB->delete_records_select('tool_coursecompliance_scan', "id $insql", $params);
-        }
-        $oldbatches = $DB->get_fieldset_select(
-            'tool_coursecompliance_act_batch',
-            'id',
-            'timecreated < :cutoff',
-            ['cutoff' => $cutoff]
+        $scans = $DB->get_records_select(
+            'tool_coursecompliance_scan',
+            'parentid = 0 AND status = :status AND finishedat > 0 AND finishedat < :cutoff',
+            ['status' => 'complete', 'cutoff' => $cutoff],
+            'id ASC', 'id', 0, 100
         );
-        if ($oldbatches) {
-            [$insql, $params] = $DB->get_in_or_equal($oldbatches, SQL_PARAMS_NAMED, 'batch');
-            $DB->delete_records_select('tool_coursecompliance_act_change', "batchid $insql", $params);
-            $DB->delete_records_select('tool_coursecompliance_session_issue', "batchid $insql", $params);
-            $DB->delete_records_select('tool_coursecompliance_act_batch', "id $insql", $params);
+        foreach ($scans as $scan) {
+            \tool_coursecompliance\operation_lock::run('scan:' . $scan->id, static function () use ($DB, $scan): void {
+                $current = $DB->get_record('tool_coursecompliance_scan', ['id' => $scan->id]);
+                if (!$current || $current->status !== 'complete') {
+                    return;
+                }
+                // Legacy successful children must not be discarded while another task still owns them.
+                if ($DB->record_exists('tool_coursecompliance_scan', ['parentid' => $scan->id])) {
+                    return;
+                }
+                $transaction = $DB->start_delegated_transaction();
+                foreach (['result', 'assessment', 'course', 'qissue'] as $suffix) {
+                    $DB->delete_records('tool_coursecompliance_' . $suffix, ['scanid' => $scan->id]);
+                }
+                $DB->delete_records('tool_coursecompliance_scan', ['id' => $scan->id]);
+                $transaction->allow_commit();
+            });
+        }
+        $batches = $DB->get_records_select(
+            'tool_coursecompliance_act_batch',
+            "status IN ('complete', 'partial') AND timefinished > 0 AND timefinished < :cutoff",
+            ['cutoff' => $cutoff], 'id ASC', 'id', 0, 100
+        );
+        foreach ($batches as $batch) {
+            \tool_coursecompliance\operation_lock::run('activity:' . $batch->id, static function () use ($DB, $batch): void {
+                $current = $DB->get_record('tool_coursecompliance_act_batch', ['id' => $batch->id]);
+                if (!$current || !in_array($current->status, ['complete', 'partial'], true)) {
+                    return;
+                }
+                $active = $DB->record_exists_select(
+                    'tool_coursecompliance_act_batch',
+                    "sourcebatchid = :sourceid AND status IN ('preview', 'queued', 'running', 'failed')",
+                    ['sourceid' => $batch->id]
+                );
+                if ($active) {
+                    return;
+                }
+                $transaction = $DB->start_delegated_transaction();
+                $DB->delete_records('tool_coursecompliance_act_change', ['batchid' => $batch->id]);
+                $DB->delete_records('tool_coursecompliance_session_issue', ['batchid' => $batch->id]);
+                $DB->delete_records('tool_coursecompliance_act_batch', ['id' => $batch->id]);
+                $transaction->allow_commit();
+            });
         }
     }
 }

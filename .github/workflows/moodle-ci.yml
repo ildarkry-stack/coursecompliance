@@ -1,0 +1,168 @@
+name: Moodle Plugin CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: moodle-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Moodle ${{ matrix.moodle }} / PHP ${{ matrix.php }} / ${{ matrix.database }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
+          MYSQL_DATABASE: moodle
+          MYSQL_CHARACTER_SET_SERVER: utf8mb4
+          MYSQL_COLLATION_SERVER: utf8mb4_unicode_ci
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot --silent"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - moodle: "5.0"
+            moodle-branch: MOODLE_500_STABLE
+            php: "8.2"
+            database: pgsql
+          - moodle: "5.0"
+            moodle-branch: MOODLE_500_STABLE
+            php: "8.4"
+            database: mysqli
+          - moodle: "5.1"
+            moodle-branch: MOODLE_501_STABLE
+            php: "8.2"
+            database: pgsql
+          - moodle: "5.1"
+            moodle-branch: MOODLE_501_STABLE
+            php: "8.4"
+            database: mysqli
+          - moodle: "5.2"
+            moodle-branch: MOODLE_502_STABLE
+            php: "8.3"
+            database: pgsql
+          - moodle: "5.2"
+            moodle-branch: MOODLE_502_STABLE
+            php: "8.4"
+            database: mysqli
+
+    env:
+      PLUGIN_PATH: ${{ github.workspace }}/plugin
+
+    steps:
+      - name: Check out plugin
+        uses: actions/checkout@v6
+        with:
+          path: plugin
+          persist-credentials: false
+
+      - name: Verify repository layout
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f "$PLUGIN_PATH/version.php"
+          test -d "$PLUGIN_PATH/classes"
+          test -d "$PLUGIN_PATH/db"
+          test -d "$PLUGIN_PATH/lang"
+          test ! -f "$PLUGIN_PATH/coursecompliance/version.php"
+
+      - name: Run project structural checks
+        shell: bash
+        run: python3 "$PLUGIN_PATH/docs/validation/static_release_check.py" "$PLUGIN_PATH"
+
+      - name: Setup PHP ${{ matrix.php }}
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: mysqli, pgsql, zip, gd, soap, intl, sodium
+          ini-values: max_input_vars=5000, opcache.enable_cli=1
+          coverage: none
+
+      - name: Initialise moodle-plugin-ci
+        shell: bash
+        run: |
+          set -euo pipefail
+          composer create-project -n --no-dev --prefer-dist moodlehq/moodle-plugin-ci ci ^4
+          echo "$(cd ci/bin && pwd)" >> "$GITHUB_PATH"
+          echo "$(cd ci/vendor/bin && pwd)" >> "$GITHUB_PATH"
+          sudo locale-gen en_AU.UTF-8
+          echo "NVM_DIR=$HOME/.nvm" >> "$GITHUB_ENV"
+
+      - name: Clean install Moodle and plugin
+        shell: bash
+        run: moodle-plugin-ci install --plugin "$PLUGIN_PATH" --db-host=127.0.0.1
+        env:
+          DB: ${{ matrix.database }}
+          MOODLE_BRANCH: ${{ matrix.moodle-branch }}
+
+      - name: PHP lint
+        if: ${{ !cancelled() }}
+        run: moodle-plugin-ci phplint "$PLUGIN_PATH"
+
+      - name: Moodle coding style
+        if: ${{ !cancelled() }}
+        run: moodle-plugin-ci phpcs --max-warnings 0 "$PLUGIN_PATH"
+
+      - name: Plugin validation
+        if: ${{ !cancelled() }}
+        run: moodle-plugin-ci validate --moodle "$GITHUB_WORKSPACE/moodle" "$PLUGIN_PATH"
+
+      - name: Upgrade savepoints
+        if: ${{ !cancelled() }}
+        run: moodle-plugin-ci savepoints "$PLUGIN_PATH"
+
+      - name: PHPDoc
+        if: ${{ !cancelled() }}
+        run: moodle-plugin-ci phpdoc --moodle "$GITHUB_WORKSPACE/moodle" --max-warnings 0 "$PLUGIN_PATH"
+
+      - name: PHPUnit
+        if: ${{ !cancelled() }}
+        run: moodle-plugin-ci phpunit --moodle "$GITHUB_WORKSPACE/moodle" --fail-on-warning "$PLUGIN_PATH"
+
+      - name: Native Moodle Grunt AMD
+        if: ${{ !cancelled() }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -d "$GITHUB_WORKSPACE/moodle/public/admin/tool/coursecompliance" ]; then
+            MOODLE_PLUGIN_PATH="$GITHUB_WORKSPACE/moodle/public/admin/tool/coursecompliance"
+          else
+            MOODLE_PLUGIN_PATH="$GITHUB_WORKSPACE/moodle/admin/tool/coursecompliance"
+          fi
+          test -d "$MOODLE_PLUGIN_PATH"
+          cd "$GITHUB_WORKSPACE/moodle"
+          npx grunt amd --root="$MOODLE_PLUGIN_PATH"
+
+      - name: Mark cancelled jobs as failed
+        if: ${{ cancelled() }}
+        run: exit 1

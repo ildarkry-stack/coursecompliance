@@ -1,5 +1,19 @@
 # Upgrading Course Compliance Center
 
+## Upgrade from 1.0.0 to 1.1.0-rc1
+
+Use a staging copy first. Back up plugin data and course settings affected by pending activity operations.
+Finish existing CourseCompliance jobs before replacing the code, then pause cron during the Moodle upgrade.
+Install the ZIP as an update to tool_coursecompliance; do not uninstall the old plugin.
+The normal Moodle upgrade adds four scan fields (configsnapshot, confighash, finaldurationms, finaldbqueries).
+No manual SQL is required. Existing audit rows remain historical and are not assigned invented snapshots.
+Resume cron only after the database upgrade completes. Run a small audit, preview/apply/rollback and the
+regression suite before increasing scope. A code-only downgrade after schema upgrade is not a supported
+rollback; restore the matching code/data backup if rollback is necessary.
+
+This build is an RC. See VALIDATION-1.1.md for tests not executed in the authoring environment.
+
+
 ## General procedure
 
 1. Back up the Moodle database and the existing `tool_coursecompliance` code directory.

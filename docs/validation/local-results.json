@@ -1,0 +1,21 @@
+{
+  "schema_tables": 10,
+  "language_keys_each": 883,
+  "php_files_delimiter_checked": 113,
+  "new_upgrade_fields": [
+    "configsnapshot",
+    "confighash",
+    "finaldurationms",
+    "finaldbqueries"
+  ],
+  "sql_regressions_passed": [
+    "indicator excludes private worker",
+    "question filters before page and full count",
+    "question summary aggregates execute",
+    "clean recheck suppresses old question issues",
+    "disabled profile excluded",
+    "ready courses restricted to scan snapshots",
+    "bulk finalizer SQL for all detail tables"
+  ],
+  "limitations": "SQLite and structural checks only. PHP lint, PHPUnit, PHPCS, clean install, upgrade and Moodle runtime not executed."
+}

@@ -331,6 +331,8 @@ final class scan_analysis {
                        WHERE s.status = :status
                          AND s.parentid = 0
                          AND s.scantype <> :batchtype
+                         AND EXISTS (SELECT 1 FROM {tool_coursecompliance_profile} cp
+                                      WHERE cp.id = s.profileid AND cp.enabled = 1)
                     GROUP BY cs.courseid, s.profileid";
         $latestrows = $DB->get_records_sql($latestsql, [
             'status' => 'complete',

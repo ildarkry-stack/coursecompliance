@@ -36,20 +36,32 @@ final class apply_activity_batch extends \core\task\adhoc_task {
      * Apply the queued activity-operation batch.
      */
     public function execute(): void {
+        $data = $this->get_custom_data();
+        \tool_coursecompliance\operation_lock::run('activity:' . (int)($data->batchid ?? 0), function (): void {
+            $this->execute_locked();
+        });
+    }
+
+    /** Execute with exclusive ownership of the logical operation. */
+    private function execute_locked(): void {
         global $DB;
         $data = $this->get_custom_data();
         $batchid = (int)$data->batchid;
         try {
-            (new \tool_coursecompliance\activity_manager())->apply_batch($batchid);
+            $complete = (new \tool_coursecompliance\activity_manager())->apply_batch($batchid, 100);
+            if (!$complete) {
+                $next = new self();
+                $next->set_custom_data(['batchid' => $batchid]);
+                $next->set_userid($this->get_userid());
+                \core\task\manager::queue_adhoc_task($next);
+                return;
+            }
         } catch (\Throwable $e) {
             if ($batch = $DB->get_record('tool_coursecompliance_act_batch', ['id' => $batchid])) {
-                $batch->status = 'failed';
-                $batch->timefinished = time();
                 $batch->errormessage = $e->getMessage();
                 $DB->update_record('tool_coursecompliance_act_batch', $batch);
             }
-            mtrace('Course Compliance activity batch #' . $batchid . ' failed: ' . $e->getMessage());
-            return;
+            throw $e;
         }
 
         try {
@@ -105,6 +117,8 @@ final class apply_activity_batch extends \core\task\adhoc_task {
                 JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES
             ),
             'scantype' => 'recheck',
+            'configsnapshot' => $filter['configsnapshot'] ?? null,
+            'confighash' => !empty($filter['configsnapshot']) ? hash('sha256', $filter['configsnapshot']) : null,
             'userid' => (int)$batch->userid,
             'status' => 'queued',
             'courses' => 0,

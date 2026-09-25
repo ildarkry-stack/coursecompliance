@@ -107,7 +107,9 @@ function tool_coursecompliance_format_change_value(\stdClass $change, string $va
                     ? \tool_coursecompliance\profile_config::decode($profile->configjson)
                     : [];
             }
-            $config = $profileconfigs[$profileid];
+            $config = !empty($batchconfig['configsnapshot'])
+                ? \tool_coursecompliance\profile_config::decode($batchconfig['configsnapshot'])
+                : $profileconfigs[$profileid];
             $targetidnumbers = [];
             foreach (['exam', 'resit1', 'resit2'] as $type) {
                 $idnumber = trim((string)($config[$type . 'idnumber'] ?? $type));

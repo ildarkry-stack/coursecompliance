@@ -24,3 +24,14 @@ Start with 10 courses per background worker. If peak memory remains low and task
 A failed worker is automatically requeued according to **CourseCompliance → Settings → Automatic retries for a failed worker**. The default is one retry. If retries are exhausted, the parent audit is marked failed while successful worker results remain stored. Open the failed report and use **Retry failed batches** to requeue only failed workers.
 
 Do not delete failed child scans manually: they are required for targeted recovery and diagnostics.
+
+## 1.1 telemetry and remaining costs
+
+Worker duration/query counts include preserved retry attempts. finaldurationms and finaldbqueries separately
+measure aggregation/child cleanup before the parent UPDATE and COMMIT. Peak memory is the PHP process
+high-water mark; it is not isolated worker allocation. Sum of worker times is not wall-clock audit time.
+
+Normal report pages and current question issues are SQL-paged. Semantic report filters still scan a
+recordset. Computed Action Center/delta views retain legacy costs. Bank content/metadata is capped at
+5000 rows per Quiz with partial-verification notices, but random-candidate enumeration can still be large.
+No Moodle runtime speedup is claimed without measurements on the target installation.

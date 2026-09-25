@@ -1,5 +1,21 @@
 # Changelog
 
+## 1.1.0-rc1 — 2026-09-25
+
+- Freeze the audit profile and reuse it for workers, AutoFix and its recheck.
+- Exclude private workers from course indicators and unify live publication predicates.
+- Page normal audit reports and question-bank filters in SQL; stream semantic report filters.
+- Restrict ready-course reports to audited snapshots; aggregate question detail counts in SQL.
+- Publish worker results with grouped INSERT SELECT and atomic child cleanup.
+- Preserve retry cost; expose finalization metrics separately.
+- Lock scheduling, workers, finalization and activity tasks; publish task trees atomically.
+- Resume only pending activity changes in continuations of 100 modules; commit applied status with changes.
+- Retain failed/active recovery data during bounded history cleanup.
+- Bound bank metadata/content inspection and explicitly report partial verification.
+- Add seven persisted-state regression scenarios; update schema/diagnostic tests.
+- RC validation limitations and deferred features: docs/VALIDATION-1.1.md.
+
+
 ## 0.19.0-rc1 — 2026-09-16
 
 - Added a read-only **Diagnostics** page under Settings with the plugin release, Moodle/PHP/database compatibility checks, required-API checks, pending CourseCompliance tasks, failed parent audits, long-running audits and last completed audit information.

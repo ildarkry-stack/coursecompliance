@@ -2,9 +2,9 @@
 
 Course Compliance Center is a Moodle administration tool for auditing course quality, assessment readiness and institutional standards across large course collections. It combines read-only diagnostics with conservative, preview-first remediation workflows for settings that have one unambiguous target value.
 
-**Release:** 0.19.0-rc1  
-**Supported Moodle versions:** 5.0, 5.1 and 5.2  
-**Supported databases in CI:** PostgreSQL and MySQL  
+**Release:** 1.1.0-rc1
+**Supported Moodle versions:** 5.0, 5.1 and 5.2
+**Supported databases in CI:** PostgreSQL and MySQL
 **License:** GNU GPL v3 or later
 
 ## Main capabilities
@@ -78,13 +78,16 @@ The plugin implements Moodle's Privacy API, including metadata declaration, expo
 
 ## Development and automated checks
 
-The GitHub Actions workflow checks Moodle coding standards and runs the PHPUnit suite across Moodle 5.0, 5.1 and 5.2 with supported PHP versions. PostgreSQL is used for the main compatibility matrix and MySQL coverage is included for every supported Moodle branch. Release packaging is also validated to contain a single top-level `coursecompliance/` directory without repository metadata.
+The release gate requires Moodle coding standards and PHPUnit across Moodle 5.0, 5.1 and 5.2, with PostgreSQL and MySQL. This ZIP does not include evidence that the matrix has passed for 1.1.0-rc1. Release packaging is also validated to contain a single top-level `coursecompliance/` directory without repository metadata.
 
 See [`CONTRIBUTING.md`](CONTRIBUTING.md), [`SECURITY.md`](SECURITY.md) and [`docs/RELEASE_CHECKLIST.md`](docs/RELEASE_CHECKLIST.md).
 
 ## Release status
 
-0.19.0-rc1 is a release-candidate line intended for final validation before 1.0. Production deployment should be preceded by a backup and a staged audit on representative courses. Existing audit, standard and operation history is preserved when upgrading from the 0.18 beta line.
+1.1.0-rc1 addresses audit publication, report memory use, task recovery and immutable standards.
+This build has not been executed inside Moodle in the authoring environment. Clean install,
+upgrade, PHPUnit and the compatibility matrix must pass before promotion to stable.
+See `docs/VALIDATION-1.1.md` for the exact checks and remaining limitations.
 
 ## Marketplace preparation
 

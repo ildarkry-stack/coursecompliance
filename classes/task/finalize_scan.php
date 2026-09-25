@@ -35,6 +35,14 @@ final class finalize_scan extends \core\task\adhoc_task {
      * Execute task.
      */
     public function execute(): void {
+        $data = $this->get_custom_data();
+        \tool_coursecompliance\operation_lock::run('scan:' . (int)($data->scanid ?? 0), function (): void {
+            $this->execute_locked();
+        });
+    }
+
+    /** Execute with exclusive ownership of the logical operation. */
+    private function execute_locked(): void {
         global $DB;
 
         $data = $this->get_custom_data();
@@ -50,7 +58,15 @@ final class finalize_scan extends \core\task\adhoc_task {
             'batchno ASC, id ASC'
         );
         $expected = max(1, (int)$parent->batchtotal);
-        if (count($children) < $expected || self::has_pending_children($children)) {
+        if (count($children) !== $expected) {
+            $parent->status = 'failed';
+            $parent->finishedat = time();
+            $parent->errormessage = get_string('scanincompletebatches', 'tool_coursecompliance');
+            $DB->update_record('tool_coursecompliance_scan', $parent);
+            \tool_coursecompliance\scan_notifier::failed($parent);
+            return;
+        }
+        if (self::has_pending_children($children)) {
             \tool_coursecompliance\scan_scheduler::queue_finalizer(
                 $scanid,
                 (int)$parent->userid,
@@ -76,6 +92,7 @@ final class finalize_scan extends \core\task\adhoc_task {
             return;
         }
 
+        $performance = \tool_coursecompliance\scan_performance::start();
         $transaction = $DB->start_delegated_transaction();
         try {
             self::clear_parent_data($scanid);
@@ -127,6 +144,10 @@ final class finalize_scan extends \core\task\adhoc_task {
                 static fn (\stdClass $child): int => (int)($child->retrycount ?? 0),
                 $children
             ));
+            self::delete_children($children);
+            $metrics = \tool_coursecompliance\scan_performance::finish($performance);
+            $parent->finaldurationms = (int)$metrics['durationms'];
+            $parent->finaldbqueries = (int)$metrics['dbqueries'];
             $parent->finishedat = time();
             $parent->errormessage = '';
             $DB->update_record('tool_coursecompliance_scan', $parent);
@@ -147,7 +168,6 @@ final class finalize_scan extends \core\task\adhoc_task {
             return;
         }
 
-        self::delete_children($children);
         \tool_coursecompliance\scan_notifier::completed($parent);
     }
 
@@ -189,13 +209,17 @@ final class finalize_scan extends \core\task\adhoc_task {
     private static function copy_rows(string $table, int $childid, int $parentid): void {
         global $DB;
 
-        $recordset = $DB->get_recordset($table, ['scanid' => $childid]);
-        foreach ($recordset as $record) {
-            unset($record->id);
-            $record->scanid = $parentid;
-            $DB->insert_record($table, $record);
-        }
-        $recordset->close();
+        $columns = array_keys($DB->get_columns($table));
+        $columns = array_values(array_diff($columns, ['id']));
+        $fields = implode(', ', $columns);
+        $select = implode(', ', array_map(
+            static fn (string $column): string => $column === 'scanid' ? ':parentid' : $column,
+            $columns
+        ));
+        $DB->execute(
+            "INSERT INTO {{$table}} ($fields) SELECT $select FROM {{$table}} WHERE scanid = :childid",
+            ['parentid' => $parentid, 'childid' => $childid]
+        );
     }
 
     /**

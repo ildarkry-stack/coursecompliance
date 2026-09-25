@@ -49,6 +49,7 @@ final class provider implements
             'tool_coursecompliance_scan',
             [
                 'userid' => 'privacy:metadata:userid',
+                'configsnapshot' => 'privacy:metadata:configsnapshot',
                 'timecreated' => 'privacy:metadata:timecreated',
             ],
             'privacy:metadata:scan'
@@ -57,6 +58,7 @@ final class provider implements
             'tool_coursecompliance_act_batch',
             [
                 'userid' => 'privacy:metadata:activitybatch:userid',
+                'filterjson' => 'privacy:metadata:configsnapshot',
                 'timecreated' => 'privacy:metadata:timecreated',
             ],
             'privacy:metadata:activitybatch'
@@ -150,7 +152,8 @@ final class provider implements
             ['userid' => $userid],
             'timecreated ASC',
             'id, profileid, categoryid, courselimit, scantype, status, courses, assessments, critical, warnings, notices, ' .
-                'ignored, durationms, dbqueries, peakmemory, retrycount, startedat, finishedat, errormessage, timecreated'
+                'ignored, durationms, dbqueries, peakmemory, retrycount, startedat, finishedat, errormessage, timecreated, ' .
+                'configsnapshot, confighash, finaldurationms, finaldbqueries'
         );
         $audits = [];
         foreach ($records as $record) {
@@ -162,7 +165,7 @@ final class provider implements
             ['userid' => $userid],
             'timecreated ASC',
             'id, categoryid, action, status, summary, totalchanges, applied, skipped, failed, ' .
-                'timecreated, timestarted, timefinished, errormessage'
+                'timecreated, timestarted, timefinished, errormessage, filterjson'
         );
         $operations = [];
         foreach ($batches as $batch) {

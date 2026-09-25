@@ -35,12 +35,23 @@ final class run_scan extends \core\task\adhoc_task {
      * Execute the scan task.
      */
     public function execute(): void {
+        $data = $this->get_custom_data();
+        \tool_coursecompliance\operation_lock::run('worker:' . (int)($data->scanid ?? 0), function (): void {
+            $this->execute_locked();
+        });
+    }
+
+    /** Execute with exclusive ownership of the logical operation. */
+    private function execute_locked(): void {
         global $DB;
 
         $data = $this->get_custom_data();
         $scanid = (int)($data->scanid ?? 0);
         $courselimit = (int)($data->courselimit ?? 0);
         $scan = $DB->get_record('tool_coursecompliance_scan', ['id' => $scanid]);
+        if ($scan && $scan->status === 'complete') {
+            return;
+        }
         if (!$scan) {
             mtrace('Course compliance scan record ' . $scanid . ' no longer exists; task skipped.');
             return;
@@ -59,17 +70,24 @@ final class run_scan extends \core\task\adhoc_task {
 
         $performance = \tool_coursecompliance\scan_performance::start();
         try {
-            (new \tool_coursecompliance\scanner())->run($scanid, $courselimit);
-            \tool_coursecompliance\scan_performance::store(
-                $scanid,
-                \tool_coursecompliance\scan_performance::finish($performance)
-            );
+            (new \tool_coursecompliance\scanner())->run($scanid, $courselimit, false);
+            $transaction = $DB->start_delegated_transaction();
+            try {
+                \tool_coursecompliance\scan_performance::store(
+                    $scanid,
+                    \tool_coursecompliance\scan_performance::finish($performance)
+                );
+                $DB->set_field('tool_coursecompliance_scan', 'status', 'complete', ['id' => $scanid]);
+                $transaction->allow_commit();
+            } catch (\Throwable $e) {
+                $transaction->rollback($e);
+            }
         } catch (\Throwable $e) {
             $metrics = \tool_coursecompliance\scan_performance::finish($performance);
             if ($scan = $DB->get_record('tool_coursecompliance_scan', ['id' => $scanid])) {
-                $scan->durationms = (int)$metrics['durationms'];
-                $scan->dbqueries = (int)$metrics['dbqueries'];
-                $scan->peakmemory = (int)$metrics['peakmemory'];
+                $scan->durationms += (int)$metrics['durationms'];
+                $scan->dbqueries += (int)$metrics['dbqueries'];
+                $scan->peakmemory = max((int)$scan->peakmemory, (int)$metrics['peakmemory']);
                 $scan->errormessage = $e->getMessage();
 
                 if (

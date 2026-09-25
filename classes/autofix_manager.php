@@ -112,7 +112,7 @@ final class autofix_manager {
             throw new \moodle_exception('autofixscanincomplete', 'tool_coursecompliance');
         }
         $profile = $DB->get_record('tool_coursecompliance_profile', ['id' => $scan->profileid], '*', MUST_EXIST);
-        $config = profile_config::decode($profile->configjson);
+        $config = scan_snapshot::config($scan);
         $results = $DB->get_records('tool_coursecompliance_result', ['scanid' => $scanid], 'courseid, id');
         $resultids = array_values(array_unique(array_filter(array_map('intval', $resultids))));
         if ($resultids) {
@@ -213,6 +213,7 @@ final class autofix_manager {
             'filterjson' => json_encode([
                 'scanid' => $scanid,
                 'profileid' => (int)$scan->profileid,
+                'configsnapshot' => profile_config::encode($config),
                 'courselimit' => (int)($scan->courselimit ?? 0),
                 'resultids' => array_values(array_map('intval', array_keys($fixable))),
             ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),

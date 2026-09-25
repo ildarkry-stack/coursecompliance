@@ -66,11 +66,16 @@ final class activity_manager {
      * Apply a queued batch.
      *
      * @param int $batchid Batch id.
+     * @param int $limit Maximum modules in this task, zero for an explicit unbounded call.
+     * @return bool Whether all pending changes have been processed.
      */
-    public function apply_batch(int $batchid): void {
+    public function apply_batch(int $batchid, int $limit = 0): bool {
         global $DB;
 
         $batch = $DB->get_record('tool_coursecompliance_act_batch', ['id' => $batchid], '*', MUST_EXIST);
+        if (in_array($batch->status, ['complete', 'partial'], true)) {
+            return true;
+        }
         if (!in_array($batch->status, ['queued', 'running'], true)) {
             throw new \moodle_exception('batchnotqueued', 'tool_coursecompliance');
         }
@@ -78,13 +83,22 @@ final class activity_manager {
         $batch->timestarted = $batch->timestarted ?: time();
         $DB->update_record('tool_coursecompliance_act_batch', $batch);
 
-        $cmids = $DB->get_fieldset_sql(
-            'SELECT DISTINCT cmid FROM {tool_coursecompliance_act_change} WHERE batchid = :batchid ORDER BY cmid ASC',
+        $modules = $DB->get_records_sql(
+            "SELECT cmid FROM {tool_coursecompliance_act_change}
+              WHERE batchid = :batchid AND status = :pending GROUP BY cmid ORDER BY cmid ASC",
+            ['batchid' => $batchid, 'pending' => 'pending'],
+            0,
+            max(0, $limit)
+        );
+        $cmids = array_keys($modules);
+        $counts = $DB->get_records_sql(
+            "SELECT status, COUNT(1) AS changes FROM {tool_coursecompliance_act_change}
+              WHERE batchid = :batchid GROUP BY status",
             ['batchid' => $batchid]
         );
-        $applied = 0;
-        $skipped = 0;
-        $failed = 0;
+        $applied = (int)($counts['applied']->changes ?? 0);
+        $skipped = (int)($counts['skipped']->changes ?? 0);
+        $failed = (int)($counts['failed']->changes ?? 0);
         $groupsprocessed = 0;
         $repository = new activity_repository();
 
@@ -94,10 +108,10 @@ final class activity_manager {
             }
             $activities = $repository->get_by_cmids($cmchunk);
             [$cmsql, $cmparams] = $DB->get_in_or_equal($cmchunk, SQL_PARAMS_NAMED, 'batchcm');
-            $params = $cmparams + ['batchid' => $batchid];
+            $params = $cmparams + ['batchid' => $batchid, 'pending' => 'pending'];
             $changes = $DB->get_records_select(
                 'tool_coursecompliance_act_change',
-                "batchid = :batchid AND cmid $cmsql",
+                "batchid = :batchid AND cmid $cmsql AND status = :pending",
                 $params,
                 'cmid ASC, id ASC'
             );
@@ -137,11 +151,11 @@ final class activity_manager {
                     $transaction = $DB->start_delegated_transaction();
                     try {
                         $this->apply_activity_changes($activity, $cmchanges);
+                        $this->mark_group($cmchanges, 'applied', '');
                         $transaction->allow_commit();
                     } catch (\Throwable $e) {
                         $transaction->rollback($e);
                     }
-                    $this->mark_group($cmchanges, 'applied', '');
                     $applied += count($cmchanges);
                 } catch (\Throwable $e) {
                     $this->mark_group($cmchanges, 'failed', $e->getMessage());
@@ -156,6 +170,10 @@ final class activity_manager {
             $this->update_progress($batchid, $applied, $skipped, $failed);
         }
 
+        if ($DB->record_exists('tool_coursecompliance_act_change', ['batchid' => $batchid, 'status' => 'pending'])) {
+            return false;
+        }
+
         $batch = $DB->get_record('tool_coursecompliance_act_batch', ['id' => $batchid], '*', MUST_EXIST);
         $batch->applied = $applied;
         $batch->skipped = $skipped;
@@ -167,6 +185,7 @@ final class activity_manager {
         }
         $batch->timefinished = time();
         $DB->update_record('tool_coursecompliance_act_batch', $batch);
+        return true;
     }
 
     /**

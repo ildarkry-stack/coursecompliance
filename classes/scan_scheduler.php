@@ -43,6 +43,20 @@ final class scan_scheduler {
      * @return int Number of queued batches.
      */
     public static function queue(int $scanid, array $courseids, int $userid = 0): int {
+        return operation_lock::run('scan:' . $scanid, static function () use ($scanid, $courseids, $userid): int {
+            return self::queue_locked($scanid, $courseids, $userid);
+        });
+    }
+
+    /**
+     * Publish a complete task tree atomically under the parent lock.
+     *
+     * @param int $scanid Parent id.
+     * @param array $courseids Selected courses.
+     * @param int $userid Initiator.
+     * @return int Batch count.
+     */
+    private static function queue_locked(int $scanid, array $courseids, int $userid): int {
         global $DB;
 
         $parent = $DB->get_record('tool_coursecompliance_scan', ['id' => $scanid], '*', MUST_EXIST);
@@ -51,6 +65,14 @@ final class scan_scheduler {
             throw new \moodle_exception('scanrequirescourses', 'tool_coursecompliance');
         }
 
+        if ($DB->record_exists('tool_coursecompliance_scan', ['parentid' => $scanid])) {
+            return (int)$parent->batchtotal;
+        }
+        if ($parent->status !== 'queued' || (int)$parent->parentid > 0) {
+            throw new \coding_exception('Only a queued parent scan can be scheduled.');
+        }
+        $transaction = $DB->start_delegated_transaction();
+        scan_snapshot::capture($parent);
         $batchsize = self::batch_size();
         $chunks = array_chunk($courseids, $batchsize);
         $batchtotal = count($chunks);
@@ -77,6 +99,8 @@ final class scan_scheduler {
                     JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES
                 ),
                 'scantype' => 'batch',
+                'configsnapshot' => $parent->configsnapshot,
+                'confighash' => $parent->confighash,
                 'parentid' => $scanid,
                 'batchno' => $batchno,
                 'batchtotal' => $batchtotal,
@@ -111,6 +135,7 @@ final class scan_scheduler {
         }
 
         self::queue_finalizer($scanid, $userid, 15);
+        $transaction->allow_commit();
         return $batchtotal;
     }
 
@@ -143,9 +168,25 @@ final class scan_scheduler {
      * @return int Number of workers requeued, or -1 when only finalization was requeued.
      */
     public static function retry_failed_batches(int $scanid, int $userid = 0): int {
+        return operation_lock::run('scan:' . $scanid, static function () use ($scanid, $userid): int {
+            return self::retry_failed_locked($scanid, $userid);
+        });
+    }
+
+    /**
+     * Retry under the same lock used to publish the parent result.
+     *
+     * @param int $scanid Parent id.
+     * @param int $userid Initiator.
+     * @return int Number of requeued children.
+     */
+    private static function retry_failed_locked(int $scanid, int $userid): int {
         global $DB;
 
         $parent = $DB->get_record('tool_coursecompliance_scan', ['id' => $scanid], '*', MUST_EXIST);
+        if ($parent->status !== 'failed') {
+            return 0;
+        }
         $failed = $DB->get_records('tool_coursecompliance_scan', [
             'parentid' => $scanid,
             'status' => 'failed',
@@ -192,9 +233,6 @@ final class scan_scheduler {
         $scan->status = 'queued';
         $scan->startedat = 0;
         $scan->finishedat = 0;
-        $scan->durationms = 0;
-        $scan->dbqueries = 0;
-        $scan->peakmemory = 0;
         $scan->retrycount = (int)$scan->retrycount + 1;
         $DB->update_record('tool_coursecompliance_scan', $scan);
 

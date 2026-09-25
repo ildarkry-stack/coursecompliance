@@ -31,6 +31,9 @@ final class quiz_integrity_inspector {
     /** Maximum number of question definitions loaded for deep validation in one Quiz. */
     private const MAX_DEEP_QUESTIONS = 500;
 
+    /** Maximum metadata/content rows inspected per Quiz before reporting partial verification. */
+    private const MAX_BANK_QUESTIONS = 5000;
+
     /** @var array<int, \stdClass[]> Preloaded answer rows keyed by question id. */
     private static array $answercache = [];
 
@@ -58,6 +61,7 @@ final class quiz_integrity_inspector {
     public static function inspect(\stdClass $quiz): array {
         global $DB;
 
+        self::reset_preload_cache();
         $result = [
             'structureerror' => '',
             'structurequestioncount' => 0,
@@ -162,7 +166,12 @@ final class quiz_integrity_inspector {
             }
 
             $questionids = array_values(array_unique(array_filter(array_map('intval', $questionids))));
+            $allquestionids = $questionids;
             $result['bankquestioncount'] = count($questionids);
+            if (count($questionids) > self::MAX_BANK_QUESTIONS) {
+                $questionids = array_slice($questionids, 0, self::MAX_BANK_QUESTIONS);
+                $result['deepchecktruncated'] = true;
+            }
             $metadata = [];
 
             if ($questionids) {
@@ -231,9 +240,15 @@ final class quiz_integrity_inspector {
                                 SELECT MAX(qv2.version)
                                   FROM {question_versions} qv2
                                  WHERE qv2.questionbankentryid = qv.questionbankentryid
-                            )",
-                        $categoryparams
+                            ) ORDER BY q.id",
+                        $categoryparams,
+                        0,
+                        self::MAX_BANK_QUESTIONS + 1
                     );
+                    if (count($bankquestions) > self::MAX_BANK_QUESTIONS) {
+                        array_pop($bankquestions);
+                        $result['deepchecktruncated'] = true;
+                    }
                     $readyids = [];
                     $contentgroups = [];
                     foreach ($bankquestions as $bankquestion) {
@@ -250,7 +265,7 @@ final class quiz_integrity_inspector {
                         $contentgroups[$hash][] = $bankquestion;
                     }
                     $result['categoryquestioncount'] = count($readyids);
-                    $usedlookup = array_fill_keys($questionids, true);
+                    $usedlookup = array_fill_keys($allquestionids, true);
                     foreach ($readyids as $readyid) {
                         if (!isset($usedlookup[$readyid])) {
                             $result['unusedbankquestioncount']++;
@@ -348,7 +363,11 @@ final class quiz_integrity_inspector {
             // Ask the Quiz API to load the question structure as Moodle itself would.
             $quizsettings = \mod_quiz\quiz_settings::create((int)$quiz->id);
             $quizsettings->preload_questions();
-            $quizsettings->load_questions();
+            if (count($slots) <= self::MAX_DEEP_QUESTIONS) {
+                $quizsettings->load_questions();
+            } else {
+                $result['deepchecktruncated'] = true;
+            }
         } catch (\Throwable $e) {
             $result['structureerror'] = self::clean_error($e->getMessage());
             $result['issues'][] = self::issue(

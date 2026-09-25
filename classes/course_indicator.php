@@ -69,6 +69,7 @@ final class course_indicator {
                        JOIN {tool_coursecompliance_course} cs ON cs.scanid = s.id
                       WHERE cs.courseid = :courseid
                             AND s.status = :scanstatus
+                            AND s.parentid = 0 AND s.scantype <> 'batch'
                             AND p.enabled = :profileenabled
                    GROUP BY s.profileid";
         $latestrows = $DB->get_records_sql($latestsql, $params);
@@ -79,6 +80,7 @@ final class course_indicator {
                               JOIN {tool_coursecompliance_assessment} a ON a.scanid = s.id
                              WHERE a.courseid = :courseid
                                AND s.status = :scanstatus
+                            AND s.parentid = 0 AND s.scantype <> 'batch'
                                AND p.enabled = :profileenabled
                           GROUP BY s.profileid";
             $latestrows = $DB->get_records_sql($fallbacksql, $params);

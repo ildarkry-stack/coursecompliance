@@ -2,15 +2,15 @@
 
 Course Compliance Center is developed as one codebase for Moodle 5.0, 5.1 and 5.2.
 
-## Supported Moodle versions
+## Target Moodle versions
 
 | Moodle | Minimum PHP | CI coverage | Status |
 | --- | --- | --- | --- |
-| 5.0 | 8.2 | PHP 8.2 and 8.4, PostgreSQL and MySQL smoke coverage | Supported (legacy branch) |
-| 5.1 | 8.2 | PHP 8.2 and 8.4, PostgreSQL and MySQL smoke coverage | Supported |
-| 5.2 | 8.3 | PHP 8.3 and 8.4, PostgreSQL and MySQL smoke coverage | Supported |
+| 5.0 | 8.2 | PHP 8.2 and 8.4, PostgreSQL and MySQL smoke coverage | RC validation required |
+| 5.1 | 8.2 | PHP 8.2 and 8.4, PostgreSQL and MySQL smoke coverage | RC validation required |
+| 5.2 | 8.3 | PHP 8.3 and 8.4, PostgreSQL and MySQL smoke coverage | RC validation required |
 
-The plugin deliberately does not claim support for a Moodle version until the GitHub Actions compatibility matrix installs that Moodle branch and runs the PHPUnit suite successfully.
+The range in version.php is retained from 1.0.0 as the compatibility target. For 1.1.0-rc1, the authoring environment could not run the matrix. The table describes the required release gate, not evidence of passed tests for this RC.
 
 ## Database policy
 

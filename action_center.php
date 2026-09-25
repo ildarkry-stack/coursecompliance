@@ -82,11 +82,9 @@ foreach ($analysisresults as $result) {
         $delta = \tool_coursecompliance\scan_analysis::delta($scanid);
         $newsignatures[$scanid] = array_fill_keys(array_keys($delta['new']), true);
     }
-    if (!isset($configs[(int)$result->profileid])) {
-        $profile = $DB->get_record('tool_coursecompliance_profile', ['id' => (int)$result->profileid]);
-        $configs[(int)$result->profileid] = $profile
-            ? \tool_coursecompliance\profile_config::decode($profile->configjson)
-            : [];
+    if (!isset($configs[$scanid])) {
+        $configscan = $DB->get_record('tool_coursecompliance_scan', ['id' => $scanid], '*', MUST_EXIST);
+        $configs[$scanid] = \tool_coursecompliance\scan_snapshot::config($configscan);
     }
 }
 
@@ -99,7 +97,7 @@ foreach ($metricresults as $result) {
     if (!empty($newsignatures[(int)$result->scanid][$signature])) {
         $newcount++;
     }
-    $config = $configs[(int)$result->profileid] ?? [];
+    $config = $configs[(int)$result->scanid] ?? [];
     if (\tool_coursecompliance\autofix_manager::is_fixable($result, $config)) {
         $fixablecount++;
     }
@@ -119,7 +117,7 @@ $filtered = [];
 foreach ($results as $result) {
     $signature = \tool_coursecompliance\scan_analysis::result_signature($result);
     $isnew = !empty($newsignatures[(int)$result->scanid][$signature]);
-    $config = $configs[(int)$result->profileid] ?? [];
+    $config = $configs[(int)$result->scanid] ?? [];
     $isfixable = \tool_coursecompliance\autofix_manager::is_fixable($result, $config);
     if ($kind === 'new' && !$isnew) {
         continue;

@@ -65,11 +65,12 @@ final class scan_performance {
     public static function store(int $scanid, array $metrics): void {
         global $DB;
 
+        $previous = $DB->get_record('tool_coursecompliance_scan', ['id' => $scanid], '*', MUST_EXIST);
         $record = (object)[
             'id' => $scanid,
-            'durationms' => (int)($metrics['durationms'] ?? 0),
-            'dbqueries' => (int)($metrics['dbqueries'] ?? 0),
-            'peakmemory' => (int)($metrics['peakmemory'] ?? 0),
+            'durationms' => (int)$previous->durationms + (int)($metrics['durationms'] ?? 0),
+            'dbqueries' => (int)$previous->dbqueries + (int)($metrics['dbqueries'] ?? 0),
+            'peakmemory' => max((int)$previous->peakmemory, (int)($metrics['peakmemory'] ?? 0)),
         ];
         $DB->update_record('tool_coursecompliance_scan', $record);
     }

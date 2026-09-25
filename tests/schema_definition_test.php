@@ -75,7 +75,11 @@ final class schema_definition_test extends \advanced_testcase {
             }
         }
 
-        foreach (['durationms', 'dbqueries', 'peakmemory', 'retrycount'] as $field) {
+        $required = [
+            'durationms', 'dbqueries', 'peakmemory', 'retrycount',
+            'configsnapshot', 'confighash', 'finaldurationms', 'finaldbqueries',
+        ];
+        foreach ($required as $field) {
             $this->assertContains($field, $fields);
         }
     }

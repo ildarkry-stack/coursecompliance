@@ -124,29 +124,8 @@ final class action_center_repository {
     private static function where(string $severity, string $search): array {
         global $DB;
 
-        $conditions = [
-            "s.status = :ccstatus",
-            "s.parentid = 0",
-            "s.scantype <> :ccbatch",
-            "NOT EXISTS (
-                SELECT 1
-                  FROM {tool_coursecompliance_scan} newer
-                  JOIN {tool_coursecompliance_course} newercourse
-                    ON newercourse.scanid = newer.id
-                   AND newercourse.courseid = r.courseid
-                 WHERE newer.status = :ccnewstatus
-                   AND newer.parentid = 0
-                   AND newer.scantype <> :ccnewbatch
-                   AND newer.profileid = s.profileid
-                   AND newer.id > s.id
-            )",
-        ];
-        $params = [
-            'ccstatus' => 'complete',
-            'ccbatch' => 'batch',
-            'ccnewstatus' => 'complete',
-            'ccnewbatch' => 'batch',
-        ];
+        $conditions = [current_scan::predicate('s', 'r.courseid')];
+        $params = [];
         if ($severity !== '') {
             $conditions[] = 'r.severity = :ccseverity';
             $params['ccseverity'] = $severity;

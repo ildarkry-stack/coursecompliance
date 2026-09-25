@@ -33,13 +33,13 @@ $assessmenttype = optional_param('assessmenttype', '', PARAM_ALPHANUMEXT);
 $courseid = optional_param('courseid', 0, PARAM_INT);
 $kind = optional_param('kind', '', PARAM_ALPHA);
 $search = trim(optional_param('search', '', PARAM_TEXT));
-$page = optional_param('page', 0, PARAM_INT);
+$page = max(0, optional_param('page', 0, PARAM_INT));
 $perpage = 100;
 
 $scan = $DB->get_record('tool_coursecompliance_scan', ['id' => $scanid], '*', MUST_EXIST);
 $profile = $DB->get_record('tool_coursecompliance_profile', ['id' => $scan->profileid]);
 $category = \core_course_category::get($scan->categoryid, MUST_EXIST, true);
-$config = $profile ? \tool_coursecompliance\profile_config::decode($profile->configjson) : [];
+$config = \tool_coursecompliance\scan_snapshot::config($scan);
 
 $urlparams = ['scanid' => $scanid];
 if ($severity !== '') {
@@ -77,6 +77,13 @@ if (!empty($scan->courselimit)) {
         'alert alert-info py-2'
     );
 }
+
+echo html_writer::div(
+    !empty($scan->confighash)
+        ? s(get_string('scansnapshot', 'tool_coursecompliance', substr($scan->confighash, 0, 12)))
+        : s(get_string('scanlegacysnapshot', 'tool_coursecompliance')),
+    'small text-muted mb-3'
+);
 
 if (!empty($config['blueprint']) && is_array($config['blueprint'])) {
     $source = (object)[
@@ -145,55 +152,27 @@ if ($scan->status === 'failed') {
         }
         echo html_writer::table($failedtable);
 
-        if (has_capability('tool/coursecompliance:scan', $context)) {
-            $retryurl = new moodle_url('/admin/tool/coursecompliance/scan_retry.php');
-            echo html_writer::start_tag('form', ['method' => 'post', 'action' => $retryurl->out(false)]);
-            echo html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'sesskey', 'value' => sesskey()]);
-            echo html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'scanid', 'value' => $scanid]);
-            echo html_writer::empty_tag('input', [
-                'type' => 'submit',
-                'class' => 'btn btn-primary',
-                'value' => get_string('scanretryfailed', 'tool_coursecompliance'),
-            ]);
-            echo html_writer::end_tag('form');
-        }
+    }
+    if ((int)$scan->batchtotal > 0 && has_capability('tool/coursecompliance:scan', $context)) {
+        $retryurl = new moodle_url('/admin/tool/coursecompliance/scan_retry.php');
+        echo html_writer::start_tag('form', ['method' => 'post', 'action' => $retryurl->out(false)]);
+        echo html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'sesskey', 'value' => sesskey()]);
+        echo html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'scanid', 'value' => $scanid]);
+        echo html_writer::empty_tag('input', [
+            'type' => 'submit',
+            'class' => 'btn btn-primary',
+            'value' => get_string('scanretryfailed', 'tool_coursecompliance'),
+        ]);
+        echo html_writer::end_tag('form');
     }
     echo $OUTPUT->footer();
     exit;
 }
 
-$allresultssql = "SELECT r.*, c.fullname, c.shortname, cm.id AS cmid
-                   FROM {tool_coursecompliance_result} r
-                   JOIN {course} c ON c.id = r.courseid
-              LEFT JOIN {modules} m ON m.name = r.component
-              LEFT JOIN {course_modules} cm ON cm.course = r.courseid
-                    AND cm.module = m.id
-                    AND cm.instance = r.objectid
-                  WHERE r.scanid = :scanid
-               ORDER BY c.fullname, r.rulecode";
-$allresults = $DB->get_records_sql($allresultssql, ['scanid' => $scanid]);
-$missing = [];
-$affectedcourses = [];
-$mismatchcount = 0;
-foreach ($allresults as $result) {
-    $affectedcourses[(int)$result->courseid] = true;
-    if (\tool_coursecompliance\report_helper::is_missing($result)) {
-        $label = \tool_coursecompliance\report_helper::missing_description($result, $config);
-        if (!isset($missing[$label])) {
-            $missing[$label] = ['count' => 0, 'courses' => []];
-        }
-        $missing[$label]['count']++;
-        $missing[$label]['courses'][(int)$result->courseid] = format_string($result->fullname);
-    } else {
-        $mismatchcount++;
-    }
-}
-$missingcount = array_sum(array_map(static fn ($item) => $item['count'], $missing));
+[$missing, $affectedcoursecount, $mismatchcount, $autofixablecount] =
+    \tool_coursecompliance\report_repository::summary($scanid, $config);
+$missingcount = array_sum(array_column($missing, 'count'));
 $totalproblems = (int)$scan->critical + (int)$scan->warnings + (int)$scan->notices;
-$autofixablecount = count(array_filter(
-    $allresults,
-    static fn ($result) => \tool_coursecompliance\autofix_manager::is_fixable($result, $config)
-));
 
 echo \tool_coursecompliance\ui::metric_cards([
     [
@@ -202,7 +181,7 @@ echo \tool_coursecompliance\ui::metric_cards([
     ],
     [
         'label' => get_string('affectedcourses', 'tool_coursecompliance'),
-        'value' => count($affectedcourses),
+        'value' => $affectedcoursecount,
     ],
     [
         'label' => get_string('critical', 'tool_coursecompliance'),
@@ -244,6 +223,16 @@ if ((int)($scan->retrycount ?? 0) > 0) {
         'label' => get_string('scanretries', 'tool_coursecompliance'),
         'value' => (int)$scan->retrycount,
         'class' => 'text-warning',
+    ];
+}
+if (!empty($scan->finaldurationms) || !empty($scan->finaldbqueries)) {
+    $performancemetrics[] = [
+        'label' => get_string('scanfinaltime', 'tool_coursecompliance'),
+        'value' => format_time((int)ceil($scan->finaldurationms / 1000)),
+    ];
+    $performancemetrics[] = [
+        'label' => get_string('scanfinalqueries', 'tool_coursecompliance'),
+        'value' => (int)$scan->finaldbqueries,
     ];
 }
 if ($performancemetrics) {
@@ -316,8 +305,8 @@ if ($missing) {
         $coursenames = array_values($data['courses']);
         $previewnames = array_slice($coursenames, 0, 5);
         $coursepreview = implode(', ', array_map('s', $previewnames));
-        if (count($coursenames) > 5) {
-            $coursepreview .= ' … +' . (count($coursenames) - 5);
+        if ($data['coursecount'] > 5) {
+            $coursepreview .= ' … +' . ($data['coursecount'] - 5);
         }
         $missingtable->data[] = [s($label), (int)$data['count'], $coursepreview];
     }
@@ -426,16 +415,10 @@ echo html_writer::end_div();
 echo html_writer::end_tag('form');
 
 if ($kind === 'ready') {
-    $categoryids = array_merge([(int)$scan->categoryid], $category->get_all_children_ids());
-    [$catsql, $catparams] = $DB->get_in_or_equal($categoryids, SQL_PARAMS_NAMED, 'readycat');
-    $readyparams = $catparams + ['siteid' => SITEID];
-    $readywhere = "category $catsql AND id <> :siteid";
-    $affectedids = array_keys($affectedcourses);
-    if ($affectedids) {
-        [$affectedsql, $affectedparams] = $DB->get_in_or_equal($affectedids, SQL_PARAMS_NAMED, 'affected', false);
-        $readywhere .= " AND id $affectedsql";
-        $readyparams += $affectedparams;
-    }
+    $readyparams = ['readyscanid' => $scanid, 'issuescanid' => $scanid];
+    $readywhere = "id IN (SELECT courseid FROM {tool_coursecompliance_course} WHERE scanid = :readyscanid)
+                   AND NOT EXISTS (SELECT 1 FROM {tool_coursecompliance_result} r
+                                    WHERE r.scanid = :issuescanid AND r.courseid = {course}.id)";
     if ($search !== '') {
         $readywhere .= ' AND (' . $DB->sql_like('fullname', ':readyfullname', false, false) .
             ' OR ' . $DB->sql_like('shortname', ':readyshortname', false, false) . ')';
@@ -448,7 +431,7 @@ if ($kind === 'ready') {
         'course',
         $readywhere,
         $readyparams,
-        'fullname ASC',
+        'fullname ASC, id ASC',
         'id,fullname,shortname',
         $page * $perpage,
         $perpage
@@ -507,35 +490,9 @@ if ($search !== '') {
     $params['courseshortname'] = $courselike;
 }
 
-$sql = "SELECT r.*, c.fullname, c.shortname, cm.id AS cmid
-          FROM {tool_coursecompliance_result} r
-          JOIN {course} c ON c.id = r.courseid
-     LEFT JOIN {modules} m ON m.name = r.component
-     LEFT JOIN {course_modules} cm ON cm.course = r.courseid
-           AND cm.module = m.id
-           AND cm.instance = r.objectid
-         WHERE $where
-      ORDER BY CASE r.severity WHEN 'critical' THEN 1 WHEN 'warning' THEN 2 ELSE 3 END,
-               c.fullname, r.rulecode";
-$filtered = $DB->get_records_sql($sql, $params);
-if ($kind === 'missing') {
-    $filtered = array_filter(
-        $filtered,
-        static fn ($result) => \tool_coursecompliance\report_helper::is_missing($result)
-    );
-} else if ($kind === 'mismatch') {
-    $filtered = array_filter(
-        $filtered,
-        static fn ($result) => !\tool_coursecompliance\report_helper::is_missing($result)
-    );
-} else if ($kind === 'autofix') {
-    $filtered = array_filter(
-        $filtered,
-        static fn ($result) => \tool_coursecompliance\autofix_manager::is_fixable($result, $config)
-    );
-}
-$total = count($filtered);
-$results = array_slice(array_values($filtered), $page * $perpage, $perpage);
+[$results, $total] = \tool_coursecompliance\report_repository::page(
+    $where, $params, $kind, $config, $page, $perpage
+);
 $questiondetailcounts = \tool_coursecompliance\question_issue_repository::counts_for_results($results);
 
 if (!$results) {

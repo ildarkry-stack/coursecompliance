@@ -60,7 +60,7 @@ final class diagnostics_test extends \advanced_testcase {
         $snapshot = diagnostics::snapshot();
 
         $this->assertSame((int)$CFG->branch, $snapshot['branch']);
-        $this->assertSame('0.19.0-rc1', $snapshot['pluginrelease']);
+        $this->assertSame('1.1.0-rc1', $snapshot['pluginrelease']);
         $this->assertArrayHasKey('moodle', $snapshot['checks']);
         $this->assertArrayHasKey('php', $snapshot['checks']);
         $this->assertArrayHasKey('database', $snapshot['checks']);
