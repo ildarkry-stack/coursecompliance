@@ -161,12 +161,16 @@ jobs:
             MOODLE_PLUGIN_PATH="$GITHUB_WORKSPACE/moodle/admin/tool/coursecompliance"
           fi
           mkdir -p "$(dirname "$MOODLE_PLUGIN_PATH")"
-          if [ ! -e "$MOODLE_PLUGIN_PATH" ]; then
-            ln -s "$PLUGIN_PATH" "$MOODLE_PLUGIN_PATH"
+          # Use a real directory: Moodle Grunt does not reliably accept symlinked roots.
+          if [ -L "$MOODLE_PLUGIN_PATH" ]; then
+            rm "$MOODLE_PLUGIN_PATH"
           fi
+          mkdir -p "$MOODLE_PLUGIN_PATH"
+          cp -a "$PLUGIN_PATH/." "$MOODLE_PLUGIN_PATH/"
           test -f "$MOODLE_PLUGIN_PATH/amd/src/course_indicator.js"
           cd "$GITHUB_WORKSPACE/moodle"
-          npx grunt amd --root="$MOODLE_PLUGIN_PATH"
+          MOODLE_RELATIVE_PATH="${MOODLE_PLUGIN_PATH#"$GITHUB_WORKSPACE/moodle/"}"
+          npx grunt amd --root="$MOODLE_RELATIVE_PATH"
 
       - name: Mark cancelled jobs as failed
         if: ${{ cancelled() }}
