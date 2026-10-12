@@ -24,7 +24,9 @@
 
 namespace tool_coursecompliance;
 
-/** Shared publication rules for live compliance dashboards. */
+/**
+ * Shared publication rules for live compliance dashboards.
+ */
 final class current_scan {
     /**
      * Build an internal-only predicate for the latest published course/profile scan.
