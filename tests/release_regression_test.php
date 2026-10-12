@@ -8,11 +8,11 @@
 //
 // Moodle is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with Moodle. If not, see <http://www.gnu.org/licenses/>.
+// along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
 
 /**
  * Regression coverage for the 1.1 reliability and reporting changes.
@@ -38,7 +38,9 @@ namespace tool_coursecompliance;
  * @covers \tool_coursecompliance\task\finalize_scan
  */
 final class release_regression_test extends \advanced_testcase {
-    /** A profile edit cannot change an already scheduled audit. */
+    /**
+     * A profile edit cannot change an already scheduled audit.
+     */
     public function test_snapshot_and_idempotent_scheduling(): void {
         global $DB, $USER;
         $this->resetAfterTest();
@@ -59,7 +61,11 @@ final class release_regression_test extends \advanced_testcase {
         $this->assertSame(hash('sha256', $parent->configsnapshot), $child->confighash);
     }
 
-    /** Private worker snapshots never override a published course indicator. */
+    /**
+
+     * Private worker snapshots never override a published course indicator.
+
+     */
     public function test_indicator_ignores_finished_child_of_running_parent(): void {
         global $DB;
         $this->resetAfterTest();
@@ -76,7 +82,11 @@ final class release_regression_test extends \advanced_testcase {
         $this->assertSame(1, $indicator->critical);
     }
 
-    /** Regular and semantic pages retain full totals and stable ordering. */
+    /**
+
+     * Regular and semantic pages retain full totals and stable ordering.
+
+     */
     public function test_report_pages_and_semantic_filters(): void {
         $this->resetAfterTest();
         $this->setAdminUser();
@@ -100,7 +110,11 @@ final class release_regression_test extends \advanced_testcase {
         $this->assertSame(0, $mismatchtotal);
     }
 
-    /** A question filter is applied before pagination and newer clean scans suppress old details. */
+    /**
+
+     * A question filter is applied before pagination and newer clean scans suppress old details.
+
+     */
     public function test_question_filters_and_clean_overlay(): void {
         global $DB;
         $this->resetAfterTest();
@@ -124,7 +138,11 @@ final class release_regression_test extends \advanced_testcase {
         $this->assertSame(0, question_issue_repository::current_count());
     }
 
-    /** Continuations keep applied rows and counters instead of relabelling them as conflicts. */
+    /**
+
+     * Continuations keep applied rows and counters instead of relabelling them as conflicts.
+
+     */
     public function test_activity_continuation_preserves_applied_changes(): void {
         global $DB, $USER;
         $this->resetAfterTest();
@@ -156,7 +174,11 @@ final class release_regression_test extends \advanced_testcase {
         $this->assertSame('complete', $batch->status);
     }
 
-    /** Retention does not destroy active or failed recovery state. */
+    /**
+
+     * Retention does not destroy active or failed recovery state.
+
+     */
     public function test_cleanup_preserves_recoverable_scans(): void {
         global $DB;
         $this->resetAfterTest();
@@ -176,7 +198,11 @@ final class release_regression_test extends \advanced_testcase {
         $this->assertTrue($DB->record_exists('tool_coursecompliance_scan', ['id' => $failedid]));
     }
 
-    /** Grouped publication preserves rows and is idempotent. */
+    /**
+
+     * Grouped publication preserves rows and is idempotent.
+
+     */
     public function test_finalizer_publishes_detail_rows_once(): void {
         global $DB;
         $this->resetAfterTest();
