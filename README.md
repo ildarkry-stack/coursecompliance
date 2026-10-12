@@ -2,7 +2,7 @@
 
 Course Compliance Center is a Moodle administration tool for auditing course quality, assessment readiness and institutional standards across large course collections. It combines read-only diagnostics with conservative, preview-first remediation workflows for settings that have one unambiguous target value.
 
-**Release:** 1.1.0-rc1
+**Release:** 1.1.0-rc2
 **Supported Moodle versions:** 5.0, 5.1 and 5.2
 **Supported databases in CI:** PostgreSQL and MySQL
 **License:** GNU GPL v3 or later
@@ -78,13 +78,13 @@ The plugin implements Moodle's Privacy API, including metadata declaration, expo
 
 ## Development and automated checks
 
-The release gate requires Moodle coding standards and PHPUnit across Moodle 5.0, 5.1 and 5.2, with PostgreSQL and MySQL. This ZIP does not include evidence that the matrix has passed for 1.1.0-rc1. Release packaging is also validated to contain a single top-level `coursecompliance/` directory without repository metadata.
+The release gate requires Moodle coding standards and PHPUnit across Moodle 5.0, 5.1 and 5.2, with PostgreSQL and MySQL. This ZIP does not include evidence that the matrix has passed for 1.1.0-rc2. Release packaging is also validated to contain a single top-level `coursecompliance/` directory without repository metadata.
 
 See [`CONTRIBUTING.md`](CONTRIBUTING.md), [`SECURITY.md`](SECURITY.md) and [`docs/RELEASE_CHECKLIST.md`](docs/RELEASE_CHECKLIST.md).
 
 ## Release status
 
-1.1.0-rc1 addresses audit publication, report memory use, task recovery and immutable standards.
+1.1.0-rc2 addresses audit publication, report memory use, task recovery and immutable standards.
 This build has not been executed inside Moodle in the authoring environment. Clean install,
 upgrade, PHPUnit and the compatibility matrix must pass before promotion to stable.
 See `docs/VALIDATION-1.1.md` for the exact checks and remaining limitations.
