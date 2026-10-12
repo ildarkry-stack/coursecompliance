@@ -28,7 +28,7 @@ for f in newfields:
 assert "upgrade_plugin_savepoint(true, 2026092500, 'tool', 'coursecompliance')" in upgrade
 # The current plugin version may advance with subsequent releases. Do not pin it to an old release.
 versiontext = (root / 'version.php').read_text()
-versionmatch = re.search(r'\\$plugin->version\\s*=\\s*(\\d+)\\s*;', versiontext)
+versionmatch = re.search(r'\$plugin->version\s*=\s*(\d+)\s*;', versiontext)
 assert versionmatch, 'Missing numeric plugin version'
 assert int(versionmatch.group(1)) >= 2026092500, 'Plugin version predates the recorded DB upgrade'
 # Lightweight lexical sanity, intentionally not described as a PHP syntax check.
