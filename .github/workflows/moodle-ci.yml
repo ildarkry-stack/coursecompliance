@@ -153,12 +153,18 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          if [ -d "$GITHUB_WORKSPACE/moodle/public/admin/tool/coursecompliance" ]; then
+          # moodle-plugin-ci installs the plugin for testing but does not always
+          # leave its source tree in the Moodle checkout after PHPUnit.
+          if [ -d "$GITHUB_WORKSPACE/moodle/public/admin/tool" ]; then
             MOODLE_PLUGIN_PATH="$GITHUB_WORKSPACE/moodle/public/admin/tool/coursecompliance"
           else
             MOODLE_PLUGIN_PATH="$GITHUB_WORKSPACE/moodle/admin/tool/coursecompliance"
           fi
-          test -d "$MOODLE_PLUGIN_PATH"
+          mkdir -p "$(dirname "$MOODLE_PLUGIN_PATH")"
+          if [ ! -e "$MOODLE_PLUGIN_PATH" ]; then
+            ln -s "$PLUGIN_PATH" "$MOODLE_PLUGIN_PATH"
+          fi
+          test -f "$MOODLE_PLUGIN_PATH/amd/src/course_indicator.js"
           cd "$GITHUB_WORKSPACE/moodle"
           npx grunt amd --root="$MOODLE_PLUGIN_PATH"
 
