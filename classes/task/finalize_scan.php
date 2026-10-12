@@ -41,7 +41,9 @@ final class finalize_scan extends \core\task\adhoc_task {
         });
     }
 
-    /** Execute with exclusive ownership of the logical operation. */
+    /**
+     * Execute with exclusive ownership of the logical operation.
+     */
     private function execute_locked(): void {
         global $DB;
 
