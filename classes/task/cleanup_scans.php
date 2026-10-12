@@ -47,7 +47,10 @@ final class cleanup_scans extends \core\task\scheduled_task {
             'tool_coursecompliance_scan',
             'parentid = 0 AND status = :status AND finishedat > 0 AND finishedat < :cutoff',
             ['status' => 'complete', 'cutoff' => $cutoff],
-            'id ASC', 'id', 0, 100
+            'id ASC',
+            'id',
+            0,
+            100
         );
         foreach ($scans as $scan) {
             \tool_coursecompliance\operation_lock::run('scan:' . $scan->id, static function () use ($DB, $scan): void {
@@ -70,7 +73,11 @@ final class cleanup_scans extends \core\task\scheduled_task {
         $batches = $DB->get_records_select(
             'tool_coursecompliance_act_batch',
             "status IN ('complete', 'partial') AND timefinished > 0 AND timefinished < :cutoff",
-            ['cutoff' => $cutoff], 'id ASC', 'id', 0, 100
+            ['cutoff' => $cutoff],
+            'id ASC',
+            'id',
+            0,
+            100
         );
         foreach ($batches as $batch) {
             \tool_coursecompliance\operation_lock::run('activity:' . $batch->id, static function () use ($DB, $batch): void {
