@@ -539,6 +539,8 @@ foreach ($results as $result) {
     $problem = \tool_coursecompliance\report_helper::is_missing($result)
         ? \tool_coursecompliance\report_helper::missing_description($result, $config)
         : (string)$result->message;
+    // Escape the stored message before appending the trusted rule-code HTML.
+    $problem = s($problem);
     $problem .= html_writer::div(
         get_string('rulecode', 'tool_coursecompliance') . ': ' . s($result->rulecode),
         'small text-muted mt-1'
