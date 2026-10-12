@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: moodle-ci-${{ github.workflow }}-${{ github.ref }}
@@ -83,7 +83,7 @@ jobs:
         uses: actions/checkout@v6
         with:
           path: plugin
-          persist-credentials: false
+          persist-credentials: true
 
       - name: Verify repository layout
         shell: bash
@@ -169,8 +169,28 @@ jobs:
           cp -a "$PLUGIN_PATH/." "$MOODLE_PLUGIN_PATH/"
           test -f "$MOODLE_PLUGIN_PATH/amd/src/course_indicator.js"
           cd "$GITHUB_WORKSPACE/moodle"
+          echo "MOODLE_PLUGIN_PATH=$MOODLE_PLUGIN_PATH" >> "$GITHUB_ENV"
           MOODLE_RELATIVE_PATH="${MOODLE_PLUGIN_PATH#"$GITHUB_WORKSPACE/moodle/"}"
           npx grunt amd --root="$MOODLE_RELATIVE_PATH"
+
+      - name: Commit reproducible AMD build output
+        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && matrix.moodle == '5.0' && matrix.php == '8.2' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Built inside Moodle's actual checkout by its own Grunt toolchain.
+          cp "$MOODLE_PLUGIN_PATH/amd/build/"*.min.js "$PLUGIN_PATH/amd/build/"
+          cp "$MOODLE_PLUGIN_PATH/amd/build/"*.min.js.map "$PLUGIN_PATH/amd/build/"
+          cd "$PLUGIN_PATH"
+          git add -f amd/build/*.min.js amd/build/*.min.js.map
+          if git diff --cached --quiet; then
+            echo "AMD build output already committed."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "build(amd): check in native Moodle Grunt artifacts"
+          git push origin HEAD:main
 
       - name: Mark cancelled jobs as failed
         if: ${{ cancelled() }}
