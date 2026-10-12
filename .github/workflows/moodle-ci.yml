@@ -36,7 +36,6 @@ jobs:
         image: mysql:8.4
         env:
           MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
-          MYSQL_DATABASE: moodle
           MYSQL_CHARACTER_SET_SERVER: utf8mb4
           MYSQL_COLLATION_SERVER: utf8mb4_unicode_ci
         ports:
