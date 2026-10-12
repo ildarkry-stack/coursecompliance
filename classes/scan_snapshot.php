@@ -24,7 +24,9 @@
 
 namespace tool_coursecompliance;
 
-/** Immutable profile configuration associated with an audit. */
+/**
+ * Immutable profile configuration associated with an audit.
+ */
 final class scan_snapshot {
     /**
      * Resolve the historical configuration, with an explicit legacy fallback.
