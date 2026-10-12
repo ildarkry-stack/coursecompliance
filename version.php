@@ -25,8 +25,8 @@
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'tool_coursecompliance';
-$plugin->version = 2026092500;
-$plugin->release = '1.1.0-rc1';
+$plugin->version = 2026101200;
+$plugin->release = '1.1.0-rc2';
 $plugin->requires = 2025041400; // Moodle 5.0.
 $plugin->supported = [500, 502];
 $plugin->maturity = MATURITY_RC;
