@@ -24,7 +24,9 @@
 
 namespace tool_coursecompliance;
 
-/** Bounded-memory access to audit report rows. */
+/**
+ * Bounded-memory access to audit report rows.
+ */
 final class report_repository {
     /**
      * Return filtered rows and the full matching count.
