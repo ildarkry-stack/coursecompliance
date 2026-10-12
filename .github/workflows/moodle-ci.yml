@@ -126,31 +126,31 @@ jobs:
           MOODLE_BRANCH: ${{ matrix.moodle-branch }}
 
       - name: PHP lint
-        if: ${{ !cancelled() }}
+        if: ${{ success() }}
         run: moodle-plugin-ci phplint "$PLUGIN_PATH"
 
       - name: Moodle coding style
-        if: ${{ !cancelled() }}
+        if: ${{ success() }}
         run: moodle-plugin-ci phpcs --max-warnings 0 "$PLUGIN_PATH"
 
       - name: Plugin validation
-        if: ${{ !cancelled() }}
+        if: ${{ success() }}
         run: moodle-plugin-ci validate --moodle "$GITHUB_WORKSPACE/moodle" "$PLUGIN_PATH"
 
       - name: Upgrade savepoints
-        if: ${{ !cancelled() }}
+        if: ${{ success() }}
         run: moodle-plugin-ci savepoints "$PLUGIN_PATH"
 
       - name: PHPDoc
-        if: ${{ !cancelled() }}
+        if: ${{ success() }}
         run: moodle-plugin-ci phpdoc --moodle "$GITHUB_WORKSPACE/moodle" --max-warnings 0 "$PLUGIN_PATH"
 
       - name: PHPUnit
-        if: ${{ !cancelled() }}
+        if: ${{ success() }}
         run: moodle-plugin-ci phpunit --moodle "$GITHUB_WORKSPACE/moodle" --fail-on-warning "$PLUGIN_PATH"
 
       - name: Native Moodle Grunt AMD
-        if: ${{ !cancelled() }}
+        if: ${{ success() }}
         shell: bash
         run: |
           set -euo pipefail
