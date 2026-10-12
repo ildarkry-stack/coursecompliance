@@ -24,7 +24,9 @@
 
 namespace tool_coursecompliance;
 
-/** Serialises operations sharing a logical resource across cron workers. */
+/**
+ * Serialises operations sharing a logical resource across cron workers.
+ */
 final class operation_lock {
     /**
      * Execute an operation while holding a Moodle lock.
