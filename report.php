@@ -151,7 +151,6 @@ if ($scan->status === 'failed') {
             ];
         }
         echo html_writer::table($failedtable);
-
     }
     if ((int)$scan->batchtotal > 0 && has_capability('tool/coursecompliance:scan', $context)) {
         $retryurl = new moodle_url('/admin/tool/coursecompliance/scan_retry.php');
@@ -491,7 +490,12 @@ if ($search !== '') {
 }
 
 [$results, $total] = \tool_coursecompliance\report_repository::page(
-    $where, $params, $kind, $config, $page, $perpage
+    $where,
+    $params,
+    $kind,
+    $config,
+    $page,
+    $perpage
 );
 $questiondetailcounts = \tool_coursecompliance\question_issue_repository::counts_for_results($results);
 
