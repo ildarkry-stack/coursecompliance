@@ -1,3 +1,9 @@
+## 1.1.0-rc2 (2026-10-12)
+
+- Escape stored audit messages in the report to prevent stored XSS.
+- Define missing capability labels and page labels in English and Russian.
+- Align release metadata with the Marketplace review candidate.
+
 # Changelog
 
 ## 1.1.0-rc1 — 2026-09-25
